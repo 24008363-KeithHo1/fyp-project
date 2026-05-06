@@ -1,0 +1,12 @@
+<nav>
+  <ul style="list-style:none;display:flex;gap:1rem;padding:0;">
+    <li><a href="/dashboard">Dashboard</a></li>
+    <li><a href="/invoices">Invoices</a></li>
+    <li><a href="/payroll">Payroll</a></li>
+    <li><a href="/reports">Reports</a></li>
+    <li style="margin-left:auto"><a href="#" id="logout">Logout</a></li>
+  </ul>
+</nav>
+<script>
+  document.getElementById('logout')?.addEventListener('click', ()=>{ localStorage.removeItem('token'); location = '/login'; });
+</script>

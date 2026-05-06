@@ -1,0 +1,32 @@
+<%- include('partials/header', { title: 'Payroll' }) %>
+<%- include('partials/navbar') %>
+
+<main>
+  <h2>Payroll</h2>
+  <form id="upload" enctype="multipart/form-data">
+    <input type="file" id="file" accept=".xlsx"><br>
+    <button>Upload</button>
+  </form>
+  <ul id="list"></ul>
+</main>
+
+<script>
+const token = localStorage.getItem('token');
+if (!token) location = '/login';
+document.getElementById('upload').addEventListener('submit', async e=>{
+  e.preventDefault();
+  const f = document.getElementById('file').files[0];
+  const fd = new FormData(); fd.append('file', f);
+  await fetch('/api/payroll/upload',{method:'POST',headers:{authorization:'Bearer '+token},body:fd});
+  load();
+});
+async function load(){
+  const res = await fetch('/api/payroll',{headers:{authorization:'Bearer '+token}});
+  const items = await res.json();
+  const ul = document.getElementById('list'); ul.innerHTML='';
+  items.forEach(p=>{ const li=document.createElement('li'); li.innerHTML=`${p.employee_name} - ${p.period} - <a href='/api/payroll/${p.id}/payslip' target='_blank'>Payslip</a>`; ul.appendChild(li); });
+}
+load();
+</script>
+
+<%- include('partials/footer') %>

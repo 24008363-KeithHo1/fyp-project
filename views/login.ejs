@@ -1,0 +1,23 @@
+<%- include('partials/header', { title: 'Login' }) %>
+<%- include('partials/navbar') %>
+
+<main>
+  <h2>Login</h2>
+  <form id="login">
+    <label>Email: <input type="email" id="email" required></label><br>
+    <label>Password: <input type="password" id="password" required></label><br>
+    <button type="submit">Login</button>
+  </form>
+</main>
+
+<script>
+document.getElementById('login').addEventListener('submit', async e=>{
+  e.preventDefault();
+  const res = await fetch('/api/auth/login',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({email:document.getElementById('email').value,password:document.getElementById('password').value})});
+  const j = await res.json();
+  if (j.token){ localStorage.setItem('token', j.token); location = '/dashboard'; }
+  else alert(j.error || 'Login failed');
+});
+</script>
+
+<%- include('partials/footer') %>

@@ -1,0 +1,31 @@
+<%- include('partials/header', { title: 'MFA Setup' }) %>
+<%- include('partials/navbar') %>
+
+<main>
+  <h2>MFA Setup</h2>
+  <p>This page will request a QR and secret from the server. You must be logged in.</p>
+  <button id="get">Generate MFA Setup</button>
+  <div id="qr"></div>
+  <form id="confirm" style="display:none;">
+    <label>Enter code from app: <input id="code"></label>
+    <button>Enable MFA</button>
+  </form>
+  <script>
+  document.getElementById('get').addEventListener('click', async ()=>{
+    const token = localStorage.getItem('token'); if (!token) return location='/login';
+    const res = await fetch('/api/auth/mfa/setup',{method:'POST',headers:{authorization:'Bearer '+token}});
+    const j = await res.json();
+    document.getElementById('qr').innerHTML = `<img src="${j.qr}" alt="qr"><p>Secret: ${j.secret}</p>`;
+    document.getElementById('confirm').style.display='block';
+  });
+  document.getElementById('confirm').addEventListener('submit', async e=>{
+    e.preventDefault();
+    const token = localStorage.getItem('token');
+    const code = document.getElementById('code').value;
+    const res = await fetch('/api/auth/mfa/enable',{method:'POST',headers:{authorization:'Bearer '+token,'content-type':'application/json'},body:JSON.stringify({code})});
+    const j = await res.json(); if (j.ok) alert('MFA enabled'); else alert(j.error||'Failed');
+  });
+  </script>
+</main>
+
+<%- include('partials/footer') %>

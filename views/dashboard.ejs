@@ -1,0 +1,13 @@
+<%- include('partials/header', { title: 'Dashboard' }) %>
+<%- include('partials/navbar') %>
+
+<main>
+	<h2>Dashboard</h2>
+	<p><a href="/invoices">Invoices</a> | <a href="/payroll">Payroll</a> | <a href="/reports">Reports</a></p>
+	<script>
+	const token = localStorage.getItem('token');
+	if (!token) location = '/login';
+	</script>
+</main>
+
+<%- include('partials/footer') %>

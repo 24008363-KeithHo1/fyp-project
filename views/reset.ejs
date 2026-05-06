@@ -1,0 +1,44 @@
+<%- include('partials/header', { title: 'Reset Password' }) %>
+<%- include('partials/navbar') %>
+
+<main>
+  <h2>Reset Password</h2>
+  <div id="request">
+    <p>Enter your email to request a password reset.</p>
+    <form id="requestForm">
+      <label>Email: <input type="email" id="emailReq" required></label>
+      <button>Request reset</button>
+    </form>
+  </div>
+
+  <div id="perform" style="display:none;">
+    <p>Set a new password</p>
+    <form id="resetForm">
+      <input type="hidden" id="token" value="<%= token %>">
+      <label>New password: <input type="password" id="newPass" required></label>
+      <button>Reset password</button>
+    </form>
+  </div>
+</main>
+
+<script>
+document.getElementById('requestForm').addEventListener('submit', async e=>{
+  e.preventDefault();
+  await fetch('/api/auth/request-reset',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({email:document.getElementById('emailReq').value})});
+  alert('If email exists, a reset link was sent.');
+});
+
+if (document.getElementById('token').value) {
+  document.getElementById('request').style.display='none';
+  document.getElementById('perform').style.display='block';
+}
+
+document.getElementById('resetForm').addEventListener('submit', async e=>{
+  e.preventDefault();
+  const res = await fetch('/api/auth/reset',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({token:document.getElementById('token').value,password:document.getElementById('newPass').value})});
+  const j = await res.json();
+  if (j.ok) { alert('Password reset. Please login.'); location='/login'; } else alert(j.error || 'Failed');
+});
+</script>
+
+<%- include('partials/footer') %>
