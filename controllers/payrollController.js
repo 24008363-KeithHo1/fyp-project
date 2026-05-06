@@ -11,7 +11,16 @@ exports.upload = async (req, res) => {
     const rows = await parsePayrollExcel(req.file.path);
     const created = [];
     for (const r of rows) {
-      const p = await Payroll.create({ employee_name: r.employee_name, employee_email: r.employee_email, period: r.period, gross: r.gross, net: r.net, data: r });
+      const p = await Payroll.create({ 
+        employee_name: r.employee_name, 
+        employee_email: r.employee_email, 
+        period: r.period, 
+        gross: r.gross, 
+        allowances: r.allowances,
+        deductions: r.deductions,
+        net: r.net, 
+        data: r 
+      });
       created.push(p);
     }
     res.json({ imported: created.length });
@@ -29,6 +38,14 @@ exports.get = async (req, res) => {
   const p = await Payroll.findByPk(req.params.id);
   if (!p) return res.status(404).json({ error: 'Not found' });
   res.json(p);
+};
+
+exports.myslips = async (req, res) => {
+  const payrolls = await Payroll.findAll({
+    where: { employee_email: req.user.email },
+    order: [['id', 'DESC']]
+  });
+  res.json(payrolls);
 };
 
 exports.payslip = async (req, res) => {

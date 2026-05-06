@@ -8,7 +8,7 @@ module.exports = async function (req, res, next) {
   const token = auth.split(' ')[1];
   try {
     const payload = jwt.verify(token, jwtSecret);
-    const user = await User.findByPk(payload.id, { include: ['role'] });
+    const user = await User.findByPk(payload.id);  // Remove include: ['role'] since role is now direct field
     if (!user) return res.status(401).json({ error: 'Invalid token user' });
     req.user = user;
     next();

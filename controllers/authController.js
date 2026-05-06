@@ -22,8 +22,7 @@ exports.register = async (req, res) => {
       it.used = true; await it.save();
     }
     const hash = await bcrypt.hash(password, 10);
-    const roleObj = await Role.findOne({ where: { name: role || 'Staff' } });
-    const user = await User.create({ name, email, password: hash, RoleId: roleObj ? roleObj.id : null, isVerified: !!inviteToken });
+    const user = await User.create({ name, email, password: hash, role: role || 'Staff', isVerified: !!inviteToken });  // Use direct role field
     res.json({ id: user.id, email: user.email });
   } catch (err) {
     res.status(400).json({ error: err.message });
@@ -33,7 +32,7 @@ exports.register = async (req, res) => {
 exports.login = async (req, res) => {
   try {
     const { email, password } = req.body;
-    const user = await User.findOne({ where: { email }, include: ['role'] });
+    const user = await User.findOne({ where: { email } });  // Remove include: ['role'] since role is direct field
     if (!user) return res.status(401).json({ error: 'Invalid credentials' });
     const match = await bcrypt.compare(password, user.password);
     if (!match) return res.status(401).json({ error: 'Invalid credentials' });
@@ -42,8 +41,8 @@ exports.login = async (req, res) => {
       const mfaToken = jwt.sign({ id: user.id, mfa: true }, jwtSecret, { expiresIn: '5m' });
       return res.json({ mfaRequired: true, mfaToken });
     }
-    const token = jwt.sign({ id: user.id, role: user.role && user.role.name }, jwtSecret, { expiresIn: jwtExpiry });
-    res.json({ token, user: { id: user.id, name: user.name, email: user.email, role: user.role && user.role.name } });
+    const token = jwt.sign({ id: user.id, role: user.role }, jwtSecret, { expiresIn: jwtExpiry });  // Use direct role field
+    res.json({ token, user: { id: user.id, name: user.name, email: user.email, role: user.role } });  // Use direct role field
   } catch (err) {
     res.status(400).json({ error: err.message });
   }

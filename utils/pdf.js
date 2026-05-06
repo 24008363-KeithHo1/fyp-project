@@ -14,12 +14,30 @@ async function generateInvoicePDF(invoice){
 
 async function generatePayslipPDF(payroll){
   const doc = new PDFDocument();
-  doc.fontSize(18).text('Payslip', { align: 'center' });
+  doc.fontSize(18).text('PAYSLIP', { align: 'center' });
   doc.moveDown();
-  doc.fontSize(12).text(`Employee: ${payroll.employee_name}`);
-  doc.text(`Period: ${payroll.period}`);
-  doc.text(`Gross: ${payroll.gross}`);
-  doc.text(`Net: ${payroll.net}`);
+  doc.fontSize(12)
+    .text(`Employee: ${payroll.employee_name}`)
+    .text(`Email: ${payroll.employee_email}`)
+    .text(`Period: ${payroll.period}`);
+  
+  doc.moveDown();
+  doc.fontSize(11).text('EARNINGS:', { underline: true });
+  doc.fontSize(10).text(`  Gross: $${payroll.gross}`);
+  const allowances = payroll.allowances || {};
+  Object.entries(allowances).forEach(([key, val]) => {
+    doc.text(`  ${key}: $${val}`);
+  });
+  
+  doc.moveDown();
+  doc.fontSize(11).text('DEDUCTIONS:', { underline: true });
+  const deductions = payroll.deductions || {};
+  Object.entries(deductions).forEach(([key, val]) => {
+    doc.text(`  ${key}: $${val}`);
+  });
+  
+  doc.moveDown();
+  doc.fontSize(12).text(`NET PAY: $${payroll.net}`, { bold: true });
   doc.end();
   return doc;
 }

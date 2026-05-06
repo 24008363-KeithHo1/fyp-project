@@ -1,6 +1,6 @@
 -- Full updated schema for Automated Invoicing & Payroll System (fyp)
-CREATE DATABASE IF NOT EXISTS fyp CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
-USE fyp;
+CREATE DATABASE IF NOT EXISTS `soi-2026-0036-zaynyi` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+USE `soi-2026-0036-zaynyi`;
 
 -- Ensure Roles table (Sequelize timestamps included)
 CREATE TABLE IF NOT EXISTS Roles (
@@ -10,20 +10,19 @@ CREATE TABLE IF NOT EXISTS Roles (
   updatedAt DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
--- Ensure Users table (with auth, MFA, timestamps)
+-- Ensure Users table (with auth, MFA, timestamps) - Updated to use role names directly
 CREATE TABLE IF NOT EXISTS Users (
   id INT AUTO_INCREMENT PRIMARY KEY,
   name VARCHAR(255) NOT NULL,
   email VARCHAR(255) NOT NULL UNIQUE,
   password VARCHAR(255) NOT NULL,
-  RoleId INT,
+  role ENUM('Admin','Finance','HR','Staff') DEFAULT 'Staff',  -- Direct role names instead of RoleId
   isActive BOOLEAN DEFAULT TRUE,
   isVerified BOOLEAN DEFAULT FALSE,
   mfaEnabled BOOLEAN DEFAULT FALSE,
   mfaSecret VARCHAR(255),
   createdAt DATETIME DEFAULT CURRENT_TIMESTAMP,
-  updatedAt DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-  CONSTRAINT fk_users_role FOREIGN KEY (RoleId) REFERENCES Roles(id) ON DELETE SET NULL
+  updatedAt DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- Invoices
@@ -46,6 +45,8 @@ CREATE TABLE IF NOT EXISTS Payrolls (
   employee_email VARCHAR(255) NOT NULL,
   period VARCHAR(100),
   gross DECIMAL(10,2),
+  allowances JSON DEFAULT ('{}'),
+  deductions JSON DEFAULT ('{}'),
   net DECIMAL(10,2),
   data JSON,
   createdAt DATETIME DEFAULT CURRENT_TIMESTAMP,

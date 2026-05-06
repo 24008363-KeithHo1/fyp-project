@@ -7,6 +7,8 @@ const Payroll = sequelize.define('Payroll', {
   employee_email: { type: DataTypes.STRING, allowNull: false },
   period: { type: DataTypes.STRING },
   gross: { type: DataTypes.DECIMAL(10,2) },
+  allowances: { type: DataTypes.JSON, defaultValue: {} },
+  deductions: { type: DataTypes.JSON, defaultValue: {} },
   net: { type: DataTypes.DECIMAL(10,2) },
   data: { type: DataTypes.JSON }
 });
