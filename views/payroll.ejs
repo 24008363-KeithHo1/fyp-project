@@ -1,7 +1,5 @@
 <%- include('partials/header', { title: 'Payroll' }) %>
 <%- include('partials/navbar') %>
-
-<main class="container my-4">
   <script>const token = localStorage.getItem('token'); if (!token) location = '/login';</script>
 
   <div class="row mb-3">
@@ -88,6 +86,6 @@
   load();
   </script>
 
-</main>
+ 
 
 <%- include('partials/footer') %>

@@ -1,7 +1,6 @@
 <%- include('partials/header', { title: 'Login' }) %>
 <%- include('partials/navbar') %>
-
-<main class="container my-5">
+<div class="row justify-content-center">
   <div class="row justify-content-center">
     <div class="col-md-6 col-lg-4">
       <div class="card shadow-sm">
@@ -34,6 +33,6 @@
     else alert(j.error || 'Login failed');
   });
   </script>
-</main>
+</div>
 
 <%- include('partials/footer') %>

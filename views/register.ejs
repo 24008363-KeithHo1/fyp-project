@@ -1,7 +1,6 @@
 <%- include('partials/header', { title: 'Register' }) %>
 <%- include('partials/navbar') %>
 
-<main>
   <h2>Create account</h2>
   <form id="register">
     <input type="hidden" id="inviteToken" value="<%= token %>">
@@ -11,7 +10,7 @@
     <label>Role: <select id="role"><option>Staff</option><option>Finance</option><option>HR</option><option>Admin</option></select></label><br>
     <button>Create account</button>
   </form>
-</main>
+ 
 
 <script>
 document.getElementById('register').addEventListener('submit', async e=>{
