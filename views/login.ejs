@@ -1,23 +1,39 @@
 <%- include('partials/header', { title: 'Login' }) %>
 <%- include('partials/navbar') %>
 
-<main>
-  <h2>Login</h2>
-  <form id="login">
-    <label>Email: <input type="email" id="email" required></label><br>
-    <label>Password: <input type="password" id="password" required></label><br>
-    <button type="submit">Login</button> <button type="button" onclick="location.href='/register'">Register</button>
-  </form>
+<main class="container my-5">
+  <div class="row justify-content-center">
+    <div class="col-md-6 col-lg-4">
+      <div class="card shadow-sm">
+        <div class="card-body">
+          <h3 class="card-title mb-3">Sign in</h3>
+          <form id="login">
+            <div class="mb-3">
+              <label for="email" class="form-label">Email</label>
+              <input type="email" class="form-control" id="email" required>
+            </div>
+            <div class="mb-3">
+              <label for="password" class="form-label">Password</label>
+              <input type="password" class="form-control" id="password" required>
+            </div>
+            <div class="d-flex gap-2">
+              <button type="submit" class="btn btn-primary">Login</button>
+              <button type="button" class="btn btn-outline-secondary" onclick="location.href='/register'">Register</button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+  <script>
+  document.getElementById('login').addEventListener('submit', async e=>{
+    e.preventDefault();
+    const res = await fetch('/api/auth/login',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({email:document.getElementById('email').value,password:document.getElementById('password').value})});
+    const j = await res.json();
+    if (j.token){ localStorage.setItem('token', j.token); location = '/dashboard'; }
+    else alert(j.error || 'Login failed');
+  });
+  </script>
 </main>
-
-<script>
-document.getElementById('login').addEventListener('submit', async e=>{
-  e.preventDefault();
-  const res = await fetch('/api/auth/login',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({email:document.getElementById('email').value,password:document.getElementById('password').value})});
-  const j = await res.json();
-  if (j.token){ localStorage.setItem('token', j.token); location = '/dashboard'; }
-  else alert(j.error || 'Login failed');
-});
-</script>
 
 <%- include('partials/footer') %>

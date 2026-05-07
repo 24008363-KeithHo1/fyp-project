@@ -1,13 +1,55 @@
 <%- include('partials/header', { title: 'Dashboard' }) %>
 <%- include('partials/navbar') %>
 
-<main>
-	<h2>Dashboard</h2>
-	<p><a href="/invoices">Invoices</a> | <a href="/payroll">Payroll</a> | <a href="/reports">Reports</a></p>
+<main class="container my-4">
 	<script>
 	const token = localStorage.getItem('token');
 	if (!token) location = '/login';
 	</script>
+
+	<div class="d-flex align-items-center mb-4">
+		<h2 class="me-auto">Dashboard</h2>
+		<div>
+			<a href="/invoices" class="btn btn-sm btn-outline-primary me-2">Invoices</a>
+			<a href="/payroll" class="btn btn-sm btn-outline-primary">Payroll</a>
+		</div>
+	</div>
+
+	<div class="row g-3">
+		<div class="col-sm-6 col-lg-3">
+			<div class="card text-white bg-primary h-100">
+				<div class="card-body">
+					<h5 class="card-title">Invoices</h5>
+					<p class="card-text">Overview of outstanding and recent invoices.</p>
+				</div>
+			</div>
+		</div>
+		<div class="col-sm-6 col-lg-3">
+			<div class="card h-100">
+				<div class="card-body">
+					<h5 class="card-title">Payroll</h5>
+					<p class="card-text">Recent payroll runs and pending approvals.</p>
+				</div>
+			</div>
+		</div>
+		<div class="col-sm-6 col-lg-3">
+			<div class="card h-100">
+				<div class="card-body">
+					<h5 class="card-title">Reports</h5>
+					<p class="card-text">Generate financial and payroll reports.</p>
+				</div>
+			</div>
+		</div>
+		<div class="col-sm-6 col-lg-3">
+			<div class="card h-100">
+				<div class="card-body">
+					<h5 class="card-title">Users</h5>
+					<p class="card-text">Manage users and roles.</p>
+				</div>
+			</div>
+		</div>
+	</div>
+
 </main>
 
 <%- include('partials/footer') %>

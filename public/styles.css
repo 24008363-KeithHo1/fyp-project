@@ -1,8 +1,13 @@
-body{font-family:Segoe UI,Roboto,Arial,sans-serif;margin:0;padding:0;color:#222}
+body{font-family:Segoe UI,Roboto,Arial,sans-serif;margin:0;padding:0;color:#222;background:#f8f9fb}
 header{background:#0b63a4;color:#fff;padding:1rem}
-nav{background:#f4f6f8;padding:.5rem 1rem}
-nav a{color:#0b63a4;text-decoration:none}
+nav{background:transparent;padding:.5rem 1rem}
+nav a{color:var(--bs-body-color);text-decoration:none}
 main{padding:1rem}
 form input, form select{padding:.5rem;margin:.25rem 0;display:block;width:100%;max-width:360px}
 button{padding:.5rem 1rem;background:#0b63a4;color:#fff;border:none;border-radius:4px}
 footer{background:#fafafa;padding:1rem;text-align:center;color:#666}
+
+/* Small overrides for Bootstrap components */
+.navbar-brand{font-weight:600}
+.card-title{font-weight:600}
+.card.text-white.bg-primary{background:#0b63a4!important}
