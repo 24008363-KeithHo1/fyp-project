@@ -11,3 +11,14 @@ footer{background:#fafafa;padding:1rem;text-align:center;color:#666}
 .navbar-brand{font-weight:600}
 .card-title{font-weight:600}
 .card.text-white.bg-primary{background:#0b63a4!important}
+
+/* App container and card styles for clean boxed layout */
+.app-container{max-width:1100px;margin-left:auto;margin-right:auto}
+.content-card{background:#fff;border-radius:8px;padding:1.5rem;border:1px solid rgba(16,24,40,0.06)}
+.content-card h2{margin-top:0;margin-bottom:0.75rem}
+.page-title{font-size:1.25rem;font-weight:700}
+.shadow-sm{box-shadow:0 1px 3px rgba(16,24,40,0.06)}
+
+/* Tweak header inside container */
+header .container{display:flex;align-items:center;justify-content:space-between}
+header h1{font-size:1.1rem;margin:0}
