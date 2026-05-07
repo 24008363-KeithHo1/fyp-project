@@ -1,111 +1,93 @@
 <%- include('partials/header', { title: 'Payroll' }) %>
 <%- include('partials/navbar') %>
 
-<main style="padding: 20px; font-family: Arial, sans-serif;">
-  <h2>Payroll Management</h2>
-  
-  <div style="border: 1px solid #ddd; padding: 15px; margin-bottom: 20px; background: #f9f9f9;">
-    <h3>Upload Payroll Data</h3>
-    <p style="font-size: 12px; color: #666;">
-      Excel columns: id | employee_name | employee_email | period | gross | net | data | createdAt | updatedAt
-    </p>
-    <form id="upload" enctype="multipart/form-data">
-      <input type="file" id="file" accept=".xlsx" required style="padding: 8px; width: 300px;">
-      <button type="submit" style="padding: 8px 20px; background: #007bff; color: white; border: none; cursor: pointer;">Upload Excel</button>
-    </form>
+<main class="container my-4">
+  <script>const token = localStorage.getItem('token'); if (!token) location = '/login';</script>
+
+  <div class="row mb-3">
+    <div class="col-md-6">
+      <div class="card shadow-sm">
+        <div class="card-body">
+          <h5 class="card-title">Upload Payroll Data</h5>
+          <p class="text-muted small">Excel columns: id | employee_name | employee_email | period | gross | net | data</p>
+          <form id="upload" enctype="multipart/form-data" class="d-flex gap-2 align-items-center">
+            <input type="file" id="file" accept=".xlsx" required class="form-control-file form-control">
+            <button type="submit" class="btn btn-primary">Upload Excel</button>
+          </form>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-6 d-flex align-items-center justify-content-end">
+      <div>
+        <a href="/payroll/new" class="btn btn-outline-secondary">New Payroll Run</a>
+      </div>
+    </div>
   </div>
 
-  <table border="1" style="width: 100%; border-collapse: collapse; margin-top: 20px;">
-    <thead>
-      <tr style="background: #007bff; color: white;">
-        <th style="padding: 10px; text-align: left;">id</th>
-        <th style="padding: 10px; text-align: left;">employee_name</th>
-        <th style="padding: 10px; text-align: left;">employee_email</th>
-        <th style="padding: 10px; text-align: left;">period</th>
-        <th style="padding: 10px; text-align: right;">gross</th>
-        <th style="padding: 10px; text-align: right;">net</th>
-        <th style="padding: 10px; text-align: center;">data</th>
-        <th style="padding: 10px; text-align: center;">createdAt</th>
-        <th style="padding: 10px; text-align: center;">updatedAt</th>
+  <div class="card shadow-sm">
+    <div class="card-body">
+      <h5 class="card-title">Payroll Records</h5>
+      <div class="table-responsive">
+        <table class="table table-striped table-hover align-middle">
+          <thead class="table-light">
+            <tr>
+              <th>Employee</th>
+              <th>Period</th>
+              <th class="text-end">Gross</th>
+              <th class="text-end">Allowances</th>
+              <th class="text-end">Deductions</th>
+              <th class="text-end">Net</th>
+              <th class="text-center">Payslip</th>
+            </tr>
+          </thead>
+          <tbody id="list"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
 
-      </tr>
-    </thead>
-    <tbody id="list"></tbody>
-  </table>
+  <script>
+  document.getElementById('upload').addEventListener('submit', async e => {
+    e.preventDefault();
+    const file = document.getElementById('file').files[0];
+    const fd = new FormData(); fd.append('file', file);
+    try {
+      const res = await fetch('/api/payroll/upload', { method: 'POST', headers: { authorization: 'Bearer ' + token }, body: fd });
+      const data = await res.json();
+      alert(`Imported ${data.imported || 0} records successfully!`);
+      document.getElementById('file').value = '';
+      load();
+    } catch (err) { alert('Upload failed: ' + err.message); }
+  });
+
+  async function load() {
+    try {
+      const res = await fetch('/api/payroll', { headers: { authorization: 'Bearer ' + token } });
+      if (!res.ok) return;
+      const items = await res.json();
+      const tbody = document.getElementById('list'); tbody.innerHTML = '';
+      if (!items || items.length === 0) { tbody.innerHTML = '<tr><td colspan="7" class="text-center text-muted">No payroll records found</td></tr>'; return; }
+      items.forEach(p => {
+        const allowancesTotal = Object.values(p.allowances || {}).reduce((a, b) => a + parseFloat(b || 0), 0);
+        const deductionsTotal = Object.values(p.deductions || {}).reduce((a, b) => a + parseFloat(b || 0), 0);
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td>${p.employee_name || ''}</td>
+          <td>${p.period || ''}</td>
+          <td class="text-end">${parseFloat(p.gross||0).toFixed(2)}</td>
+          <td class="text-end text-success">${allowancesTotal.toFixed(2)}</td>
+          <td class="text-end text-danger">${deductionsTotal.toFixed(2)}</td>
+          <td class="text-end fw-bold">${parseFloat(p.net||0).toFixed(2)}</td>
+          <td class="text-center"><a class="btn btn-sm btn-outline-primary" href="/api/payroll/${p.id}/payslip" target="_blank">PDF</a></td>
+        `;
+        tbody.appendChild(tr);
+      });
+    } catch (err) { console.error('Load error:', err); }
+  }
+
+  load();
+  </script>
+
 </main>
-
-<script>
-const token = localStorage.getItem('token');
-if (!token) location = '/login';
-
-document.getElementById('upload').addEventListener('submit', async e => {
-  e.preventDefault();
-  const file = document.getElementById('file').files[0];
-  const fd = new FormData();
-  fd.append('file', file);
-  try {
-    const res = await fetch('/api/payroll/upload', {
-      method: 'POST',
-      headers: { authorization: 'Bearer ' + token },
-      body: fd
-    });
-    const data = await res.json();
-    alert(`Imported ${data.imported} records successfully!`);
-    document.getElementById('file').value = '';
-    load();
-  } catch (err) {
-    alert('Upload failed: ' + err.message);
-  }
-});
-
-async function load() {
-  try {
-    const res = await fetch('/api/payroll', { 
-      headers: { authorization: 'Bearer ' + token } 
-    });
-    if (!res.ok) {
-      alert('Error: ' + res.status + ' - ' + res.statusText);
-      return;
-    }
-    const items = await res.json();
-    if (!Array.isArray(items)) {
-      console.error('Response is not an array:', items);
-      alert('Error: Unexpected response format');
-      return;
-    }
-    const tbody = document.getElementById('list');
-    tbody.innerHTML = '';
-    
-    if (items.length === 0) {
-      tbody.innerHTML = '<tr><td colspan="7" style="padding: 20px; text-align: center; color: #999;">No payroll records found</td></tr>';
-      return;
-    }
-    
-    items.forEach(p => {
-      const tr = document.createElement('tr');
-      const allowancesTotal = Object.values(p.allowances || {}).reduce((a, b) => a + parseFloat(b || 0), 0);
-      const deductionsTotal = Object.values(p.deductions || {}).reduce((a, b) => a + parseFloat(b || 0), 0);
-      
-      tr.innerHTML = `
-        <td style="padding: 10px; border-bottom: 1px solid #ddd;">${p.employee_name}</td>
-        <td style="padding: 10px; border-bottom: 1px solid #ddd;">${p.period}</td>
-        <td style="padding: 10px; border-bottom: 1px solid #ddd; text-align: right;">$${parseFloat(p.gross || 0).toFixed(2)}</td>
-        <td style="padding: 10px; border-bottom: 1px solid #ddd; text-align: right; color: #28a745;">$${allowancesTotal.toFixed(2)}</td>
-        <td style="padding: 10px; border-bottom: 1px solid #ddd; text-align: right; color: #dc3545;">-$${deductionsTotal.toFixed(2)}</td>
-        <td style="padding: 10px; border-bottom: 1px solid #ddd; text-align: right; font-weight: bold; font-size: 14px;">$${parseFloat(p.net || 0).toFixed(2)}</td>
-        <td style="padding: 10px; border-bottom: 1px solid #ddd; text-align: center;">
-          <a href="/api/payroll/${p.id}/payslip" target="_blank" style="color: #007bff; text-decoration: none;">📄 PDF</a>
-        </td>
-      `;
-      tbody.appendChild(tr);
-    });
-  } catch (err) {
-    console.error('Load error:', err);
-    alert('Failed to load payroll: ' + err.message);
-  }
-}
-
-load();
-</script>
 
 <%- include('partials/footer') %>

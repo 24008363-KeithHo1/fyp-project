@@ -1,32 +1,94 @@
 <%- include('partials/header', { title: 'Invoices' }) %>
 <%- include('partials/navbar') %>
 
-<main>
-  <h2>Invoices</h2>
-  <form id="create">
-    <input placeholder="Customer name" id="customer"><br>
-    <input placeholder="Amount" id="amount"><br>
-    <input type="date" id="due"><br>
-    <button>Create</button>
-  </form>
-  <ul id="list"></ul>
-</main>
+<main class="container my-4">
+  <script>const token = localStorage.getItem('token'); if (!token) location = '/login';</script>
 
-<script>
-const token = localStorage.getItem('token');
-if (!token) location = '/login';
-async function load(){
-  const res = await fetch('/api/invoices',{headers:{authorization:'Bearer '+token}});
-  const items = await res.json();
-  const ul = document.getElementById('list'); ul.innerHTML='';
-  items.forEach(i=>{ const li=document.createElement('li'); li.innerHTML=`${i.number} - ${i.customer_name} - ${i.amount} - <a href='/api/invoices/${i.id}/pdf' target='_blank'>PDF</a>`; ul.appendChild(li); });
-}
-document.getElementById('create').addEventListener('submit', async e=>{
-  e.preventDefault();
-  await fetch('/api/invoices',{method:'POST',headers:{authorization:'Bearer '+token,'content-type':'application/json'},body:JSON.stringify({customer_name:document.getElementById('customer').value,amount:document.getElementById('amount').value,due_date:document.getElementById('due').value})});
+  <div class="row">
+    <div class="col-lg-4">
+      <div class="card mb-3 shadow-sm">
+        <div class="card-body">
+          <h5 class="card-title">Create Invoice</h5>
+          <form id="create">
+            <div class="mb-3">
+              <label for="customer" class="form-label">Customer name</label>
+              <input id="customer" class="form-control" placeholder="Customer name" required>
+            </div>
+            <div class="mb-3">
+              <label for="amount" class="form-label">Amount</label>
+              <input id="amount" class="form-control" placeholder="0.00" inputmode="decimal" required>
+            </div>
+            <div class="mb-3">
+              <label for="due" class="form-label">Due date</label>
+              <input type="date" id="due" class="form-control">
+            </div>
+            <div class="d-grid gap-2">
+              <button class="btn btn-primary" type="submit">Create Invoice</button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-lg-8">
+      <div class="card shadow-sm">
+        <div class="card-body">
+          <h5 class="card-title">Invoices</h5>
+          <div class="table-responsive">
+            <table class="table table-hover align-middle">
+              <thead class="table-light">
+                <tr>
+                  <th>Number</th>
+                  <th>Customer</th>
+                  <th class="text-end">Amount</th>
+                  <th>Due</th>
+                  <th>Status</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody id="list"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+  async function load(){
+    const res = await fetch('/api/invoices',{headers:{authorization:'Bearer '+token}});
+    if (!res.ok) return;
+    const items = await res.json();
+    const tbody = document.getElementById('list'); tbody.innerHTML='';
+    if (!items || !items.length) tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted">No invoices</td></tr>';
+    items.forEach(i=>{
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td>${i.number || ''}</td>
+        <td>${i.customer_name || ''}</td>
+        <td class="text-end">${parseFloat(i.amount||0).toFixed(2)}</td>
+        <td>${i.due_date ? new Date(i.due_date).toLocaleDateString() : ''}</td>
+        <td>${i.status || ''}</td>
+        <td class="text-end"><a class="btn btn-sm btn-outline-primary" href="/api/invoices/${i.id}/pdf" target="_blank">PDF</a></td>
+      `;
+      tbody.appendChild(tr);
+    });
+  }
+
+  document.getElementById('create').addEventListener('submit', async e=>{
+    e.preventDefault();
+    const payload = { customer_name:document.getElementById('customer').value, amount:document.getElementById('amount').value, due_date:document.getElementById('due').value };
+    const res = await fetch('/api/invoices',{method:'POST',headers:{authorization:'Bearer '+token,'content-type':'application/json'},body:JSON.stringify(payload)});
+    if (res.ok){
+      document.getElementById('create').reset();
+      load();
+    } else {
+      const err = await res.json(); alert(err.error || 'Failed to create invoice');
+    }
+  });
   load();
-});
-load();
-</script>
+  </script>
+
+</main>
 
 <%- include('partials/footer') %>
