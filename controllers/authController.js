@@ -5,7 +5,6 @@ const speakeasy = require('speakeasy');
 const qrcode = require('qrcode');
 const { jwtSecret, jwtExpiry } = require('../config/config');
 const User = require('../models/User');
-const Role = require('../models/Role');
 const InviteToken = require('../models/InviteToken');
 const PasswordResetToken = require('../models/PasswordResetToken');
 const { sendEmail, inviteEmailHtml, resetEmailHtml } = require('../utils/email');
@@ -22,7 +21,7 @@ exports.register = async (req, res) => {
       it.used = true; await it.save();
     }
     const hash = await bcrypt.hash(password, 10);
-    const user = await User.create({ name, email, password: hash, role: role || 'Staff', isVerified: !!inviteToken });  // Use direct role field
+    const user = await User.create({ name, email, password: hash, role: role || 'Staff', isVerified: !!inviteToken });
     res.json({ id: user.id, email: user.email });
   } catch (err) {
     res.status(400).json({ error: err.message });
@@ -32,7 +31,7 @@ exports.register = async (req, res) => {
 exports.login = async (req, res) => {
   try {
     const { email, password } = req.body;
-    const user = await User.findOne({ where: { email } });  // Remove include: ['role'] since role is direct field
+    const user = await User.findOne({ where: { email } });
     if (!user) return res.status(401).json({ error: 'Invalid credentials' });
     const match = await bcrypt.compare(password, user.password);
     if (!match) return res.status(401).json({ error: 'Invalid credentials' });
@@ -41,8 +40,8 @@ exports.login = async (req, res) => {
       const mfaToken = jwt.sign({ id: user.id, mfa: true }, jwtSecret, { expiresIn: '5m' });
       return res.json({ mfaRequired: true, mfaToken });
     }
-    const token = jwt.sign({ id: user.id, role: user.role }, jwtSecret, { expiresIn: jwtExpiry });  // Use direct role field
-    res.json({ token, user: { id: user.id, name: user.name, email: user.email, role: user.role } });  // Use direct role field
+    const token = jwt.sign({ id: user.id, role: user.role }, jwtSecret, { expiresIn: jwtExpiry });
+    res.json({ token, user: { id: user.id, name: user.name, email: user.email, role: user.role } });
   } catch (err) {
     res.status(400).json({ error: err.message });
   }
@@ -53,11 +52,11 @@ exports.mfaVerify = async (req, res) => {
     const { mfaToken, code } = req.body;
     const payload = jwt.verify(mfaToken, jwtSecret);
     if (!payload || !payload.id || !payload.mfa) return res.status(400).json({ error: 'Invalid MFA token' });
-    const user = await User.findByPk(payload.id, { include: ['role'] });
+    const user = await User.findByPk(payload.id);
     if (!user) return res.status(404).json({ error: 'User not found' });
     const verified = speakeasy.totp.verify({ secret: user.mfaSecret, encoding: 'base32', token: code, window: 1 });
     if (!verified) return res.status(401).json({ error: 'Invalid code' });
-    const token = jwt.sign({ id: user.id, role: user.role && user.role.name }, jwtSecret, { expiresIn: jwtExpiry });
+    const token = jwt.sign({ id: user.id, role: user.role }, jwtSecret, { expiresIn: jwtExpiry });
     res.json({ token });
   } catch (err) { res.status(400).json({ error: err.message }); }
 };
@@ -134,14 +133,4 @@ exports.resetPassword = async (req, res) => {
     pr.used = true; await pr.save();
     res.json({ ok: true });
   } catch (err) { res.status(400).json({ error: err.message }); }
-};
-
-exports.seedRoles = async (req, res) => {
-  try {
-    const roles = ['Admin','Finance','HR','Staff'];
-    for (const name of roles) await Role.findOrCreate({ where: { name } });
-    res.json({ seeded: roles });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
 };

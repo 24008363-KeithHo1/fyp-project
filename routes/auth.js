@@ -4,7 +4,6 @@ const auth = require('../controllers/authController');
 
 router.post('/register', auth.register);
 router.post('/login', auth.login);
-router.post('/seed-roles', auth.seedRoles);
 router.post('/invite', require('../middlewares/auth'), auth.invite);
 router.get('/verify-invite', auth.verifyInvite);
 router.post('/request-reset', auth.requestPasswordReset);

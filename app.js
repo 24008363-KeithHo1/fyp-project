@@ -44,7 +44,9 @@ async function start() {
     await sequelize.authenticate();
     console.log('DB connected');
     await sequelize.sync();
-    app.listen(PORT, () => console.log(`Server running on ${PORT}`));
+    app.listen(PORT, () => {
+      console.log(`Server running at http://localhost:${PORT}`);
+    });
   } catch (err) {
     console.error('Failed to start', err);
     process.exit(1);
