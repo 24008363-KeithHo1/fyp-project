@@ -24,6 +24,7 @@ app.get('/login', (req, res) => res.render('login'));
 app.get('/dashboard', (req, res) => res.render('dashboard'));
 app.get('/invoices', (req, res) => res.render('invoice'));
 app.get('/payroll', (req, res) => res.render('payroll'));
+app.get('/mypayslips', require('./middlewares/auth'), require('./controllers/payrollController').mypayslipsView);
 app.get('/reports', (req, res) => res.render('reports'));
 app.get('/register', (req, res) => res.render('register', { token: req.query.token || '', email: req.query.email || '' }));
 app.get('/reset', (req, res) => res.render('reset', { token: req.query.token || '' }));

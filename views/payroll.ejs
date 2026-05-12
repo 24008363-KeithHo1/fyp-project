@@ -2,40 +2,85 @@
 <%- include('partials/navbar') %>
   <script>const token = localStorage.getItem('token'); if (!token) location = '/login';</script>
 
-  <div class="row mb-3">
+  <div class="row mb-4">
+    <div class="col-md-8">
+      <h2 class="mb-0">Payroll Management</h2>
+      <p class="text-muted mb-0">Manage employee payroll records and generate payslips</p>
+    </div>
+    <div class="col-md-4 text-end">
+      <a href="/mypayslips" class="btn btn-outline-primary me-2">
+        <i class="fas fa-eye"></i> My Payslips
+      </a>
+      <a href="/reports" class="btn btn-outline-secondary">
+        <i class="fas fa-chart-bar"></i> Reports
+      </a>
+    </div>
+  </div>
+
+  <div class="row mb-4">
     <div class="col-md-6">
-      <div class="card shadow-sm">
+      <div class="card shadow-sm h-100">
         <div class="card-body">
-          <h5 class="card-title">Upload Payroll Data</h5>
-          <p class="text-muted small">Excel columns: id | employee_name | employee_email | period | gross | net | data</p>
+          <h5 class="card-title">
+            <i class="fas fa-upload text-primary"></i> Upload Payroll Data
+          </h5>
+          <p class="text-muted small mb-3">
+            <strong>Excel Format:</strong> Column 1 (skip/ID) | Column 2: employee_name | Column 3: employee_email | Column 4: period | Column 5: gross | Column 6: net | Column 7: deductions
+          </p>
           <form id="upload" enctype="multipart/form-data" class="d-flex gap-2 align-items-center">
-            <input type="file" id="file" accept=".xlsx" required class="form-control-file form-control">
-            <button type="submit" class="btn btn-primary">Upload Excel</button>
+            <input type="file" id="file" accept=".xlsx,.xls,.csv" required class="form-control form-control-sm">
+            <button type="submit" class="btn btn-primary btn-sm">
+              <i class="fas fa-upload"></i> Upload
+            </button>
           </form>
         </div>
       </div>
     </div>
-    <div class="col-md-6 d-flex align-items-center justify-content-end">
-      <div>
-        <a href="/payroll/new" class="btn btn-outline-secondary">New Payroll Run</a>
+    <div class="col-md-6">
+      <div class="card shadow-sm h-100">
+        <div class="card-body">
+          <h5 class="card-title">
+            <i class="fas fa-info-circle text-info"></i> Quick Stats
+          </h5>
+          <div class="row text-center">
+            <div class="col-4">
+              <div class="h4 mb-1" id="totalRecords">0</div>
+              <small class="text-muted">Total Records</small>
+            </div>
+            <div class="col-4">
+              <div class="h4 mb-1 text-success" id="totalGross">$0</div>
+              <small class="text-muted">Total Gross</small>
+            </div>
+            <div class="col-4">
+              <div class="h4 mb-1 text-primary" id="totalNet">$0</div>
+              <small class="text-muted">Total Net</small>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   </div>
 
   <div class="card shadow-sm">
-    <div class="card-body">
-      <h5 class="card-title">Payroll Records</h5>
+    <div class="card-body p-0">
+      <div class="card-header bg-white border-bottom-0">
+        <h5 class="card-title mb-0">
+          <i class="fas fa-list text-secondary"></i> Payroll Records
+        </h5>
+      </div>
       <div class="table-responsive">
-        <table class="table table-striped table-hover align-middle">
+        <table class="table table-striped table-hover align-middle mb-0" id="payrollTable">
           <thead class="table-light">
             <tr>
-              <th>Employee</th>
-              <th>Period</th>
-              <th class="text-end">Gross</th>
-              <th class="text-end">Allowances</th>
-              <th class="text-end">Deductions</th>
-              <th class="text-end">Net</th>
-              <th class="text-center">Payslip</th>
+              <th class="border-0">ID</th>
+              <th class="border-0">Employee</th>
+              <th class="border-0">Period</th>
+              <th class="text-end border-0">Gross</th>
+              <th class="text-end border-0">Deductions</th>
+              <th class="text-end border-0">Net</th>
+              <th class="border-0">Created</th>
+              <th class="border-0">Updated</th>
+              <th class="text-center border-0">Actions</th>
             </tr>
           </thead>
           <tbody id="list"></tbody>
@@ -44,19 +89,85 @@
     </div>
   </div>
 
+  <!-- Edit Payroll Modal -->
+  <div class="modal fade" id="editModal" tabindex="-1" aria-labelledby="editModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="editModalLabel">Edit Payroll Record</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <form id="editForm">
+            <input type="hidden" id="editId">
+            <div class="row g-3">
+              <div class="col-md-6">
+                <label for="editEmployeeName" class="form-label">Employee Name</label>
+                <input type="text" class="form-control" id="editEmployeeName" required>
+              </div>
+              <div class="col-md-6">
+                <label for="editEmployeeEmail" class="form-label">Employee Email</label>
+                <input type="email" class="form-control" id="editEmployeeEmail" required>
+              </div>
+              <div class="col-md-6">
+                <label for="editPeriod" class="form-label">Period</label>
+                <input type="text" class="form-control" id="editPeriod" required>
+              </div>
+              <div class="col-md-6">
+                <label for="editGross" class="form-label">Gross Amount</label>
+                <input type="number" class="form-control" id="editGross" step="0.01" min="0" required>
+              </div>
+              <div class="col-md-6">
+                <label for="editDeductions" class="form-label">Deductions</label>
+                <input type="number" class="form-control" id="editDeductions" step="0.01" min="0" required>
+              </div>
+              <div class="col-md-6">
+                <label for="editNet" class="form-label">Net Amount</label>
+                <input type="number" class="form-control" id="editNet" step="0.01" min="0" required>
+              </div>
+            </div>
+          </form>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+          <button type="button" class="btn btn-primary" id="saveEdit">Save Changes</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <script>
   document.getElementById('upload').addEventListener('submit', async e => {
     e.preventDefault();
     const file = document.getElementById('file').files[0];
+    if (!file) {
+      alert('Please select a file');
+      return;
+    }
     const fd = new FormData(); fd.append('file', file);
     try {
       const res = await fetch('/api/payroll/upload', { method: 'POST', headers: { authorization: 'Bearer ' + token }, body: fd });
       const data = await res.json();
-      alert(`Imported ${data.imported || 0} records successfully!`);
+      
+      if (!res.ok) {
+        alert(`Error: ${data.error}\n${data.details ? data.details.join('\n') : ''}`);
+        return;
+      }
+      
+      let msg = `✓ Imported ${data.imported || 0} new records, updated ${data.updated || 0} existing records`;
+      if (data.warnings) {
+        msg += `\n⚠ ${data.warnings}`;
+      }
+      alert(msg);
       document.getElementById('file').value = '';
       load();
     } catch (err) { alert('Upload failed: ' + err.message); }
   });
+
+  function formatDate(dateString) {
+    if (!dateString) return '-';
+    return new Date(dateString).toLocaleString();
+  }
 
   async function load() {
     try {
@@ -64,24 +175,115 @@
       if (!res.ok) return;
       const items = await res.json();
       const tbody = document.getElementById('list'); tbody.innerHTML = '';
-      if (!items || items.length === 0) { tbody.innerHTML = '<tr><td colspan="7" class="text-center text-muted">No payroll records found</td></tr>'; return; }
+      
+      if (!items || items.length === 0) { 
+        tbody.innerHTML = '<tr><td colspan="9" class="text-center text-muted py-4">No payroll records found</td></tr>';
+        updateStats(0, 0, 0);
+        return; 
+      }
+      
+      let totalGross = 0;
+      let totalNet = 0;
+      
       items.forEach(p => {
-        const allowancesTotal = Object.values(p.allowances || {}).reduce((a, b) => a + parseFloat(b || 0), 0);
-        const deductionsTotal = Object.values(p.deductions || {}).reduce((a, b) => a + parseFloat(b || 0), 0);
+        totalGross += parseFloat(p.gross || 0);
+        totalNet += parseFloat(p.net || 0);
+        
         const tr = document.createElement('tr');
         tr.innerHTML = `
-          <td>${p.employee_name || ''}</td>
-          <td>${p.period || ''}</td>
-          <td class="text-end">${parseFloat(p.gross||0).toFixed(2)}</td>
-          <td class="text-end text-success">${allowancesTotal.toFixed(2)}</td>
-          <td class="text-end text-danger">${deductionsTotal.toFixed(2)}</td>
-          <td class="text-end fw-bold">${parseFloat(p.net||0).toFixed(2)}</td>
-          <td class="text-center"><a class="btn btn-sm btn-outline-primary" href="/api/payroll/${p.id}/payslip" target="_blank">PDF</a></td>
+          <td>${p.id}</td>
+          <td>
+            <div class="fw-semibold">${p.employee_name || ''}</div>
+            <small class="text-muted">${p.employee_email || ''}</small>
+          </td>
+          <td><span class="badge bg-light text-dark">${p.period || ''}</span></td>
+          <td class="text-end fw-semibold">${parseFloat(p.gross||0).toFixed(2)}</td>
+          <td class="text-end text-danger">${parseFloat(p.deductions||0).toFixed(2)}</td>
+          <td class="text-end fw-bold text-primary">${parseFloat(p.net||0).toFixed(2)}</td>
+          <td><small class="text-muted">${formatDate(p.createdAt)}</small></td>
+          <td><small class="text-muted">${formatDate(p.updatedAt)}</small></td>
+          <td class="text-center">
+            <button class="btn btn-sm btn-outline-primary me-1" onclick="editPayroll(${p.id})" title="Edit Record">
+              <i class="fas fa-edit"></i>
+            </button>
+            <a class="btn btn-sm btn-outline-success" href="/api/payroll/${p.id}/payslip" target="_blank" title="Download PDF">
+              <i class="fas fa-file-pdf"></i>
+            </a>
+          </td>
         `;
         tbody.appendChild(tr);
       });
+      
+      updateStats(items.length, totalGross, totalNet);
     } catch (err) { console.error('Load error:', err); }
   }
+
+  function updateStats(records, gross, net) {
+    document.getElementById('totalRecords').textContent = records;
+    document.getElementById('totalGross').textContent = '$' + gross.toFixed(2);
+    document.getElementById('totalNet').textContent = '$' + net.toFixed(2);
+  }
+
+  async function editPayroll(id) {
+    try {
+      const res = await fetch(`/api/payroll/${id}`, { headers: { authorization: 'Bearer ' + token } });
+      if (!res.ok) return alert('Failed to load payroll data');
+      
+      const payroll = await res.json();
+      
+      // Populate modal
+      document.getElementById('editId').value = payroll.id;
+      document.getElementById('editEmployeeName').value = payroll.employee_name || '';
+      document.getElementById('editEmployeeEmail').value = payroll.employee_email || '';
+      document.getElementById('editPeriod').value = payroll.period || '';
+      document.getElementById('editGross').value = payroll.gross || 0;
+      document.getElementById('editDeductions').value = payroll.deductions || 0;
+      document.getElementById('editNet').value = payroll.net || 0;
+      
+      // Show modal
+      const modal = new bootstrap.Modal(document.getElementById('editModal'));
+      modal.show();
+    } catch (err) {
+      console.error('Edit load error:', err);
+      alert('Failed to load payroll data');
+    }
+  }
+
+  // Save edit
+  document.getElementById('saveEdit').addEventListener('click', async () => {
+    const id = document.getElementById('editId').value;
+    const data = {
+      employee_name: document.getElementById('editEmployeeName').value.trim(),
+      employee_email: document.getElementById('editEmployeeEmail').value.trim(),
+      period: document.getElementById('editPeriod').value.trim(),
+      gross: parseFloat(document.getElementById('editGross').value) || 0,
+      deductions: parseFloat(document.getElementById('editDeductions').value) || 0,
+      net: parseFloat(document.getElementById('editNet').value) || 0
+    };
+
+    try {
+      const res = await fetch(`/api/payroll/${id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          authorization: 'Bearer ' + token
+        },
+        body: JSON.stringify(data)
+      });
+
+      if (!res.ok) {
+        const error = await res.json();
+        return alert('Update failed: ' + (error.error || 'Unknown error'));
+      }
+
+      alert('Payroll record updated successfully!');
+      bootstrap.Modal.getInstance(document.getElementById('editModal')).hide();
+      load(); // Refresh table
+    } catch (err) {
+      console.error('Update error:', err);
+      alert('Update failed: ' + err.message);
+    }
+  });
 
   load();
   </script>

@@ -1,6 +1,29 @@
 const Payroll = require('../models/Payroll');
 const multer = require('multer');
-const upload = multer({ dest: 'uploads/' });
+const path = require('path');
+
+// Configure multer for Excel uploads
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    cb(null, 'uploads/');
+  },
+  filename: (req, file, cb) => {
+    cb(null, Date.now() + path.extname(file.originalname));
+  }
+});
+
+const upload = multer({ 
+  storage: storage,
+  fileFilter: (req, file, cb) => {
+    const ext = path.extname(file.originalname).toLowerCase();
+    if (ext === '.xlsx' || ext === '.xls' || ext === '.csv') {
+      cb(null, true);
+    } else {
+      cb(new Error('Only Excel files (.xlsx, .xls, .csv) are allowed'));
+    }
+  }
+});
+
 const { parsePayrollExcel } = require('../utils/excel');
 const { generatePayslipPDF } = require('../utils/pdf');
 
@@ -8,24 +31,68 @@ exports.uploadMiddleware = upload.single('file');
 
 exports.upload = async (req, res) => {
   try {
-    const rows = await parsePayrollExcel(req.file.path);
-    const created = [];
-    for (const r of rows) {
-      const p = await Payroll.create({ 
-        employee_name: r.employee_name, 
-        employee_email: r.employee_email, 
-        period: r.period, 
-        gross: r.gross, 
-        allowances: r.allowances,
-        deductions: r.deductions,
-        net: r.net, 
-        data: r 
-      });
-      created.push(p);
+    if (!req.file) {
+      return res.status(400).json({ error: 'No file uploaded' });
     }
-    res.json({ imported: created.length });
+    
+    const { rows, errors } = await parsePayrollExcel(req.file.path);
+    
+    // If there are errors but no valid rows, reject the upload
+    if (errors.length > 0 && rows.length === 0) {
+      return res.status(400).json({ error: 'Validation errors - no valid rows to import', details: errors });
+    }
+    
+    const created = [];
+    const updated = [];
+    
+    for (const r of rows) {
+      // Try to find existing record by employee_email and period
+      const existing = await Payroll.findOne({
+        where: { 
+          employee_email: r.employee_email,
+          period: r.period
+        }
+      });
+
+      if (existing) {
+        // Update existing record - updatedAt will be automatically set by Sequelize
+        await existing.update({ 
+          employee_name: r.employee_name, 
+          gross: r.gross, 
+          deductions: r.deductions,
+          net: r.net
+        });
+        updated.push(existing);
+      } else {
+        // Create new record - createdAt and updatedAt will be automatically set by Sequelize
+        const p = await Payroll.create({ 
+          employee_name: r.employee_name, 
+          employee_email: r.employee_email, 
+          period: r.period, 
+          gross: r.gross, 
+          deductions: r.deductions,
+          net: r.net
+        });
+        created.push(p);
+      }
+    }
+    
+    const response = { 
+      imported: created.length, 
+      updated: updated.length,
+      total: created.length + updated.length
+    };
+    
+    // Include validation errors in response if any
+    if (errors.length > 0) {
+      response.warnings = `${errors.length} rows had validation issues and were skipped`;
+      response.errorDetails = errors;
+    }
+    
+    res.json(response);
   } catch (err) {
-    res.status(400).json({ error: err.message });
+    console.error('Upload error:', err);
+    res.status(400).json({ error: err.message, stack: err.stack });
   }
 };
 
@@ -40,6 +107,28 @@ exports.get = async (req, res) => {
   res.json(p);
 };
 
+exports.update = async (req, res) => {
+  try {
+    const p = await Payroll.findByPk(req.params.id);
+    if (!p) return res.status(404).json({ error: 'Not found' });
+    
+    const { employee_name, employee_email, period, gross, deductions, net } = req.body;
+    
+    await p.update({
+      ...(employee_name && { employee_name }),
+      ...(employee_email && { employee_email }),
+      ...(period && { period }),
+      ...(gross !== undefined && { gross }),
+      ...(deductions !== undefined && { deductions }),
+      ...(net !== undefined && { net })
+    });
+    
+    res.json({ message: 'Updated successfully', payroll: p });
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+};
+
 exports.myslips = async (req, res) => {
   const payrolls = await Payroll.findAll({
     where: { employee_email: req.user.email },
@@ -48,10 +137,26 @@ exports.myslips = async (req, res) => {
   res.json(payrolls);
 };
 
+exports.mypayslipsView = async (req, res) => {
+  const payrolls = await Payroll.findAll({
+    where: { employee_email: req.user.email },
+    order: [['id', 'DESC']]
+  });
+  res.render('mypayslips', { payrolls });
+};
+
 exports.payslip = async (req, res) => {
   const p = await Payroll.findByPk(req.params.id);
   if (!p) return res.status(404).json({ error: 'Not found' });
   const stream = await generatePayslipPDF(p);
   res.setHeader('Content-Type','application/pdf');
   stream.pipe(res);
+};
+
+exports.mypayslipsView = async (req, res) => {
+  const payrolls = await Payroll.findAll({
+    where: { employee_email: req.user.email },
+    order: [['id', 'DESC']]
+  });
+  res.render('mypayslips', { payrolls });
 };
