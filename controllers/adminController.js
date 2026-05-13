@@ -1,4 +1,5 @@
 const User = require('../models/User');
+const AuditLog = require('../models/AuditLog');
 
 exports.ensureAdmin = (req, res, next) => {
   if (!req.user || req.user.role !== 'Admin') return res.status(403).send('Forbidden');
@@ -30,6 +31,17 @@ exports.updateUser = async (req, res) => {
   try {
     const { role, isActive } = req.body;
     await User.update({ role, isActive: isActive === 'on' }, { where: { id: req.params.id } });
+    try {
+      await AuditLog.create({
+        userId: req.user && req.user.id ? req.user.id : null,
+        action: 'update_user',
+        entity: 'User',
+        entityId: parseInt(req.params.id, 10),
+        meta: { role, isActive: isActive === 'on' }
+      });
+    } catch (logErr) {
+      console.error('Audit log failed:', logErr);
+    }
     res.redirect('/admin/users');
   } catch (err) {
     console.error(err);
