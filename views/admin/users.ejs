@@ -1,0 +1,25 @@
+<%- include('../partials/header') -%>
+<%- include('../partials/navbar') -%>
+
+<div class="container mt-4">
+  <h2>Users</h2>
+  <table class="table table-striped">
+    <thead>
+      <tr><th>ID</th><th>Name</th><th>Email</th><th>Role</th><th>Active</th><th>Actions</th></tr>
+    </thead>
+    <tbody>
+      <% users.forEach(function(u){ %>
+        <tr>
+          <td><%= u.id %></td>
+          <td><%= u.name %></td>
+          <td><%= u.email %></td>
+          <td><%= u.role %></td>
+          <td><%= u.isActive ? 'Yes' : 'No' %></td>
+          <td><a class="btn btn-sm btn-primary" href="/admin/users/<%= u.id %>/edit">Edit</a></td>
+        </tr>
+      <% }) %>
+    </tbody>
+  </table>
+</div>
+
+<%- include('../partials/footer') -%>

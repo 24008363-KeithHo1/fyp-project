@@ -1,0 +1,33 @@
+<%- include('../partials/header') -%>
+<%- include('../partials/navbar') -%>
+
+<div class="container mt-4">
+  <h2>Edit User</h2>
+  <form method="post" action="/admin/users/<%= user.id %>">
+    <div class="mb-3">
+      <label class="form-label">Name</label>
+      <input class="form-control" value="<%= user.name %>" disabled />
+    </div>
+    <div class="mb-3">
+      <label class="form-label">Email</label>
+      <input class="form-control" value="<%= user.email %>" disabled />
+    </div>
+    <div class="mb-3">
+      <label class="form-label">Role</label>
+      <select name="role" class="form-select">
+        <option value="Admin" <%= user.role === 'Admin' ? 'selected' : '' %>>Admin</option>
+        <option value="Finance" <%= user.role === 'Finance' ? 'selected' : '' %>>Finance</option>
+        <option value="HR" <%= user.role === 'HR' ? 'selected' : '' %>>HR</option>
+        <option value="Staff" <%= user.role === 'Staff' ? 'selected' : '' %>>Staff</option>
+      </select>
+    </div>
+    <div class="form-check mb-3">
+      <input class="form-check-input" type="checkbox" name="isActive" id="isActive" <%= user.isActive ? 'checked' : '' %> />
+      <label class="form-check-label" for="isActive">Active</label>
+    </div>
+    <button class="btn btn-primary" type="submit">Save</button>
+    <a class="btn btn-secondary" href="/admin/users">Cancel</a>
+  </form>
+</div>
+
+<%- include('../partials/footer') -%>

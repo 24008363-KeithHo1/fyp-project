@@ -34,6 +34,8 @@ app.get('/mfa-setup', (req, res) => res.render('mfa-setup'));
 app.use('/api/auth', require('./routes/auth'));
 app.use('/api/invoices', require('./routes/invoice'));
 app.use('/api/payroll', require('./routes/payroll'));
+// Admin routes (UI)
+app.use('/admin', require('./routes/admin'));
 
 // health
 app.get('/api/health', (req, res) => res.json({ status: 'ok' }));
