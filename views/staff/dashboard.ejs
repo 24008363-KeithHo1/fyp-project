@@ -1,0 +1,26 @@
+<%- include('../partials/header', { title: 'Staff Dashboard' }) %>
+<%- include('../partials/navbar') %>
+
+<script>
+const token = localStorage.getItem('token');
+if (!token) location = '/login';
+try{
+  const payload = JSON.parse(atob(token.split('.')[1]));
+  if (payload.role !== 'Staff' && payload.role !== 'Admin') location = '/dashboard';
+}catch(e){ location = '/login'; }
+</script>
+
+<div class="container mt-4">
+  <h2>Staff Dashboard</h2>
+  <p>Your payslips and personal information.</p>
+  <div class="row">
+    <div class="col-md-6">
+      <a class="btn btn-primary" href="/mypayslips">My Payslips</a>
+    </div>
+    <div class="col-md-6">
+      <a class="btn btn-secondary" href="/reports">Personal Reports</a>
+    </div>
+  </div>
+</div>
+
+<%- include('../partials/footer') %>

@@ -10,5 +10,6 @@ router.use(requireRole(['Admin']));
 router.get('/users', admin.listUsers);
 router.get('/users/:id/edit', admin.editUserView);
 router.post('/users/:id', admin.updateUser);
+router.get('/dashboard', admin.dashboardView);
 
 module.exports = router;

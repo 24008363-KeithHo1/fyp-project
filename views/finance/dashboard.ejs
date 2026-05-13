@@ -1,0 +1,26 @@
+<%- include('../partials/header', { title: 'Finance Dashboard' }) %>
+<%- include('../partials/navbar') %>
+
+<script>
+const token = localStorage.getItem('token');
+if (!token) location = '/login';
+try{
+  const payload = JSON.parse(atob(token.split('.')[1]));
+  if (payload.role !== 'Finance' && payload.role !== 'Admin') location = '/dashboard';
+}catch(e){ location = '/login'; }
+</script>
+
+<div class="container mt-4">
+  <h2>Finance Dashboard</h2>
+  <p>Invoices, payments and financial summaries.</p>
+  <div class="row">
+    <div class="col-md-6">
+      <a class="btn btn-primary" href="/invoices">View Invoices</a>
+    </div>
+    <div class="col-md-6">
+      <a class="btn btn-secondary" href="/reports">Reports</a>
+    </div>
+  </div>
+</div>
+
+<%- include('../partials/footer') %>

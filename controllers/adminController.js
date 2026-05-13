@@ -48,3 +48,7 @@ exports.updateUser = async (req, res) => {
     res.status(500).send('Server error');
   }
 };
+
+exports.dashboardView = (req, res) => {
+  res.render('admin/dashboard');
+};

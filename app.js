@@ -36,6 +36,10 @@ app.use('/api/invoices', require('./routes/invoice'));
 app.use('/api/payroll', require('./routes/payroll'));
 // Admin routes (UI)
 app.use('/admin', require('./routes/admin'));
+// Role-specific dashboards
+app.use('/finance', require('./routes/finance'));
+app.use('/hr', require('./routes/hr'));
+app.use('/staff', require('./routes/staff'));
 
 // health
 app.get('/api/health', (req, res) => res.json({ status: 'ok' }));

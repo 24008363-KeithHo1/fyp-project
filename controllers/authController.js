@@ -134,3 +134,19 @@ exports.resetPassword = async (req, res) => {
     res.json({ ok: true });
   } catch (err) { res.status(400).json({ error: err.message }); }
 };
+
+exports.me = async (req, res) => {
+  try {
+    const user = req.user;
+    if (!user) return res.status(401).json({ error: 'Unauthenticated' });
+    const role = user.role || 'Staff';
+    let dashboard = '/staff/dashboard';
+    if (role === 'Admin') dashboard = '/admin/dashboard';
+    else if (role === 'Finance') dashboard = '/finance/dashboard';
+    else if (role === 'HR') dashboard = '/hr/dashboard';
+
+    res.json({ user: { id: user.id, name: user.name, email: user.email, role }, dashboard });
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+};

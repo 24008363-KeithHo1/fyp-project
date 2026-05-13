@@ -25,9 +25,25 @@
   <script>
   document.getElementById('login').addEventListener('submit', async e=>{
     e.preventDefault();
-    const res = await fetch('/api/auth/login',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({email:document.getElementById('email').value,password:document.getElementById('password').value})});
+    const res = await fetch('/api/auth/login',{
+      method:'POST',
+      headers:{'content-type':'application/json'},
+      body:JSON.stringify({
+        email:document.getElementById('email').value,
+        password:document.getElementById('password').value
+      })
+    });
     const j = await res.json();
-    if (j.token){ localStorage.setItem('token', j.token); location = '/dashboard'; }
+    if (j.token){
+      localStorage.setItem('token', j.token);
+      // set token cookie so server-side routes can authenticate page requests
+      document.cookie = 'token=' + encodeURIComponent(j.token) + '; path=/';
+      const role = (j.user && j.user.role) || (JSON.parse(atob(j.token.split('.')[1])).role) || 'Staff';
+      if (role === 'Admin') return location = '/admin/dashboard';
+      if (role === 'Finance') return location = '/finance/dashboard';
+      if (role === 'HR') return location = '/hr/dashboard';
+      return location = '/staff/dashboard';
+    }
     else alert(j.error || 'Login failed');
   });
   </script>
