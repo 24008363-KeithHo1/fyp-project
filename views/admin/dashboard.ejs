@@ -13,14 +13,45 @@ try{
 <div class="container mt-4">
   <h2>Admin Dashboard</h2>
   <p>Overview and quick actions for administrators.</p>
-  <div class="row">
-    <div class="col-md-6">
-      <a class="btn btn-primary" href="/admin/users">Manage Users</a>
+  
+    <div class="row g-3">
+      <div class="col-md-3">
+        <div class="card h-100">
+          <div class="card-body">
+            <h5 class="card-title">Manage Users</h5>
+            <p class="card-text">View, edit, and manage user accounts and roles.</p>
+            <a class="btn btn-primary" href="/admin/users">Open</a>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-3">
+        <div class="card h-100">
+          <div class="card-body">
+            <h5 class="card-title">Audit Logs</h5>
+            <p class="card-text">Review recent administrative actions and changes.</p>
+            <a class="btn btn-secondary" href="/admin/audit-logs">Open</a>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-3">
+        <div class="card h-100">
+          <div class="card-body">
+            <h5 class="card-title">Invite Tokens</h5>
+            <p class="card-text">View outstanding invites and their status.</p>
+            <a class="btn btn-outline-primary" href="/admin/invite-tokens">Open</a>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-3">
+        <div class="card h-100">
+          <div class="card-body">
+            <h5 class="card-title">Password Resets</h5>
+            <p class="card-text">Monitor password reset requests and usage.</p>
+            <a class="btn btn-outline-secondary" href="/admin/password-resets">Open</a>
+          </div>
+        </div>
+      </div>
     </div>
-    <div class="col-md-6">
-      <a class="btn btn-secondary" href="/invoices">Invoices</a>
-    </div>
-  </div>
 </div>
 
 <%- include('../partials/footer') %>

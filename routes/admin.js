@@ -8,6 +8,8 @@ router.use(auth);
 router.use(requireRole(['Admin']));
 
 router.get('/users', admin.listUsers);
+router.get('/invite-tokens', admin.listInviteTokens);
+router.get('/password-resets', admin.listPasswordResets);
 router.get('/users/:id/edit', admin.editUserView);
 router.post('/users/:id', admin.updateUser);
 router.get('/dashboard', admin.dashboardView);
