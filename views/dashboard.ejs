@@ -1,21 +1,49 @@
 
 <%- include('partials/header', { title: 'Dashboard' }) %>
 <%- include('partials/navbar') %>
-	<script>
-	const token = localStorage.getItem('token');
-	if (!token) location = '/login';
-	</script>
+		<script>
+		const token = localStorage.getItem('token');
+		if (!token) location = '/login';
+
+		function parseJwt(t){
+			try{ return JSON.parse(atob(t.split('.')[1])); }catch(e){ return null; }
+		}
+
+		document.addEventListener('DOMContentLoaded', () => {
+			const payload = parseJwt(token);
+			const role = payload && (payload.role || (payload.user && payload.user.role)) ? (payload.role || payload.user.role) : null;
+
+			// Helper to show elements
+			const show = id => { const el = document.getElementById(id); if(el) el.style.display = 'block'; };
+			const hide = id => { const el = document.getElementById(id); if(el) el.style.display = 'none'; };
+
+			// hide everything by default
+			['invoiceCard','payrollCard','reportsCard','usersCard','myPayslipsCard','topInvoicesBtn','topPayrollBtn'].forEach(hide);
+
+			if (!role) return; // no role, nothing to show
+
+			if (role === 'Admin'){
+				['invoiceCard','payrollCard','reportsCard','usersCard','myPayslipsCard','topInvoicesBtn','topPayrollBtn'].forEach(show);
+			} else if (role === 'Finance'){
+				['invoiceCard','reportsCard','topInvoicesBtn'].forEach(show);
+			} else if (role === 'HR'){
+				['payrollCard','usersCard','topPayrollBtn'].forEach(show);
+			} else if (role === 'Staff'){
+				['myPayslipsCard','topPayrollBtn'].forEach(show);
+			}
+		});
+		</script>
 
 	<div class="d-flex align-items-center mb-4">
 		<h2 class="me-auto">Dashboard</h2>
 		<div>
-			<a href="/invoices" class="btn btn-sm btn-outline-primary me-2">Invoices</a>
-			<a href="/payroll" class="btn btn-sm btn-outline-primary">Payroll</a>
+			<a id="topInvoicesBtn" href="/invoices" style="display:none" class="btn btn-sm btn-outline-primary me-2">Invoices</a>
+			<a id="topPayrollBtn" href="/payroll" style="display:none" class="btn btn-sm btn-outline-primary">Payroll</a>
 		</div>
 	</div>
 
 	<div class="row g-3">
-		<div class="col-sm-6 col-lg-3">
+		<div id="invoiceCard" style="display:none" class="col-sm-6 col-lg-3">
 			<div class="card text-white bg-primary h-100">
 				<div class="card-body">
 					<h5 class="card-title">Invoices</h5>
@@ -23,7 +51,7 @@
 				</div>
 			</div>
 		</div>
-		<div class="col-sm-6 col-lg-3">
+		<div id="payrollCard" style="display:none" class="col-sm-6 col-lg-3">
 			<div class="card h-100">
 				<div class="card-body">
 					<h5 class="card-title">Payroll</h5>
@@ -31,7 +59,7 @@
 				</div>
 			</div>
 		</div>
-		<div class="col-sm-6 col-lg-3">
+		<div id="reportsCard" style="display:none" class="col-sm-6 col-lg-3">
 			<div class="card h-100">
 				<div class="card-body">
 					<h5 class="card-title">Reports</h5>
@@ -39,11 +67,22 @@
 				</div>
 			</div>
 		</div>
-		<div class="col-sm-6 col-lg-3">
+		<div id="usersCard" style="display:none" class="col-sm-6 col-lg-3">
 			<div class="card h-100">
 				<div class="card-body">
 					<h5 class="card-title">Users</h5>
 					<p class="card-text">Manage users and roles.</p>
+				</div>
+			</div>
+		</div>
+
+		<!-- Staff-specific quick link -->
+		<div id="myPayslipsCard" style="display:none" class="col-sm-6 col-lg-3">
+			<div class="card h-100">
+				<div class="card-body">
+					<h5 class="card-title">My Payslips</h5>
+					<p class="card-text">View your payslips and payment history.</p>
+					<a href="/mypayslips" class="stretched-link"></a>
 				</div>
 			</div>
 		</div>
