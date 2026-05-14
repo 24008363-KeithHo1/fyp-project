@@ -1,8 +1,19 @@
-body{font-family:Segoe UI,Roboto,Arial,sans-serif;margin:0;padding:0;color:#222;background:linear-gradient(90deg,#e7f9ee 0%,#e7f9ee 48%,#dff6ea 52%,#f8f9fb 100%)}
+html, body {height:100%}
+/* Keep default focus outlines for accessibility; only disable mobile tap highlight */
+* { -webkit-tap-highlight-color: transparent; }
+
+/* Remove the small blue toggler icon rectangle specifically (top-left)
+  - hides the default Bootstrap toggler icon without affecting other focus styles */
+.navbar-toggler{background:transparent!important;border:none!important;padding:.25rem}
+.navbar-toggler .navbar-toggler-icon{background-image:none!important;display:none!important;width:0;height:0}
+body{display:flex;flex-direction:column;min-height:100vh;font-family:Segoe UI,Roboto,Arial,sans-serif;margin:0;padding:0;color:#222;background:linear-gradient(90deg,#e7f9ee 0%,#e7f9ee 48%,#dff6ea 52%,#f8f9fb 100%)}
 header{background:transparent;color:inherit;padding:0}
 nav{background:transparent;padding:.5rem 1rem}
 nav a{color:var(--bs-body-color);text-decoration:none}
 main{padding:1rem}
+
+/* Ensure main grows to push footer to bottom on short pages */
+main.app-container{flex:1}
 form input, form select{padding:.5rem;margin:.25rem 0;display:block;width:100%;max-width:360px}
 button{padding:.5rem 1rem;background:#0b63a4;color:#fff;border:none;border-radius:4px}
 footer{background:#fafafa;padding:1rem;text-align:center;color:#666}
@@ -46,3 +57,86 @@ header .btn-outline-primary{border-radius:20px;padding:.35rem .6rem}
 /* Header stays in normal flow above content */
 
 /* Floating brand styles removed (no longer used) */
+
+/* Dashboard cards: equal spacing and centered content */
+.dashboard-cards{display:grid;grid-template-columns:repeat(3,1fr);gap:24px;align-items:start;padding:12px 0;max-width:1100px;margin:0 auto;width:100%}
+.dashboard-cards .col{display:block}
+.dashboard-cards .card{width:100%;aspect-ratio:1/1;border-radius:10px;border:1px solid rgba(16,24,40,0.04);background:#fff;display:flex}
+.dashboard-cards .card{width:100%;aspect-ratio:1/1;border-radius:12px;border:1px solid rgba(11,94,58,0.06);background:linear-gradient(180deg,#ffffff,#fbfffb);display:flex;transition:transform .12s ease,box-shadow .12s ease}
+.dashboard-cards .card-body{padding:1.25rem;flex:1;display:flex;flex-direction:column;justify-content:center;align-items:center;text-align:center;gap:8px}
+.dashboard-cards .card-icon{font-size:22px;line-height:1;width:48px;height:48px;display:flex;align-items:center;justify-content:center;border-radius:50%;background:linear-gradient(180deg,#eef7ee,#e9f3ea);box-shadow:inset 0 1px 0 rgba(255,255,255,0.7);margin-bottom:4px}
+.dashboard-cards .card-title{margin:0;font-size:1rem;color:#0b5e3a}
+.dashboard-cards .card-text{color:#556;min-height:36px;font-size:0.9rem;margin-top:6px}
+
+/* Ensure the inner title/text wrapper centers nicely inside the square */
+.dashboard-cards .card-body > div{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px}
+
+/* Card title link styling and responsive size */
+.dashboard-cards .card-title a{color:inherit;text-decoration:none;display:inline-block;padding:4px 6px}
+.dashboard-cards .card-title a:hover{text-decoration:underline}
+
+@media(max-width:900px){
+  .dashboard-cards .card-title{font-size:0.95rem}
+}
+
+@media(max-width:480px){
+  .dashboard-cards .card-title{font-size:0.92rem}
+}
+
+/* Replace default blue focus rectangle with a subtle green focus ring */
+.dashboard-cards .card-title a:focus,
+.dashboard-cards .card:focus{
+  outline: none;
+}
+.dashboard-cards .card-title a:focus-visible,
+.dashboard-cards .card:focus-visible{
+  box-shadow: 0 0 0 4px rgba(11,94,58,0.12);
+  border-color: rgba(11,94,58,0.12);
+}
+/* Remove tap highlight on mobile */
+.dashboard-cards .card-title a,
+.dashboard-cards .card{ -webkit-tap-highlight-color: transparent }
+
+/* User requested: remove focus indicators completely for these elements */
+.dashboard-cards .card-title a:focus,
+.dashboard-cards .card:focus,
+.dashboard-cards .card-title a:focus-visible,
+.dashboard-cards .card:focus-visible{
+  outline: none !important;
+  box-shadow: none !important;
+  border-color: transparent !important;
+}
+
+@media(max-width:900px){
+  .dashboard-cards{grid-template-columns:repeat(2,1fr);gap:18px}
+}
+
+@media(max-width:480px){
+  .dashboard-cards{grid-template-columns:1fr;gap:12px}
+  .dashboard-cards .card{aspect-ratio:1/1;max-width:100%;margin:0}
+}
+
+@media(min-width:1200px){
+	.dashboard-cards{gap:24px}
+}
+
+/* Theme integration: subtle green accents, hover lift, align with header width */
+.content-card{background:#fff;border-radius:10px;padding:2.75rem;border:1px solid rgba(11,94,58,0.04);box-shadow:0 12px 34px rgba(16,24,40,0.10)}
+.dashboard-cards .card{border-color:rgba(11,94,58,0.06)}
+.dashboard-cards .card:hover{transform:translateY(-4px);box-shadow:0 10px 26px rgba(16,24,40,0.08)}
+.dashboard-cards .card-icon{background:linear-gradient(180deg,#ecf7ef,#e6f3ea);color:#0b5e3a}
+.dashboard-cards .btn{font-size:0.85rem;padding:.45rem .75rem;border-radius:50px}
+.dashboard-cards .btn-primary{background:#0b5e3a;border-color:#0b5e3a}
+.dashboard-cards .btn-outline-primary{color:#0b5e3a;border-color:#0b5e3a}
+.dashboard-cards .btn-outline-primary:hover{background:#0b5e3a;color:#fff}
+
+/* Heading inside content-card to match login heading */
+.content-card h2{font-weight:800;letter-spacing:1px;color:#0b5e3a;margin-top:0;margin-bottom:0.75rem;font-size:1.25rem}
+
+/* Make icon and text weight align with login visuals */
+.dashboard-cards .card-icon{width:52px;height:52px;font-size:24px}
+.dashboard-cards .card-title{font-weight:700}
+
+/* Adjust grid centering to sit inside content-card width */
+.app-container{max-width:100%;margin-left:auto;margin-right:auto;padding:0 1.25rem}
+.content-card{max-width:1100px;margin:0 auto}
