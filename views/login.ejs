@@ -1,27 +1,65 @@
 <%- include('partials/header', { title: 'Login' }) %>
-<div class="row justify-content-center">
-  <div class="row justify-content-center">
-    <div class="col-md-6 col-lg-4">
-      <div class="card shadow-sm">
-        <div class="card-body">
-          <h3 class="card-title mb-3">Sign in</h3>
-          <form id="login">
-            <div class="mb-3">
-              <label for="email" class="form-label">Email</label>
-              <input type="email" class="form-control" id="email" required>
-            </div>
-            <div class="mb-3">
-              <label for="password" class="form-label">Password</label>
-              <input type="password" class="form-control" id="password" required>
-            </div>
-            <div class="d-flex">
-              <button type="submit" class="btn btn-primary">Login</button>
-            </div>
-          </form>
+<style>
+  .login-hero{min-height:75vh;display:flex;align-items:center;justify-content:center;position:relative;padding:3rem 2rem}
+  .login-hero .split{position:absolute;inset:0;display:flex}
+  .login-hero .left{flex:1;background:linear-gradient(90deg,#0b8f3e 0%,#0f6b2d 100%);background-size:cover}
+  .login-hero .right{flex:1;background:#dff6ea}
+  .login-card{position:relative;z-index:2;width:560px;max-width:95%;background:#fff;padding:2.75rem;border-radius:10px;box-shadow:0 12px 34px rgba(16,24,40,0.10)}
+  .login-card h1{font-weight:800;letter-spacing:1px;text-align:center;margin-bottom:1rem;color:#0b5e3a;font-size:1.6rem}
+  .form-control.rounded-pill{border-radius:50px;padding:.75rem 1.25rem;background:#f2f2f2;border:0}
+  .form-control.rounded-pill:focus{box-shadow:0 3px 10px rgba(16,24,40,0.06);outline:none;background:#f8f8f8}
+  .login-card label.form-label{color:#0b5e3a;font-weight:600;font-size:.95rem;margin-bottom:.35rem}
+  .login-card .form-control.rounded-pill{background:#f6fbf7;border:1px solid rgba(11,94,58,0.12)}
+  .login-card .form-control.rounded-pill::placeholder{color:#8ea79a;opacity:1}
+  .login-card .form-control.rounded-pill:focus{border-color:#0b5e3a;box-shadow:0 8px 18px rgba(11,94,58,0.06);background:#fff}
+  /* Remember me styling */
+  .login-card .remember .form-check-input{width:2.2rem;height:1.25rem;cursor:pointer;accent-color:#0b5e3a}
+  .login-card .remember .form-check-label{color:#0b5e3a;font-weight:600;margin-left:.25rem;cursor:pointer}
+  .login-card .remember{gap:.75rem}
+  .btn-signin{background:#0b5e3a;border-color:#0b5e3a;color:#fff;padding:.75rem 1.25rem;border-radius:50px;font-weight:700;box-shadow:0 6px 18px rgba(11,94,58,0.12);transition:all .12s ease}
+  .btn-signin:hover{background:#094726;border-color:#094726;box-shadow:0 10px 24px rgba(9,71,38,0.14);transform:translateY(-1px)}
+  .form-row{display:flex;align-items:center;justify-content:space-between;gap:1rem;margin-top:.25rem}
+  .remember{display:flex;align-items:center;gap:.5rem}
+  .mb-3{margin-bottom:1rem}
+.btn-signin{margin-top:.25rem}
+  @media(max-width:768px){ .login-hero .split{display:none} .login-card{margin:1rem} }
+</style>
+
+<div class="login-hero">
+  <div class="split" aria-hidden="true">
+    <div class="left"></div>
+    <div class="right"></div>
+  </div>
+
+  <div class="login-card">
+    <h1>LOGIN</h1>
+    <form id="login">
+      <div class="mb-3">
+        <label for="email" class="form-label mb-1">Email</label>
+        <input type="email" class="form-control rounded-pill" id="email" placeholder="Enter email" required>
+      </div>
+      <div class="mb-3">
+        <label for="password" class="form-label mb-1">Password</label>
+        <input type="password" class="form-control rounded-pill" id="password" placeholder="Password" required>
+      </div>
+      <div class="mb-3 form-row">
+        <div class="remember">
+          <div class="form-check form-switch">
+            <input class="form-check-input" type="checkbox" id="remember">
+          </div>
+          <label for="remember" class="form-check-label">Remember me</label>
+        </div>
+        <div>
+          <a id="forgot-link" href="/reset">Forgot password?</a>
         </div>
       </div>
-    </div>
+      <div class="mb-2">
+        <button type="submit" class="btn btn-signin w-100">Login</button>
+      </div>
+    </form>
   </div>
+
+</div>
   <script>
   document.getElementById('login').addEventListener('submit', async e=>{
     e.preventDefault();

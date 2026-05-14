@@ -1,5 +1,5 @@
-body{font-family:Segoe UI,Roboto,Arial,sans-serif;margin:0;padding:0;color:#222;background:#f8f9fb}
-header{background:#0b63a4;color:#fff;padding:1rem}
+body{font-family:Segoe UI,Roboto,Arial,sans-serif;margin:0;padding:0;color:#222;background:linear-gradient(90deg,#e7f9ee 0%,#e7f9ee 48%,#dff6ea 52%,#f8f9fb 100%)}
+header{background:transparent;color:inherit;padding:0}
 nav{background:transparent;padding:.5rem 1rem}
 nav a{color:var(--bs-body-color);text-decoration:none}
 main{padding:1rem}
@@ -21,4 +21,28 @@ footer{background:#fafafa;padding:1rem;text-align:center;color:#666}
 
 /* Tweak header inside container */
 header .container{display:flex;align-items:center;justify-content:space-between}
-header h1{font-size:1.1rem;margin:0}
+/* Make brand blend with site: softer green, normal case, moderate weight */
+/* Make brand more visible: darker green, larger, bolder, subtle shadow */
+header .navbar-brand{color:#0b5e3a;font-weight:800;font-size:1.28rem;letter-spacing:0.5px;text-transform:none;text-shadow:0 1px 0 rgba(255,255,255,0.6)}
+
+header .navbar-brand:hover{color:#094726}
+
+@media(max-width:576px){
+	header .navbar-brand{font-size:1.05rem}
+}
+
+/* Restyle the logout button to blend with site branding */
+#logout{background:transparent;border:1px solid #0b5e3a;color:#0b5e3a;border-radius:20px;padding:.35rem .6rem;transition:all .15s ease}
+#logout:hover{background:#0b5e3a;color:#fff;border-color:#094726}
+#logout:active{transform:translateY(1px)}
+
+/* Blend the "Forgot password?" link with site palette */
+#forgot-link{color:#0b5e3a;font-weight:600;text-decoration:none;font-size:.95rem}
+#forgot-link:hover{color:#094726;text-decoration:underline}
+
+/* Title shown outside the login container (removed) */
+header .btn-outline-primary{border-radius:20px;padding:.35rem .6rem}
+
+/* Header stays in normal flow above content */
+
+/* Floating brand styles removed (no longer used) */

@@ -9,14 +9,28 @@
   <link rel="stylesheet" href="/styles.css">
 </head>
 <body>
-  <header>
-    <div class="container py-3 d-flex justify-content-between align-items-center">
-      <h1 class="page-title mb-0">Automated Invoicing & Payroll System</h1>
-      <a class="btn btn-sm btn-danger" href="#" id="logout">Logout</a>
+  <header class="site-header py-3">
+    <div class="container d-flex justify-content-between align-items-center">
+      <a class="navbar-brand mb-0 h4 text-dark <%= title === 'Login' ? 'd-none' : '' %>" href="/">Automated Invoicing & Payroll System</a>
+      <div>
+        <button id="logout" class="btn btn-sm btn-danger d-none">Logout</button>
+      </div>
     </div>
   </header>
+  
   <script>
-    document.getElementById('logout')?.addEventListener('click', ()=>{ localStorage.removeItem('token'); location = '/login'; });
+    // Toggle Login/Logout visibility based on token
+    (function(){
+      const logoutBtn = document.getElementById('logout');
+      function updateAuthUI(){
+        const hasToken = !!localStorage.getItem('token');
+        if (hasToken) logoutBtn.classList.remove('d-none');
+        else logoutBtn.classList.add('d-none');
+      }
+      updateAuthUI();
+      logoutBtn?.addEventListener('click', ()=>{ localStorage.removeItem('token'); updateAuthUI(); location = '/login'; });
+      window.addEventListener('storage', (e)=>{ if (e.key === 'token') updateAuthUI(); });
+    })();
   </script>
   <main class="app-container container my-4">
     <div class="content-card shadow-sm">
