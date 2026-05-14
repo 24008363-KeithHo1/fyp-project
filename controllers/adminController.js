@@ -9,7 +9,7 @@ exports.ensureAdmin = (req, res, next) => {
 exports.listUsers = async (req, res) => {
   try {
     const users = await User.findAll({ order: [['id', 'ASC']] });
-    res.render('admin/users', { users });
+    res.render('admin/users', { users, title: 'Manage Users' });
   } catch (err) {
     console.error(err);
     res.status(500).send('Server error');
@@ -20,7 +20,7 @@ exports.editUserView = async (req, res) => {
   try {
     const user = await User.findByPk(req.params.id);
     if (!user) return res.redirect('/admin/users');
-    res.render('admin/edit_user', { user });
+    res.render('admin/edit_user', { user, title: 'Edit User' });
   } catch (err) {
     console.error(err);
     res.status(500).send('Server error');
@@ -50,7 +50,7 @@ exports.updateUser = async (req, res) => {
 };
 
 exports.dashboardView = (req, res) => {
-  res.render('admin/dashboard');
+  res.render('admin/dashboard', { title: 'Admin Dashboard' });
 };
 
 exports.listInviteTokens = async (req, res) => {
@@ -64,7 +64,7 @@ exports.listInviteTokens = async (req, res) => {
         try { const u = await UserModel.findByPk(t.inviterId); t.inviter = u ? { id: u.id, name: u.name } : null; } catch(e){ t.inviter = null; }
       }
     }
-    res.render('admin/invite_tokens', { tokens: plain });
+    res.render('admin/invite_tokens', { tokens: plain, title: 'Invite Tokens' });
   } catch (err) {
     console.error(err);
     res.status(500).send('Server error');
@@ -82,7 +82,7 @@ exports.listPasswordResets = async (req, res) => {
         try { const u = await UserModel.findByPk(t.userId); t.user = u ? { id: u.id, name: u.name } : null; } catch(e){ t.user = null; }
       }
     }
-    res.render('admin/password_resets', { tokens: plain });
+    res.render('admin/password_resets', { tokens: plain, title: 'Password Resets' });
   } catch (err) {
     console.error(err);
     res.status(500).send('Server error');
