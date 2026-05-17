@@ -13,12 +13,49 @@ try{
 <div class="container mt-4">
   <h2>Finance Dashboard</h2>
   <p>Invoices, payments and financial summaries.</p>
-  <div class="row">
-    <div class="col-md-6">
-      <a class="btn btn-primary" href="/invoices">View Invoices</a>
-    </div>
-    <div class="col-md-6">
-      <a class="btn btn-secondary" href="/reports">Reports</a>
+  <div class="content-card mt-3">
+    <div class="dashboard-cards">
+      <div class="col">
+        <a href="/invoices" class="card-link">
+          <div class="card h-100 text-center shadow-sm">
+            <div class="card-body">
+              <div class="card-icon mb-3" aria-hidden="true">📄</div>
+              <div>
+                <h5 class="card-title">Invoices</h5>
+                <p class="card-text">Create, view and manage invoices.</p>
+              </div>
+            </div>
+          </div>
+        </a>
+      </div>
+
+      <div class="col">
+        <a href="/reports" class="card-link">
+          <div class="card h-100 text-center shadow-sm">
+            <div class="card-body">
+              <div class="card-icon mb-3" aria-hidden="true">📊</div>
+              <div>
+                <h5 class="card-title">Reports</h5>
+                <p class="card-text">Financial summaries and exports.</p>
+              </div>
+            </div>
+          </div>
+        </a>
+      </div>
+
+      <div class="col">
+        <a href="/payments" class="card-link">
+          <div class="card h-100 text-center shadow-sm">
+            <div class="card-body">
+              <div class="card-icon mb-3" aria-hidden="true">💳</div>
+              <div>
+                <h5 class="card-title">Payments</h5>
+                <p class="card-text">Record and reconcile payments.</p>
+              </div>
+            </div>
+          </div>
+        </a>
+      </div>
     </div>
   </div>
 </div>
