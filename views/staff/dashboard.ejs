@@ -13,12 +13,49 @@ try{
 <div class="container mt-4">
   <h2>Staff Dashboard</h2>
   <p>Your payslips and personal information.</p>
-  <div class="row">
-    <div class="col-md-6">
-      <a class="btn btn-primary" href="/mypayslips">My Payslips</a>
-    </div>
-    <div class="col-md-6">
-      <a class="btn btn-secondary" href="/reports">Personal Reports</a>
+  <div class="content-card mt-3">
+    <div class="dashboard-cards">
+      <div class="col">
+        <a href="/mypayslips" class="card-link">
+          <div class="card h-100 text-center shadow-sm">
+            <div class="card-body">
+              <div class="card-icon mb-3" aria-hidden="true">🧾</div>
+              <div>
+                <h5 class="card-title">Payslips</h5>
+                <p class="card-text">View and download your payslips.</p>
+              </div>
+            </div>
+          </div>
+        </a>
+      </div>
+
+      <div class="col">
+        <a href="/profile" class="card-link">
+          <div class="card h-100 text-center shadow-sm">
+            <div class="card-body">
+              <div class="card-icon mb-3" aria-hidden="true">👤</div>
+              <div>
+                <h5 class="card-title">My Profile</h5>
+                <p class="card-text">Update contact and personal details.</p>
+              </div>
+            </div>
+          </div>
+        </a>
+      </div>
+
+      <div class="col">
+        <a href="/requests" class="card-link">
+          <div class="card h-100 text-center shadow-sm">
+            <div class="card-body">
+              <div class="card-icon mb-3" aria-hidden="true">✉️</div>
+              <div>
+                <h5 class="card-title">Requests</h5>
+                <p class="card-text">Submit HR or finance requests.</p>
+              </div>
+            </div>
+          </div>
+        </a>
+      </div>
     </div>
   </div>
 </div>
