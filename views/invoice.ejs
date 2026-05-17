@@ -67,7 +67,11 @@
         <td class="text-end">${parseFloat(i.amount||0).toFixed(2)}</td>
         <td>${i.due_date ? new Date(i.due_date).toLocaleDateString() : ''}</td>
         <td>${i.status || ''}</td>
-        <td class="text-end"><a class="btn btn-sm btn-outline-primary" href="/api/invoices/${i.id}/pdf" target="_blank">PDF</a></td>
+        <td class="text-end">
+          <a class="btn btn-sm btn-outline-primary me-1" href="/api/invoices/${i.id}/pdf" target="_blank">PDF</a>
+          <a class="btn btn-sm btn-outline-secondary me-1" href="/api/invoices/${i.id}/excel" target="_blank">CSV</a>
+          <button class="btn btn-sm btn-outline-success" onclick="sendInvoice(${i.id}, '${(i.data && i.data.email) || ''}')">Send</button>
+        </td>
       `;
       tbody.appendChild(tr);
     });
@@ -85,6 +89,13 @@
     }
   });
   load();
+
+  async function sendInvoice(id, defaultEmail){
+    const email = prompt('Recipient email', defaultEmail || '');
+    if (!email) return;
+    const res = await fetch(`/api/invoices/${id}/send`, { method: 'POST', headers: { authorization:'Bearer '+token, 'content-type':'application/json' }, body: JSON.stringify({ email }) });
+    if (res.ok) { alert('Invoice sent'); load(); } else { const err = await res.json(); alert(err.error || 'Failed to send'); }
+  }
   </script>
 
  
