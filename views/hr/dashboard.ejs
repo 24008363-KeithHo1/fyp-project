@@ -13,12 +13,49 @@ try{
 <div class="container mt-4">
   <h2>HR Dashboard</h2>
   <p>Payroll, employees and HR actions.</p>
-  <div class="row">
-    <div class="col-md-6">
-      <a class="btn btn-primary" href="/payroll">Payroll</a>
-    </div>
-    <div class="col-md-6">
-      <a class="btn btn-secondary" href="/admin/users">Employees</a>
+  <div class="content-card mt-3">
+    <div class="dashboard-cards">
+      <div class="col">
+        <a href="/payroll" class="card-link">
+          <div class="card h-100 text-center shadow-sm">
+            <div class="card-body">
+              <div class="card-icon mb-3" aria-hidden="true">💼</div>
+              <div>
+                <h5 class="card-title">Payroll</h5>
+                <p class="card-text">Manage payroll runs and settings.</p>
+              </div>
+            </div>
+          </div>
+        </a>
+      </div>
+
+      <div class="col">
+        <a href="/admin/users" class="card-link">
+          <div class="card h-100 text-center shadow-sm">
+            <div class="card-body">
+              <div class="card-icon mb-3" aria-hidden="true">👥</div>
+              <div>
+                <h5 class="card-title">Employees</h5>
+                <p class="card-text">View, edit and manage employee records.</p>
+              </div>
+            </div>
+          </div>
+        </a>
+      </div>
+
+      <div class="col">
+        <a href="/mypayslips" class="card-link">
+          <div class="card h-100 text-center shadow-sm">
+            <div class="card-body">
+              <div class="card-icon mb-3" aria-hidden="true">🧾</div>
+              <div>
+                <h5 class="card-title">Payslips</h5>
+                <p class="card-text">Access past payslips and downloads.</p>
+              </div>
+            </div>
+          </div>
+        </a>
+      </div>
     </div>
   </div>
 </div>
