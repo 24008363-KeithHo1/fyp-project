@@ -26,7 +26,18 @@ const upload = multer({
 
 const { parsePayrollExcel } = require('../utils/excel');
 const { generatePayslipPDF } = require('../utils/pdf');
+const normalizeDeductions = (deductions) => {
+  if (deductions == null) return {};
+  if (typeof deductions === 'object') return deductions;
+  const parsed = parseFloat(deductions);
+  return Number.isFinite(parsed) ? { amount: parsed } : {};
+};
 
+const ensurePayrollFields = (payload) => ({
+  ...payload,
+  deductions: normalizeDeductions(payload.deductions),
+  allowances: payload.allowances || {}
+});
 exports.uploadMiddleware = upload.single('file');
 
 exports.upload = async (req, res) => {
@@ -54,25 +65,25 @@ exports.upload = async (req, res) => {
         }
       });
 
+      const payrollData = ensurePayrollFields({
+        employee_name: r.employee_name,
+        employee_email: r.employee_email,
+        period: r.period,
+        gross: r.gross,
+        deductions: r.deductions,
+        net: r.net
+      });
+
       if (existing) {
-        // Update existing record - updatedAt will be automatically set by Sequelize
         await existing.update({ 
-          employee_name: r.employee_name, 
-          gross: r.gross, 
-          deductions: r.deductions,
-          net: r.net
+          employee_name: payrollData.employee_name,
+          gross: payrollData.gross,
+          deductions: payrollData.deductions,
+          net: payrollData.net
         });
         updated.push(existing);
       } else {
-        // Create new record - createdAt and updatedAt will be automatically set by Sequelize
-        const p = await Payroll.create({ 
-          employee_name: r.employee_name, 
-          employee_email: r.employee_email, 
-          period: r.period, 
-          gross: r.gross, 
-          deductions: r.deductions,
-          net: r.net
-        });
+        const p = await Payroll.create(payrollData);
         created.push(p);
       }
     }
@@ -119,7 +130,7 @@ exports.update = async (req, res) => {
       ...(employee_email && { employee_email }),
       ...(period && { period }),
       ...(gross !== undefined && { gross }),
-      ...(deductions !== undefined && { deductions }),
+      ...(deductions !== undefined && { deductions: normalizeDeductions(deductions) }),
       ...(net !== undefined && { net })
     });
     

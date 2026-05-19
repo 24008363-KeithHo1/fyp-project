@@ -80,7 +80,7 @@ async function parsePayrollExcel(filePath){
         employee_email,
         period,
         gross,
-        deductions,
+        deductions: { amount: deductions },
         net
       });
     }
