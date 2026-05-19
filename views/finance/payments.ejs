@@ -1,0 +1,41 @@
+<%- include('../partials/header', { title: 'Finance Payments' }) %>
+<%- include('../partials/navbar') %>
+
+<script>
+const token = localStorage.getItem('token');
+if (!token) location = '/login';
+try{
+  const payload = JSON.parse(atob(token.split('.')[1]));
+  if (payload.role !== 'Finance' && payload.role !== 'Admin') location = '/dashboard';
+}catch(e){ location = '/login'; }
+</script>
+
+<div class="container mt-4">
+  <h2>Payments</h2>
+  <p>Record, review, and reconcile payments for invoices and bank activity.</p>
+
+  <div class="content-card mt-3">
+    <div class="row gy-3">
+      <div class="col-md-6">
+        <div class="card shadow-sm">
+          <div class="card-body">
+            <h5 class="card-title">New Payment</h5>
+            <p class="card-text">Upload payments, mark invoices as paid, or record manual transactions.</p>
+            
+          </div>
+        </div>
+      </div>
+      <div class="col-md-6">
+        <div class="card shadow-sm">
+          <div class="card-body">
+            <h5 class="card-title">Payment History</h5>
+            <p class="card-text">Review recently recorded payments and reconcile them with invoices.</p>
+            
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<%- include('../partials/footer') %>

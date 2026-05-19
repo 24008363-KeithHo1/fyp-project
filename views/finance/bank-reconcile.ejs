@@ -1,0 +1,32 @@
+<%- include('../partials/header', { title: 'Bank Reconciliation' }) %>
+<%- include('../partials/navbar') %>
+
+<script>
+const token = localStorage.getItem('token');
+if (!token) location = '/login';
+try{
+  const payload = JSON.parse(atob(token.split('.')[1]));
+  if (payload.role !== 'Finance' && payload.role !== 'Admin') location = '/dashboard';
+}catch(e){ location = '/login'; }
+</script>
+
+<div class="container mt-4">
+  <h2>Bank Reconciliation</h2>
+  <p>Match bank transactions against your invoices and payments to keep accounts aligned.</p>
+
+  <div class="content-card mt-3">
+    <div class="row gy-3">
+      <div class="col-md-12">
+        <div class="card shadow-sm">
+          <div class="card-body">
+            <h5 class="card-title">Reconciliation workflow</h5>
+            <p class="card-text">Upload bank statements, match deposits, and close reconciliation periods.</p>
+            
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<%- include('../partials/footer') %>
