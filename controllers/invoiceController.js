@@ -179,7 +179,8 @@ exports.exportExcel = async (req, res) => {
   if (!inv) return res.status(404).json({ error: 'Not found' });
   const rows = [];
   rows.push('Number,Customer,Currency,Amount,Status,Due');
-  rows.push(`"${inv.number}","${inv.customer_name}","${inv.currency || 'SGD'}",${inv.amount},"${inv.status}","${inv.due_date?inv.due_date.toISOString().split('T')[0]:''}"`);
+  const dueStr = inv.due_date ? (inv.due_date instanceof Date ? inv.due_date.toISOString().split('T')[0] : new Date(inv.due_date).toISOString().split('T')[0]) : '';
+  rows.push(`"${inv.number}","${inv.customer_name}","${inv.currency || 'SGD'}",${inv.amount},"${inv.status}","${dueStr}"`);
 
   let lineItems = inv.data && Array.isArray(inv.data.line_items) ? inv.data.line_items : [];
   if (!lineItems.length) {
