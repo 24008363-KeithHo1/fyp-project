@@ -34,6 +34,7 @@ app.get('/dashboard', require('./middlewares/auth'), (req, res) => {
 
 app.get('/invoices', require('./middlewares/auth'), (req, res) => res.render('invoice'));
 app.get('/invoices/new', require('./middlewares/auth'), (req, res) => res.render('invoice'));
+app.get('/invoices/:id/view', require('./controllers/invoiceController').viewPage);
 app.get('/payroll', require('./middlewares/auth'), (req, res) => res.render('payroll'));
 app.get('/mypayslips', require('./middlewares/auth'), require('./controllers/payrollController').mypayslipsView);
 app.get('/reports', require('./middlewares/auth'), (req, res) => res.render('reports'));

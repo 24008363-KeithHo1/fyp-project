@@ -228,7 +228,11 @@ exports.viewPage = async (req, res) => {
   const inv = await Invoice.findByPk(req.params.id);
   if (!inv) return res.status(404).send('Invoice not found');
   const token = req.query.token;
-  if (inv.data && inv.data.view_token && token && token === inv.data.view_token && inv.status !== 'Viewed') {
+  const expectedToken = inv.data && inv.data.view_token;
+  if (!expectedToken || !token || token !== expectedToken) {
+    return res.status(403).send('Invalid or missing view token');
+  }
+  if (inv.status !== 'Viewed') {
     try { await inv.update({ status: 'Viewed' }); } catch (e) { }
   }
   res.render('invoices/view', { invoice: inv });

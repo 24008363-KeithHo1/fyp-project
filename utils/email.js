@@ -1,5 +1,7 @@
 const nodemailer = require('nodemailer');
 const { SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS, APP_URL } = process.env;
+const smtpUser = (SMTP_USER || '').trim();
+const smtpPass = (SMTP_PASS || '').replace(/\s+/g, '');
 
 let transporter = null;
 if (SMTP_HOST) {
@@ -7,7 +9,7 @@ if (SMTP_HOST) {
     host: SMTP_HOST,
     port: SMTP_PORT || 587,
     secure: false,
-    auth: { user: SMTP_USER, pass: SMTP_PASS }
+    auth: { user: smtpUser, pass: smtpPass }
   });
 }
 
@@ -16,7 +18,14 @@ async function sendEmail(to, subject, html) {
     console.warn('SMTP not configured; skipping email to', to);
     return;
   }
-  await transporter.sendMail({ from: SMTP_USER, to, subject, html });
+  try {
+    await transporter.sendMail({ from: smtpUser, to, subject, html });
+  } catch (err) {
+    if (err && (err.code === 'EAUTH' || err.responseCode === 535 || /Username and Password not accepted/i.test(err.message))) {
+      throw new Error('Gmail authentication failed. Use a Gmail App Password (with 2-Step Verification enabled) and make sure SMTP_USER is the same Gmail address.');
+    }
+    throw err;
+  }
 }
 
 function inviteEmailHtml(link){
