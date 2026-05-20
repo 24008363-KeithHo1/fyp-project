@@ -7,7 +7,8 @@ const InviteToken = sequelize.define('InviteToken', {
   email: { type: DataTypes.STRING, allowNull: false },
   expiresAt: { type: DataTypes.DATE },
   used: { type: DataTypes.BOOLEAN, defaultValue: false },
-  inviterId: { type: DataTypes.INTEGER }
-});
+  inviterId: { type: DataTypes.INTEGER },
+  createdAt: { type: DataTypes.DATE, defaultValue: DataTypes.NOW }
+}, { timestamps: false });
 
 module.exports = InviteToken;

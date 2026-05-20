@@ -88,3 +88,92 @@ exports.listPasswordResets = async (req, res) => {
     res.status(500).send('Server error');
   }
 };
+
+exports.listAuditLogs = async (req, res) => {
+  try {
+    const { action, entity, userId, startDate, endDate, limit = 200, offset = 0 } = req.query;
+    const where = {};
+    
+    if (action) where.action = action;
+    if (entity) where.entity = entity;
+    if (userId) where.userId = parseInt(userId, 10);
+    
+    if (startDate || endDate) {
+      where.createdAt = {};
+      if (startDate) where.createdAt[require('sequelize').Op.gte] = new Date(startDate);
+      if (endDate) where.createdAt[require('sequelize').Op.lte] = new Date(endDate);
+    }
+    
+    const logs = await AuditLog.findAll({ 
+      where, 
+      order: [['createdAt', 'DESC']], 
+      limit: Math.min(parseInt(limit, 10) || 200, 1000),
+      offset: parseInt(offset, 10) || 0
+    });
+    
+    const plain = logs.map(l => l.get ? l.get({ plain: true }) : l);
+    
+    // Enrich with user details
+    for (const log of plain) {
+      if (log.userId) {
+        try {
+          const user = await User.findByPk(log.userId);
+          log.user = user ? { id: user.id, name: user.name, email: user.email } : null;
+        } catch(e) {
+          log.user = null;
+        }
+      }
+    }
+    
+    res.render('admin/audit_logs', { 
+      logs: plain, 
+      title: 'Audit Logs',
+      filters: { action, entity, userId, startDate, endDate }
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).send('Server error');
+  }
+};
+
+exports.listAuditLogsJson = async (req, res) => {
+  try {
+    const { action, entity, userId, startDate, endDate, limit = 200, offset = 0 } = req.query;
+    const where = {};
+    
+    if (action) where.action = action;
+    if (entity) where.entity = entity;
+    if (userId) where.userId = parseInt(userId, 10);
+    
+    if (startDate || endDate) {
+      where.createdAt = {};
+      if (startDate) where.createdAt[require('sequelize').Op.gte] = new Date(startDate);
+      if (endDate) where.createdAt[require('sequelize').Op.lte] = new Date(endDate);
+    }
+    
+    const { count, rows } = await AuditLog.findAndCountAll({ 
+      where, 
+      order: [['createdAt', 'DESC']], 
+      limit: Math.min(parseInt(limit, 10) || 200, 1000),
+      offset: parseInt(offset, 10) || 0
+    });
+    
+    const plain = rows.map(l => l.get ? l.get({ plain: true }) : l);
+    
+    // Enrich with user details
+    for (const log of plain) {
+      if (log.userId) {
+        try {
+          const user = await User.findByPk(log.userId);
+          log.user = user ? { id: user.id, name: user.name, email: user.email } : null;
+        } catch(e) {
+          log.user = null;
+        }
+      }
+    }
+    
+    res.json({ total: count, logs: plain, limit, offset });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};

@@ -10,6 +10,8 @@ router.use(requireRole(['Admin']));
 router.get('/users', admin.listUsers);
 router.get('/invite-tokens', admin.listInviteTokens);
 router.get('/password-resets', admin.listPasswordResets);
+router.get('/audit-logs', admin.listAuditLogs);
+router.get('/audit-logs-json', admin.listAuditLogsJson);
 router.get('/users/:id/edit', admin.editUserView);
 router.post('/users/:id', admin.updateUser);
 router.get('/dashboard', admin.dashboardView);

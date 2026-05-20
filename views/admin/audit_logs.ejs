@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title><%= title %></title>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="stylesheet" href="/styles.css">
+  <style>
+    body { font-family: Arial, sans-serif; margin: 0; padding: 20px; background-color: #f5f5f5; }
+    .container { max-width: 1200px; margin: 0 auto; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+    h1 { color: #333; margin-bottom: 20px; }
+    .filters { background: #f9f9f9; padding: 15px; border-radius: 4px; margin-bottom: 20px; }
+    .filter-group { display: inline-block; margin-right: 20px; }
+    .filter-group label { display: block; font-weight: bold; margin-bottom: 5px; font-size: 0.9em; }
+    .filter-group input, .filter-group select { padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 0.9em; }
+    .filter-group input { width: 150px; }
+    .filter-group button { padding: 8px 16px; background-color: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; }
+    .filter-group button:hover { background-color: #0056b3; }
+    .table-container { overflow-x: auto; }
+    table { width: 100%; border-collapse: collapse; }
+    th, td { padding: 12px; text-align: left; border-bottom: 1px solid #ddd; }
+    th { background-color: #007bff; color: white; font-weight: bold; }
+    tr:hover { background-color: #f5f5f5; }
+    .action-badge { display: inline-block; padding: 4px 8px; border-radius: 4px; font-size: 0.85em; font-weight: bold; }
+    .action-login { background-color: #d4edda; color: #155724; }
+    .action-create { background-color: #cfe2ff; color: #084298; }
+    .action-update { background-color: #fff3cd; color: #664d03; }
+    .action-delete { background-color: #f8d7da; color: #842029; }
+    .action-failed { background-color: #f8d7da; color: #842029; }
+    .entity-badge { display: inline-block; padding: 4px 8px; border-radius: 4px; font-size: 0.85em; background-color: #e2e3e5; color: #383d41; }
+    .timestamp { color: #666; font-size: 0.9em; }
+    .user-info { font-size: 0.9em; color: #555; }
+    .meta { max-width: 300px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 0.9em; color: #666; }
+    .no-results { text-align: center; padding: 40px; color: #999; }
+    .pagination { margin-top: 20px; text-align: center; }
+    .pagination a, .pagination span { padding: 8px 12px; margin: 0 4px; border: 1px solid #ddd; border-radius: 4px; display: inline-block; }
+    .pagination a { background-color: #007bff; color: white; text-decoration: none; }
+    .pagination a:hover { background-color: #0056b3; }
+    .pagination span { background-color: #e9ecef; }
+    .navbar { background-color: #007bff; color: white; padding: 10px 20px; border-radius: 4px; margin-bottom: 20px; }
+    .navbar a { color: white; text-decoration: none; margin-right: 20px; }
+    .navbar a:hover { text-decoration: underline; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="navbar">
+      <a href="/admin/dashboard">Dashboard</a>
+      <a href="/admin/users">Users</a>
+      <a href="/admin/audit-logs">Audit Logs</a>
+      <a href="/admin/invite-tokens">Invite Tokens</a>
+      <a href="/admin/password-resets">Password Resets</a>
+    </div>
+
+    <h1>🔐 Audit Logs</h1>
+    
+    <div class="filters">
+      <form method="GET" action="/admin/audit-logs" style="display: inline-block;">
+        <div class="filter-group">
+          <label for="action">Action:</label>
+          <select name="action" id="action">
+            <option value="">All Actions</option>
+            <option value="register" <%= (filters?.action === 'register') ? 'selected' : '' %>>Register</option>
+            <option value="login_success" <%= (filters?.action === 'login_success') ? 'selected' : '' %>>Login Success</option>
+            <option value="login_failed" <%= (filters?.action === 'login_failed') ? 'selected' : '' %>>Login Failed</option>
+            <option value="mfa_enabled" <%= (filters?.action === 'mfa_enabled') ? 'selected' : '' %>>MFA Enabled</option>
+            <option value="password_reset" <%= (filters?.action === 'password_reset') ? 'selected' : '' %>>Password Reset</option>
+            <option value="create" <%= (filters?.action === 'create') ? 'selected' : '' %>>Create</option>
+            <option value="update" <%= (filters?.action === 'update') ? 'selected' : '' %>>Update</option>
+            <option value="delete" <%= (filters?.action === 'delete') ? 'selected' : '' %>>Delete</option>
+            <option value="payment_received" <%= (filters?.action === 'payment_received') ? 'selected' : '' %>>Payment Received</option>
+          </select>
+        </div>
+
+        <div class="filter-group">
+          <label for="entity">Entity:</label>
+          <select name="entity" id="entity">
+            <option value="">All Entities</option>
+            <option value="User" <%= (filters?.entity === 'User') ? 'selected' : '' %>>User</option>
+            <option value="Invoice" <%= (filters?.entity === 'Invoice') ? 'selected' : '' %>>Invoice</option>
+            <option value="Payment" <%= (filters?.entity === 'Payment') ? 'selected' : '' %>>Payment</option>
+            <option value="Payroll" <%= (filters?.entity === 'Payroll') ? 'selected' : '' %>>Payroll</option>
+          </select>
+        </div>
+
+        <div class="filter-group">
+          <label for="startDate">From:</label>
+          <input type="date" name="startDate" id="startDate" value="<%= filters?.startDate || '' %>">
+        </div>
+
+        <div class="filter-group">
+          <label for="endDate">To:</label>
+          <input type="date" name="endDate" id="endDate" value="<%= filters?.endDate || '' %>">
+        </div>
+
+        <div class="filter-group">
+          <label>&nbsp;</label>
+          <button type="submit">Filter</button>
+        </div>
+      </form>
+    </div>
+
+    <% if (logs && logs.length > 0) { %>
+      <div class="table-container">
+        <table>
+          <thead>
+            <tr>
+              <th>Timestamp</th>
+              <th>User</th>
+              <th>Action</th>
+              <th>Entity</th>
+              <th>Entity ID</th>
+              <th>Metadata</th>
+              <th>IP Address</th>
+            </tr>
+          </thead>
+          <tbody>
+            <% logs.forEach(log => { %>
+              <tr>
+                <td class="timestamp">
+                  <%= new Date(log.createdAt).toLocaleString() %>
+                </td>
+                <td class="user-info">
+                  <% if (log.user) { %>
+                    <strong><%= log.user.name %></strong><br>
+                    <small><%= log.user.email %></small>
+                  <% } else { %>
+                    <small>System / Anonymous</small>
+                  <% } %>
+                </td>
+                <td>
+                  <span class="action-badge <%= 
+                    log.action.includes('login_failed') || log.action.includes('failed') ? 'action-failed' :
+                    log.action === 'register' ? 'action-login' :
+                    log.action.includes('create') || log.action.includes('_sent') || log.action.includes('_enabled') ? 'action-create' :
+                    log.action.includes('update') || log.action.includes('_confirmed') ? 'action-update' :
+                    log.action.includes('delete') ? 'action-delete' : ''
+                  %>">
+                    <%= log.action %>
+                  </span>
+                </td>
+                <td>
+                  <span class="entity-badge"><%= log.entity %></span>
+                </td>
+                <td><%= log.entityId || '-' %></td>
+                <td class="meta" title="<%= JSON.stringify(log.meta) %>">
+                  <% 
+                    try {
+                      const meta = typeof log.meta === 'string' ? JSON.parse(log.meta) : log.meta;
+                      let metaStr = '';
+                      if (meta) {
+                        const keys = Object.keys(meta).slice(0, 3);
+                        metaStr = keys.map(k => `${k}: ${typeof meta[k] === 'object' ? JSON.stringify(meta[k]) : meta[k]}`).join(', ');
+                      }
+                  %>
+                    <%= metaStr || '-' %>
+                  <% } catch(e) { %>
+                    <%= '-' %>
+                  <% } %>
+                </td>
+                <td><%= log.ip || '-' %></td>
+              </tr>
+            <% }); %>
+          </tbody>
+        </table>
+      </div>
+    <% } else { %>
+      <div class="no-results">
+        <p>No audit logs found matching the filters.</p>
+      </div>
+    <% } %>
+  </div>
+</body>
+</html>

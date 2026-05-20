@@ -1,6 +1,7 @@
 const Payroll = require('../models/Payroll');
 const multer = require('multer');
 const path = require('path');
+const { logAction } = require('../utils/audit');
 
 // Configure multer for Excel uploads
 const storage = multer.diskStorage({
@@ -100,6 +101,8 @@ exports.upload = async (req, res) => {
       response.errorDetails = errors;
     }
     
+    await logAction(req, 'payroll_upload', 'Payroll', null, { imported: created.length, updated: updated.length, filename: req.file.originalname, errors: errors.length });
+    
     res.json(response);
   } catch (err) {
     console.error('Upload error:', err);
@@ -134,6 +137,8 @@ exports.update = async (req, res) => {
       ...(net !== undefined && { net })
     });
     
+    await logAction(req, 'payroll_update', 'Payroll', p.id, { employee_email: p.employee_email, period: p.period, gross: p.gross, net: p.net });
+    
     res.json({ message: 'Updated successfully', payroll: p });
   } catch (err) {
     res.status(400).json({ error: err.message });
@@ -159,6 +164,7 @@ exports.mypayslipsView = async (req, res) => {
 exports.payslip = async (req, res) => {
   const p = await Payroll.findByPk(req.params.id);
   if (!p) return res.status(404).json({ error: 'Not found' });
+  await logAction(req, 'payslip_download', 'Payroll', p.id, { employee_email: p.employee_email, period: p.period });
   const stream = await generatePayslipPDF(p);
   res.setHeader('Content-Type','application/pdf');
   stream.pipe(res);

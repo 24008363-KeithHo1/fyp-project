@@ -3,6 +3,7 @@ const stripe = Stripe(process.env.STRIPE_SECRET_KEY);
 
 const Invoice = require('../models/Invoice');
 const Payment = require('../models/Payment');
+const { logAudit, getRequestMetadata } = require('../utils/audit');
 
 async function recordPayment(invoice, paymentData) {
   const providerReference = paymentData.providerReference || `${paymentData.method}-${invoice.id}-${Date.now()}`;
@@ -91,6 +92,8 @@ exports.createCheckoutSession = async (req, res) => {
       })
     });
     await invoice.update({ data });
+    const { ip, userAgent } = getRequestMetadata(req);
+    await logAudit({ userId: req.user ? req.user.id : null, action: 'payment_checkout_created', entity: 'Payment', entityId: invoice.id, meta: { invoiceNumber: invoice.number, amount: invoice.amount, provider: 'stripe', sessionId: session.id }, ip, userAgent });
 
     res.json({ url: session.url });
 
@@ -118,7 +121,7 @@ exports.handleWebhook = async (req, res) => {
   try {
     if (event.type === 'checkout.session.completed' || event.type === 'checkout.session.async_payment_succeeded') {
       const session = event.data.object;
-      await markInvoicePaid(session.metadata && session.metadata.invoiceId, {
+      const invoice = await markInvoicePaid(session.metadata && session.metadata.invoiceId, {
         provider: 'stripe',
         method: 'Stripe',
         checkoutSessionId: session.id,
@@ -127,6 +130,9 @@ exports.handleWebhook = async (req, res) => {
         currency: session.currency,
         status: session.payment_status || 'paid'
       });
+      if (invoice) {
+        await logAudit({ userId: null, action: 'payment_received', entity: 'Payment', entityId: invoice.id, meta: { invoiceNumber: invoice.number, amount: session.amount_total / 100, provider: 'stripe', sessionId: session.id }, ip: 'webhook', userAgent: 'stripe' });
+      }
     }
 
     if (event.type === 'checkout.session.async_payment_failed') {
@@ -143,6 +149,7 @@ exports.handleWebhook = async (req, res) => {
           })
         });
         await invoice.update({ data });
+        await logAudit({ userId: null, action: 'payment_failed', entity: 'Payment', entityId: invoice.id, meta: { invoiceNumber: invoice.number, reason: 'stripe_async_payment_failed', sessionId: session.id }, ip: 'webhook', userAgent: 'stripe' });
       }
     }
 
@@ -203,6 +210,8 @@ exports.confirmBankTransfer = async (req, res) => {
         note: req.body && req.body.note
       }
     });
+    const { ip, userAgent } = getRequestMetadata(req);
+    await logAudit({ userId: req.user ? req.user.id : null, action: 'payment_bank_transfer_confirmed', entity: 'Payment', entityId: payment.id, meta: { invoiceNumber: invoice.number, amount: invoice.amount, reference, note: req.body && req.body.note }, ip, userAgent });
 
     res.json({ ok: true, invoice, payment });
   } catch (err) {

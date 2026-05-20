@@ -3,6 +3,7 @@ const InvoiceItem = require('../models/InvoiceItem');
 const { sequelize } = require('../config/db');
 const { generateInvoicePDF } = require('../utils/pdf');
 const { sendEmail } = require('../utils/email');
+const { logAction } = require('../utils/audit');
 const crypto = require('crypto');
 
 function round2(value) {
@@ -144,6 +145,7 @@ exports.create = async (req, res) => {
         );
       }
       await tx.commit();
+      await logAction(req, 'create', 'Invoice', inv.id, { number: inv.number, customer_name, amount: parsedAmount, currency, itemCount: normalizedItems ? normalizedItems.length : 0 });
     } catch (e) {
       await tx.rollback();
       throw e;
@@ -218,6 +220,7 @@ exports.send = async (req, res) => {
     const html = `<p>Invoice <strong>${inv.number}</strong> for ${inv.customer_name} — Amount: ${inv.currency || 'SGD'} ${inv.amount}</p><p>View online: <a href="${link}">${link}</a></p>`;
     await sendEmail(to, `Invoice ${inv.number}`, html);
     if (inv.status !== 'Sent') await inv.update({ status: 'Sent' });
+    await logAction(req, 'send', 'Invoice', inv.id, { number: inv.number, recipient: to, amount: inv.amount });
     res.json({ ok: true });
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -233,7 +236,10 @@ exports.viewPage = async (req, res) => {
     return res.status(403).send('Invalid or missing view token');
   }
   if (inv.status !== 'Viewed') {
-    try { await inv.update({ status: 'Viewed' }); } catch (e) { }
+    try { 
+      await inv.update({ status: 'Viewed' });
+      await logAction(req, 'view', 'Invoice', inv.id, { number: inv.number, viewedAt: new Date() });
+    } catch (e) { }
   }
   res.render('invoices/view', { invoice: inv });
 };
