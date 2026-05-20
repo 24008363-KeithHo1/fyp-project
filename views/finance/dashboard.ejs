@@ -100,6 +100,89 @@ try{
       </div>
     </div>
   </div>
+
+  <div class="report-kpis mt-4">
+    <div class="report-kpi">
+      <span>Paid revenue</span>
+      <strong id="financePaidRevenue">SGD 0.00</strong>
+    </div>
+    <div class="report-kpi">
+      <span>Outstanding</span>
+      <strong id="financeOutstandingRevenue">SGD 0.00</strong>
+    </div>
+    <div class="report-kpi">
+      <span>Invoices</span>
+      <strong id="financeInvoiceCount">0</strong>
+    </div>
+    <div class="report-kpi">
+      <span>Validation issues</span>
+      <strong id="financeIssueCount">0</strong>
+    </div>
+  </div>
+
+  <div class="row g-3 mt-1">
+    <div class="col-lg-6">
+      <div class="report-panel">
+        <h5>Invoice Status</h5>
+        <canvas id="financeInvoiceChart" width="420" height="220"></canvas>
+      </div>
+    </div>
+    <div class="col-lg-6">
+      <div class="report-panel">
+        <h5>Paid Revenue</h5>
+        <canvas id="financeRevenueChart" width="420" height="220"></canvas>
+      </div>
+    </div>
+  </div>
 </div>
+
+<script>
+function financeMoney(value){
+  return 'SGD ' + Number(value || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
+function financeBars(canvasId, labels, values, color){
+  const canvas = document.getElementById(canvasId);
+  const ctx = canvas.getContext('2d');
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  ctx.font = '12px Segoe UI, Arial';
+  if (!labels.length) {
+    ctx.fillStyle = '#667085';
+    ctx.fillText('No data available', 18, 32);
+    return;
+  }
+  const max = Math.max(...values, 1);
+  const barWidth = Math.max(22, (canvas.width - 42) / labels.length - 10);
+  labels.forEach((label, index) => {
+    const x = 18 + index * (barWidth + 10);
+    const height = Math.round((values[index] / max) * 145);
+    const y = 165 - height;
+    ctx.fillStyle = color;
+    ctx.fillRect(x, y, barWidth, height);
+    ctx.fillStyle = '#344054';
+    ctx.fillText(String(values[index].toFixed ? values[index].toFixed(0) : values[index]), x, y - 5);
+    ctx.fillStyle = '#667085';
+    ctx.fillText(label.slice(0, 14), x, 205);
+  });
+}
+
+async function loadFinanceDashboard(){
+  const [summaryRes, validationRes] = await Promise.all([
+    fetch('/api/reports/summary', { headers: { authorization: 'Bearer ' + token } }),
+    fetch('/api/reports/validation', { headers: { authorization: 'Bearer ' + token } })
+  ]);
+  if (!summaryRes.ok || !validationRes.ok) return;
+  const summary = await summaryRes.json();
+  const validation = await validationRes.json();
+  document.getElementById('financePaidRevenue').textContent = financeMoney(summary.totals.paidRevenue);
+  document.getElementById('financeOutstandingRevenue').textContent = financeMoney(summary.totals.outstandingRevenue);
+  document.getElementById('financeInvoiceCount').textContent = summary.totals.invoiceCount;
+  document.getElementById('financeIssueCount').textContent = validation.issueCount;
+  financeBars('financeInvoiceChart', Object.keys(summary.charts.invoiceStatus || {}), Object.values(summary.charts.invoiceStatus || {}).map(Number), '#0b5e3a');
+  financeBars('financeRevenueChart', Object.keys(summary.charts.monthlyRevenue || {}), Object.values(summary.charts.monthlyRevenue || {}).map(Number), '#0b63a4');
+}
+
+loadFinanceDashboard();
+</script>
 
 <%- include('../partials/footer') %>

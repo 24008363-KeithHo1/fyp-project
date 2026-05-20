@@ -145,3 +145,19 @@ header .btn-outline-primary{border-radius:20px;padding:.35rem .6rem}
 /* Adjust grid centering to sit inside content-card width */
 .app-container{max-width:100%;margin-left:auto;margin-right:auto;padding:0 1.25rem}
 .content-card{max-width:1100px;margin:0 auto}
+
+.report-kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:14px}
+.report-kpi,.report-panel,.bank-transfer-box{background:#fff;border:1px solid rgba(11,94,58,0.08);border-radius:8px;padding:1rem}
+.report-kpi span{display:block;color:#667085;font-size:.86rem;margin-bottom:.35rem}
+.report-kpi strong{display:block;color:#0b5e3a;font-size:1.15rem}
+.report-panel h5{font-size:1rem;font-weight:700;color:#0b5e3a;margin-bottom:.75rem}
+.report-panel canvas{width:100%;max-width:100%;height:auto;display:block}
+.payment-actions{display:flex;gap:.5rem;flex-wrap:wrap}
+
+@media(max-width:900px){
+  .report-kpis{grid-template-columns:repeat(2,1fr)}
+}
+
+@media(max-width:480px){
+  .report-kpis{grid-template-columns:1fr}
+}

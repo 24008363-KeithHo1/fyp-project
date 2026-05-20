@@ -70,6 +70,8 @@
         <td class="text-end">
           <a class="btn btn-sm btn-outline-primary me-1" href="/api/invoices/${i.id}/pdf" target="_blank">PDF</a>
           <a class="btn btn-sm btn-outline-secondary me-1" href="/api/invoices/${i.id}/excel" target="_blank">CSV</a>
+          ${i.status !== 'Paid' ? `<button class="btn btn-sm btn-outline-success me-1" onclick="payByCard(${i.id})">Pay by Card</button>` : ''}
+          ${i.status !== 'Paid' ? `<button class="btn btn-sm btn-outline-info me-1" onclick="showBankTransfer(${i.id})">Bank Transfer</button>` : ''}
           <button class="btn btn-sm btn-outline-success" onclick="sendInvoice(${i.id}, '${(i.data && i.data.email) || ''}')">Send</button>
         </td>
       `;
@@ -95,6 +97,28 @@
     if (!email) return;
     const res = await fetch(`/api/invoices/${id}/send`, { method: 'POST', headers: { authorization:'Bearer '+token, 'content-type':'application/json' }, body: JSON.stringify({ email }) });
     if (res.ok) { alert('Invoice sent'); load(); } else { const err = await res.json(); alert(err.error || 'Failed to send'); }
+  }
+
+  async function payByCard(id){
+    const res = await fetch(`/payment/checkout/${id}`, { method: 'POST' });
+    const data = await res.json();
+    if (res.ok && data.url) location = data.url;
+    else alert(data.error || 'Unable to start card payment');
+  }
+
+  async function showBankTransfer(id){
+    const res = await fetch(`/payment/bank-transfer/${id}`);
+    const data = await res.json();
+    if (!res.ok) return alert(data.error || 'Unable to load bank transfer instructions');
+    alert(
+      `Bank Transfer Instructions\n\n` +
+      `Invoice: ${data.invoice}\n` +
+      `Bank: ${data.bankName}\n` +
+      `Account name: ${data.accountName}\n` +
+      `Account number: ${data.accountNumber}\n` +
+      `Amount: ${data.currency} ${Number(data.amount).toFixed(2)}\n` +
+      `Reference: ${data.reference}`
+    );
   }
   </script>
 

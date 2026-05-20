@@ -6,12 +6,28 @@ const crypto = require('crypto');
 exports.create = async (req, res) => {
   try {
     const { customer_name, amount, due_date } = req.body;
+    const errors = [];
+    const parsedAmount = Number(amount);
+
+    if (!customer_name || !customer_name.trim()) {
+      errors.push({ field: 'customer_name', message: 'Customer name is required.' });
+    }
+    if (!Number.isFinite(parsedAmount) || parsedAmount <= 0) {
+      errors.push({ field: 'amount', message: 'Amount must be greater than zero.' });
+    }
+    if (due_date && Number.isNaN(new Date(due_date).getTime())) {
+      errors.push({ field: 'due_date', message: 'Due date is invalid.' });
+    }
+    if (errors.length) {
+      return res.status(400).json({ error: 'Validation failed', details: errors });
+    }
+
     const count = await Invoice.count();
     const seq = count + 1;
     const now = new Date();
     const prefix = `${now.getFullYear()}${String(now.getMonth()+1).padStart(2,'0')}`;
     const number = `INV-${prefix}-${String(seq).padStart(4,'0')}`;
-    const inv = await Invoice.create({ number, customer_name, amount, due_date });
+    const inv = await Invoice.create({ number, customer_name: customer_name.trim(), amount: parsedAmount, due_date });
     res.json(inv);
   } catch (err) {
     res.status(400).json({ error: err.message });

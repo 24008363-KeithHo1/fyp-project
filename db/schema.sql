@@ -45,6 +45,23 @@ CREATE TABLE IF NOT EXISTS Payrolls (
   updatedAt DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
+-- Payment history for Stripe and bank-transfer confirmations
+CREATE TABLE IF NOT EXISTS Payments (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  invoiceId INT NOT NULL,
+  invoiceNumber VARCHAR(100) NOT NULL,
+  method ENUM('Stripe','BankTransfer','Manual') NOT NULL,
+  amount DECIMAL(10,2) NOT NULL,
+  currency VARCHAR(10) DEFAULT 'SGD',
+  status ENUM('Paid','Failed','Pending') DEFAULT 'Paid',
+  providerReference VARCHAR(255) UNIQUE,
+  paidAt DATETIME NOT NULL,
+  recordedBy INT,
+  data JSON,
+  createdAt DATETIME DEFAULT CURRENT_TIMESTAMP,
+  updatedAt DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
 -- Audit logs
 CREATE TABLE IF NOT EXISTS AuditLogs (
   id INT AUTO_INCREMENT PRIMARY KEY,

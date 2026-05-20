@@ -12,6 +12,7 @@ app.set('views', path.join(__dirname, 'views'));
 app.set('view engine', 'ejs');
 
 app.use(cors());
+app.post('/payment/webhook', express.raw({ type: 'application/json' }), require('./controllers/paymentController').handleWebhook);
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 
@@ -43,6 +44,8 @@ app.get('/mfa-setup', (req, res) => res.render('mfa-setup'));
 app.use('/api/auth', require('./routes/auth'));
 app.use('/api/invoices', require('./routes/invoice'));
 app.use('/api/payroll', require('./routes/payroll'));
+app.use('/api/reports', require('./routes/report'));
+app.use('/payment', require('./routes/payment'));
 // Admin routes (UI)
 app.use('/admin', require('./routes/admin'));
 // Role-specific dashboards

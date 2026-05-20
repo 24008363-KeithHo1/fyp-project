@@ -1,7 +1,171 @@
 <%- include('partials/header', { title: 'Reports' }) %>
 <%- include('partials/navbar') %>
 
-	<h2>Reports</h2>
-	<p>Basic reporting pages will be added here.</p>
+<script>
+const token = localStorage.getItem('token');
+if (!token) location = '/login';
+</script>
+
+<div class="d-flex justify-content-between align-items-start flex-wrap gap-2 mb-4">
+  <div>
+    <h2>Reports</h2>
+    <p class="text-muted mb-0">Invoicing, payroll, revenue, and validation summaries.</p>
+  </div>
+  <button class="btn btn-outline-primary" type="button" onclick="loadReports()">Refresh</button>
+</div>
+
+<div class="report-kpis mb-4">
+  <div class="report-kpi">
+    <span>Total invoiced</span>
+    <strong id="totalInvoiced">SGD 0.00</strong>
+  </div>
+  <div class="report-kpi">
+    <span>Paid revenue</span>
+    <strong id="paidRevenue">SGD 0.00</strong>
+  </div>
+  <div class="report-kpi">
+    <span>Outstanding</span>
+    <strong id="outstandingRevenue">SGD 0.00</strong>
+  </div>
+  <div class="report-kpi">
+    <span>Payroll net</span>
+    <strong id="payrollNet">SGD 0.00</strong>
+  </div>
+</div>
+
+<div class="row g-3 mb-4">
+  <div class="col-lg-4">
+    <div class="report-panel">
+      <h5>Invoice Status</h5>
+      <canvas id="invoiceStatusChart" width="320" height="220"></canvas>
+    </div>
+  </div>
+  <div class="col-lg-4">
+    <div class="report-panel">
+      <h5>Paid Revenue</h5>
+      <canvas id="revenueChart" width="320" height="220"></canvas>
+    </div>
+  </div>
+  <div class="col-lg-4">
+    <div class="report-panel">
+      <h5>Payroll by Period</h5>
+      <canvas id="payrollChart" width="320" height="220"></canvas>
+    </div>
+  </div>
+</div>
+
+<div class="report-panel">
+  <div class="d-flex justify-content-between align-items-center mb-2">
+    <h5 class="mb-0">Validation and Error Reporting</h5>
+    <span class="badge text-bg-secondary" id="issueCount">0 issues</span>
+  </div>
+  <div class="table-responsive">
+    <table class="table table-sm align-middle">
+      <thead class="table-light">
+        <tr>
+          <th>Area</th>
+          <th>Reference</th>
+          <th>Field</th>
+          <th>Issue</th>
+        </tr>
+      </thead>
+      <tbody id="issuesBody">
+        <tr><td colspan="4" class="text-muted text-center">Loading...</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<script>
+function formatMoney(value){
+  return 'SGD ' + Number(value || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
+function drawBarChart(canvasId, labels, values, color){
+  const canvas = document.getElementById(canvasId);
+  const ctx = canvas.getContext('2d');
+  const width = canvas.width;
+  const height = canvas.height;
+  ctx.clearRect(0, 0, width, height);
+  ctx.font = '12px Segoe UI, Arial';
+  ctx.fillStyle = '#667085';
+
+  if (!labels.length) {
+    ctx.fillText('No data available', 18, 32);
+    return;
+  }
+
+  const max = Math.max(...values, 1);
+  const chartTop = 18;
+  const chartHeight = 145;
+  const gap = 10;
+  const barWidth = Math.max(20, (width - 36 - gap * (labels.length - 1)) / labels.length);
+
+  labels.forEach((label, index) => {
+    const x = 18 + index * (barWidth + gap);
+    const barHeight = Math.round((values[index] / max) * chartHeight);
+    const y = chartTop + chartHeight - barHeight;
+    ctx.fillStyle = color;
+    ctx.fillRect(x, y, barWidth, barHeight);
+    ctx.fillStyle = '#344054';
+    ctx.fillText(String(values[index].toFixed ? values[index].toFixed(0) : values[index]), x, y - 5);
+    ctx.fillStyle = '#667085';
+    ctx.save();
+    ctx.translate(x, height - 18);
+    ctx.rotate(-0.35);
+    ctx.fillText(label.slice(0, 12), 0, 0);
+    ctx.restore();
+  });
+}
+
+async function fetchJson(url){
+  const res = await fetch(url, { headers: { authorization: 'Bearer ' + token } });
+  if (!res.ok) throw new Error((await res.json()).error || 'Unable to load reports');
+  return res.json();
+}
+
+async function loadReports(){
+  const [summary, validation] = await Promise.all([
+    fetchJson('/api/reports/summary'),
+    fetchJson('/api/reports/validation')
+  ]);
+
+  document.getElementById('totalInvoiced').textContent = formatMoney(summary.totals.totalInvoiced);
+  document.getElementById('paidRevenue').textContent = formatMoney(summary.totals.paidRevenue);
+  document.getElementById('outstandingRevenue').textContent = formatMoney(summary.totals.outstandingRevenue);
+  document.getElementById('payrollNet').textContent = formatMoney(summary.totals.payrollNet);
+
+  const invoiceStatus = summary.charts.invoiceStatus || {};
+  drawBarChart('invoiceStatusChart', Object.keys(invoiceStatus), Object.values(invoiceStatus).map(Number), '#0b5e3a');
+
+  const monthlyRevenue = summary.charts.monthlyRevenue || {};
+  drawBarChart('revenueChart', Object.keys(monthlyRevenue), Object.values(monthlyRevenue).map(Number), '#0b63a4');
+
+  const payrollByPeriod = summary.charts.payrollByPeriod || {};
+  drawBarChart('payrollChart', Object.keys(payrollByPeriod), Object.values(payrollByPeriod).map(Number), '#8a5a12');
+
+  document.getElementById('issueCount').textContent = `${validation.issueCount} issue${validation.issueCount === 1 ? '' : 's'}`;
+  const tbody = document.getElementById('issuesBody');
+  tbody.innerHTML = '';
+  if (!validation.issues.length) {
+    tbody.innerHTML = '<tr><td colspan="4" class="text-muted text-center">No validation issues found</td></tr>';
+    return;
+  }
+  validation.issues.forEach(issue => {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td>${issue.type}</td>
+      <td>${issue.reference}</td>
+      <td>${issue.field}</td>
+      <td>${issue.message}</td>
+    `;
+    tbody.appendChild(tr);
+  });
+}
+
+loadReports().catch(err => {
+  document.getElementById('issuesBody').innerHTML = `<tr><td colspan="4" class="text-danger">${err.message}</td></tr>`;
+});
+</script>
 
 <%- include('partials/footer') %>

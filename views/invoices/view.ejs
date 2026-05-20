@@ -6,10 +6,41 @@
       <p><strong>Amount:</strong> SGD <%= parseFloat(invoice.amount).toFixed(2) %></p>
       <p><strong>Status:</strong> <%= invoice.status %></p>
       <p><strong>Due:</strong> <%= invoice.due_date ? new Date(invoice.due_date).toLocaleDateString() : '' %></p>
+      <% if (invoice.status !== 'Paid') { %>
+        <div class="payment-actions mt-3">
+          <button class="btn btn-success" type="button" onclick="payByCard(<%= invoice.id %>)">Pay by Card</button>
+          <button class="btn btn-outline-primary" type="button" onclick="showBankTransfer(<%= invoice.id %>)">Bank Transfer</button>
+        </div>
+        <div id="bankTransfer" class="bank-transfer-box mt-3 d-none"></div>
+      <% } %>
       <div class="mt-3">
         <a class="btn btn-primary" href="/api/invoices/<%= invoice.id %>/pdf" target="_blank">Download PDF</a>
         <a class="btn btn-outline-secondary" href="/api/invoices/<%= invoice.id %>/excel" target="_blank">Download CSV</a>
       </div>
     </div>
   </div>
+  <script>
+  async function payByCard(id){
+    const res = await fetch(`/payment/checkout/${id}`, { method: 'POST' });
+    const data = await res.json();
+    if (res.ok && data.url) location = data.url;
+    else alert(data.error || 'Unable to start card payment');
+  }
+
+  async function showBankTransfer(id){
+    const res = await fetch(`/payment/bank-transfer/${id}`);
+    const data = await res.json();
+    if (!res.ok) return alert(data.error || 'Unable to load bank transfer instructions');
+    const box = document.getElementById('bankTransfer');
+    box.classList.remove('d-none');
+    box.innerHTML = `
+      <h5>Bank Transfer Instructions</h5>
+      <p class="mb-1"><strong>Bank:</strong> ${data.bankName}</p>
+      <p class="mb-1"><strong>Account name:</strong> ${data.accountName}</p>
+      <p class="mb-1"><strong>Account number:</strong> ${data.accountNumber}</p>
+      <p class="mb-1"><strong>Amount:</strong> ${data.currency} ${Number(data.amount).toFixed(2)}</p>
+      <p class="mb-0"><strong>Reference:</strong> ${data.reference}</p>
+    `;
+  }
+  </script>
 <%- include('../partials/footer') %>

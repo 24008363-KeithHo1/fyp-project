@@ -14,28 +14,147 @@ try{
   <h2>Payments</h2>
   <p>Record, review, and reconcile payments for invoices and bank activity.</p>
 
-  <div class="content-card mt-3">
-    <div class="row gy-3">
-      <div class="col-md-6">
-        <div class="card shadow-sm">
-          <div class="card-body">
-            <h5 class="card-title">New Payment</h5>
-            <p class="card-text">Upload payments, mark invoices as paid, or record manual transactions.</p>
-            
+  <div class="row gy-3 mt-2">
+    <div class="col-lg-5">
+      <div class="report-panel">
+        <h5>Confirm Bank Transfer</h5>
+        <form id="bankTransferForm">
+          <div class="mb-3">
+            <label class="form-label" for="invoiceId">Invoice</label>
+            <select id="invoiceId" class="form-select" required></select>
           </div>
-        </div>
+          <div class="mb-3">
+            <label class="form-label" for="reference">Bank reference</label>
+            <input id="reference" class="form-control" placeholder="Transaction reference" required>
+          </div>
+          <div class="mb-3">
+            <label class="form-label" for="paidAt">Paid date</label>
+            <input id="paidAt" type="datetime-local" class="form-control">
+          </div>
+          <div class="mb-3">
+            <label class="form-label" for="note">Note</label>
+            <input id="note" class="form-control" placeholder="Optional note">
+          </div>
+          <button class="btn btn-primary" type="submit">Mark as Paid</button>
+        </form>
       </div>
-      <div class="col-md-6">
-        <div class="card shadow-sm">
-          <div class="card-body">
-            <h5 class="card-title">Payment History</h5>
-            <p class="card-text">Review recently recorded payments and reconcile them with invoices.</p>
-            
-          </div>
+    </div>
+
+    <div class="col-lg-7">
+      <div class="report-panel">
+        <div class="d-flex justify-content-between align-items-center mb-2">
+          <h5 class="mb-0">Payment History</h5>
+          <button class="btn btn-sm btn-outline-primary" type="button" onclick="loadPayments()">Refresh</button>
+        </div>
+        <div class="table-responsive">
+          <table class="table table-sm align-middle">
+            <thead class="table-light">
+              <tr>
+                <th>Date</th>
+                <th>Invoice</th>
+                <th>Method</th>
+                <th class="text-end">Amount</th>
+                <th>Reference</th>
+              </tr>
+            </thead>
+            <tbody id="historyBody">
+              <tr><td colspan="5" class="text-muted text-center">Loading...</td></tr>
+            </tbody>
+          </table>
         </div>
       </div>
     </div>
   </div>
 </div>
+
+<script>
+function money(value, currency){
+  return `${currency || 'SGD'} ${Number(value || 0).toFixed(2)}`;
+}
+
+async function fetchJson(url, options){
+  const res = await fetch(url, {
+    ...(options || {}),
+    headers: {
+      authorization: 'Bearer ' + token,
+      ...((options && options.headers) || {})
+    }
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error || 'Request failed');
+  return data;
+}
+
+async function loadInvoices(){
+  const invoices = await fetchJson('/api/invoices');
+  const select = document.getElementById('invoiceId');
+  const unpaid = invoices.filter(inv => inv.status !== 'Paid');
+  select.innerHTML = '';
+
+  if (!unpaid.length) {
+    select.innerHTML = '<option value="">No unpaid invoices</option>';
+    select.disabled = true;
+    return;
+  }
+
+  select.disabled = false;
+  unpaid.forEach(inv => {
+    const option = document.createElement('option');
+    option.value = inv.id;
+    option.textContent = `${inv.number} - ${inv.customer_name} - ${money(inv.amount, 'SGD')}`;
+    select.appendChild(option);
+  });
+}
+
+async function loadPayments(){
+  const payments = await fetchJson('/payment/history');
+  const tbody = document.getElementById('historyBody');
+  tbody.innerHTML = '';
+
+  if (!payments.length) {
+    tbody.innerHTML = '<tr><td colspan="5" class="text-muted text-center">No payments recorded yet</td></tr>';
+    return;
+  }
+
+  payments.forEach(payment => {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td>${payment.paidAt ? new Date(payment.paidAt).toLocaleString() : ''}</td>
+      <td>${payment.invoiceNumber}</td>
+      <td>${payment.method}</td>
+      <td class="text-end">${money(payment.amount, payment.currency)}</td>
+      <td>${payment.providerReference || ''}</td>
+    `;
+    tbody.appendChild(tr);
+  });
+}
+
+document.getElementById('bankTransferForm').addEventListener('submit', async (event) => {
+  event.preventDefault();
+  const invoiceId = document.getElementById('invoiceId').value;
+  if (!invoiceId) return;
+
+  try {
+    await fetchJson(`/payment/bank-transfer/${invoiceId}/confirm`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        reference: document.getElementById('reference').value,
+        paidAt: document.getElementById('paidAt').value,
+        note: document.getElementById('note').value
+      })
+    });
+    document.getElementById('bankTransferForm').reset();
+    await Promise.all([loadInvoices(), loadPayments()]);
+    alert('Bank transfer recorded and invoice marked Paid.');
+  } catch (err) {
+    alert(err.message);
+  }
+});
+
+Promise.all([loadInvoices(), loadPayments()]).catch(err => {
+  document.getElementById('historyBody').innerHTML = `<tr><td colspan="5" class="text-danger">${err.message}</td></tr>`;
+});
+</script>
 
 <%- include('../partials/footer') %>
