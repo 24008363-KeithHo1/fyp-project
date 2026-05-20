@@ -23,11 +23,33 @@ CREATE TABLE IF NOT EXISTS Invoices (
   number VARCHAR(100) NOT NULL UNIQUE,
   customer_name VARCHAR(255) NOT NULL,
   amount DECIMAL(10,2) NOT NULL,
+  currency VARCHAR(10) NOT NULL DEFAULT 'SGD',
   status ENUM('Draft','Sent','Viewed','Paid','Overdue') DEFAULT 'Draft',
   due_date DATE,
   data JSON,
   createdAt DATETIME DEFAULT CURRENT_TIMESTAMP,
   updatedAt DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- Invoice line items (normalized rows for reporting and auditing)
+CREATE TABLE IF NOT EXISTS InvoiceItems (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  invoiceId INT NOT NULL,
+  line_no INT NOT NULL,
+  description VARCHAR(255) NOT NULL,
+  qty DECIMAL(10,2) NOT NULL,
+  unit_price DECIMAL(10,2) NOT NULL,
+  discount_rate DECIMAL(5,2) DEFAULT 0,
+  tax_rate DECIMAL(5,2) DEFAULT 0,
+  line_subtotal DECIMAL(10,2) NOT NULL,
+  line_discount DECIMAL(10,2) DEFAULT 0,
+  line_tax DECIMAL(10,2) DEFAULT 0,
+  line_total DECIMAL(10,2) NOT NULL,
+  createdAt DATETIME DEFAULT CURRENT_TIMESTAMP,
+  updatedAt DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  CONSTRAINT fk_invoice_item_invoice FOREIGN KEY (invoiceId) REFERENCES Invoices(id) ON DELETE CASCADE,
+  INDEX idx_invoice_items_invoiceId (invoiceId),
+  INDEX idx_invoice_items_line_no (line_no)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- Payrolls
@@ -109,6 +131,9 @@ ALTER TABLE Users
   ADD COLUMN IF NOT EXISTS mfaSecret VARCHAR(255),
   ADD COLUMN IF NOT EXISTS createdAt DATETIME DEFAULT CURRENT_TIMESTAMP,
   ADD COLUMN IF NOT EXISTS updatedAt DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP;
+
+ALTER TABLE Invoices
+  ADD COLUMN IF NOT EXISTS currency VARCHAR(10) NOT NULL DEFAULT 'SGD';
 
 -- Roles are stored directly on Users.role. The old Roles table is no longer used.
 DROP TABLE IF EXISTS Roles;

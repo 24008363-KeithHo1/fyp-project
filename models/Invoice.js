@@ -6,6 +6,7 @@ const Invoice = sequelize.define('Invoice', {
   number: { type: DataTypes.STRING, allowNull: false, unique: true },
   customer_name: { type: DataTypes.STRING, allowNull: false },
   amount: { type: DataTypes.DECIMAL(10,2), allowNull: false },
+  currency: { type: DataTypes.STRING(10), allowNull: false, defaultValue: 'SGD' },
   status: { type: DataTypes.ENUM('Draft','Sent','Viewed','Paid','Overdue'), defaultValue: 'Draft' },
   due_date: { type: DataTypes.DATE },
   data: { type: DataTypes.JSON }

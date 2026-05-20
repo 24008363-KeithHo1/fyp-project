@@ -3,9 +3,43 @@
     <div class="card-body">
       <h3>Invoice <%= invoice.number %></h3>
       <p><strong>Customer:</strong> <%= invoice.customer_name %></p>
-      <p><strong>Amount:</strong> SGD <%= parseFloat(invoice.amount).toFixed(2) %></p>
+      <p><strong>Amount:</strong> <%= invoice.currency || (invoice.data && invoice.data.currency) || 'SGD' %> <%= parseFloat(invoice.amount).toFixed(2) %></p>
       <p><strong>Status:</strong> <%= invoice.status %></p>
       <p><strong>Due:</strong> <%= invoice.due_date ? new Date(invoice.due_date).toLocaleDateString() : '' %></p>
+      <% if (invoice.data && invoice.data.line_items && invoice.data.line_items.length) { %>
+        <div class="table-responsive mt-3">
+          <table class="table table-sm table-bordered align-middle">
+            <thead class="table-light">
+              <tr>
+                <th>Description</th>
+                <th class="text-end">Qty</th>
+                <th class="text-end">Unit Price</th>
+                <th class="text-end">Discount %</th>
+                <th class="text-end">Tax %</th>
+                <th class="text-end">Line Total</th>
+              </tr>
+            </thead>
+            <tbody>
+              <% invoice.data.line_items.forEach(function(item){ %>
+                <tr>
+                  <td><%= item.description %></td>
+                  <td class="text-end"><%= Number(item.qty || 0).toFixed(2) %></td>
+                  <td class="text-end"><%= Number(item.unit_price || 0).toFixed(2) %></td>
+                  <td class="text-end"><%= Number(item.discount_rate || 0).toFixed(2) %></td>
+                  <td class="text-end"><%= Number(item.tax_rate || 0).toFixed(2) %></td>
+                  <td class="text-end"><%= Number(item.line_total || 0).toFixed(2) %></td>
+                </tr>
+              <% }) %>
+            </tbody>
+          </table>
+        </div>
+        <div class="mt-2">
+          <p class="mb-1"><strong>Subtotal:</strong> <%= invoice.currency || (invoice.data && invoice.data.currency) || 'SGD' %> <%= Number((invoice.data.summary && invoice.data.summary.subtotal) || 0).toFixed(2) %></p>
+          <p class="mb-1"><strong>Discount:</strong> <%= invoice.currency || (invoice.data && invoice.data.currency) || 'SGD' %> <%= Number((invoice.data.summary && invoice.data.summary.discount_total) || 0).toFixed(2) %></p>
+          <p class="mb-1"><strong>Tax:</strong> <%= invoice.currency || (invoice.data && invoice.data.currency) || 'SGD' %> <%= Number((invoice.data.summary && invoice.data.summary.tax_total) || 0).toFixed(2) %></p>
+          <p class="mb-1"><strong>Total:</strong> <%= invoice.currency || (invoice.data && invoice.data.currency) || 'SGD' %> <%= Number((invoice.data.summary && invoice.data.summary.total) || invoice.amount || 0).toFixed(2) %></p>
+        </div>
+      <% } %>
       <% if (invoice.status !== 'Paid') { %>
         <div class="payment-actions mt-3">
           <button class="btn btn-success" type="button" onclick="payByCard(<%= invoice.id %>)">Pay by Card</button>

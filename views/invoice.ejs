@@ -13,12 +13,34 @@
               <input id="customer" class="form-control" placeholder="Customer name" required>
             </div>
             <div class="mb-3">
-              <label for="amount" class="form-label">Amount</label>
-              <input id="amount" class="form-control" placeholder="0.00" inputmode="decimal" required>
+              <label class="form-label">Line items</label>
+              <div class="table-responsive">
+                <table class="table table-sm align-middle" id="itemTable">
+                  <thead>
+                    <tr>
+                      <th>Description</th>
+                      <th style="width: 80px;">Qty</th>
+                      <th style="width: 120px;">Unit</th>
+                      <th style="width: 90px;">Disc %</th>
+                      <th style="width: 90px;">Tax %</th>
+                      <th class="text-end" style="width: 120px;">Line total</th>
+                      <th style="width: 40px;"></th>
+                    </tr>
+                  </thead>
+                  <tbody id="itemBody"></tbody>
+                </table>
+              </div>
+              <button type="button" id="addItem" class="btn btn-sm btn-outline-secondary">Add line item</button>
             </div>
             <div class="mb-3">
               <label for="due" class="form-label">Due date</label>
               <input type="date" id="due" class="form-control">
+            </div>
+            <div class="border rounded p-2 bg-light mb-3">
+              <div class="d-flex justify-content-between"><span>Subtotal</span><strong id="subtotal">0.00</strong></div>
+              <div class="d-flex justify-content-between"><span>Discount</span><strong id="discount">0.00</strong></div>
+              <div class="d-flex justify-content-between"><span>Tax</span><strong id="tax">0.00</strong></div>
+              <div class="d-flex justify-content-between border-top pt-2 mt-2"><span>Total</span><strong id="total">0.00</strong></div>
             </div>
             <div class="d-grid gap-2">
               <button class="btn btn-primary" type="submit">Create Invoice</button>
@@ -53,6 +75,69 @@
   </div>
 
   <script>
+  function toNum(value){
+    const num = Number(value);
+    return Number.isFinite(num) ? num : 0;
+  }
+
+  function money(value){
+    return toNum(value).toFixed(2);
+  }
+
+  function addItemRow(item){
+    const row = document.createElement('tr');
+    row.innerHTML = `
+      <td><input class="form-control form-control-sm item-description" placeholder="Service or product" value="${item && item.description ? item.description : ''}" required></td>
+      <td><input class="form-control form-control-sm item-qty" type="number" min="0.01" step="0.01" value="${item && item.qty ? item.qty : 1}" required></td>
+      <td><input class="form-control form-control-sm item-unit" type="number" min="0" step="0.01" value="${item && item.unit_price ? item.unit_price : 0}" required></td>
+      <td><input class="form-control form-control-sm item-discount" type="number" min="0" max="100" step="0.01" value="${item && item.discount_rate ? item.discount_rate : 0}"></td>
+      <td><input class="form-control form-control-sm item-tax" type="number" min="0" max="100" step="0.01" value="${item && item.tax_rate ? item.tax_rate : 0}"></td>
+      <td class="text-end item-line-total">0.00</td>
+      <td><button type="button" class="btn btn-sm btn-link text-danger item-remove">x</button></td>
+    `;
+    document.getElementById('itemBody').appendChild(row);
+    row.querySelectorAll('input').forEach((input) => input.addEventListener('input', computeTotals));
+    row.querySelector('.item-remove').addEventListener('click', () => {
+      row.remove();
+      if (!document.querySelectorAll('#itemBody tr').length) addItemRow();
+      computeTotals();
+    });
+    computeTotals();
+  }
+
+  function collectItems(){
+    return Array.from(document.querySelectorAll('#itemBody tr')).map((row) => {
+      const description = row.querySelector('.item-description').value.trim();
+      const qty = toNum(row.querySelector('.item-qty').value);
+      const unit_price = toNum(row.querySelector('.item-unit').value);
+      const discount_rate = toNum(row.querySelector('.item-discount').value);
+      const tax_rate = toNum(row.querySelector('.item-tax').value);
+      const lineSubtotal = qty * unit_price;
+      const lineDiscount = lineSubtotal * (discount_rate / 100);
+      const taxable = lineSubtotal - lineDiscount;
+      const lineTax = taxable * (tax_rate / 100);
+      const lineTotal = taxable + lineTax;
+      row.querySelector('.item-line-total').textContent = money(lineTotal);
+      return { description, qty, unit_price, discount_rate, tax_rate, line_subtotal: lineSubtotal, line_discount: lineDiscount, line_tax: lineTax, line_total: lineTotal };
+    }).filter((item) => item.description || item.qty || item.unit_price);
+  }
+
+  function computeTotals(){
+    const items = collectItems();
+    const subtotal = items.reduce((sum, item) => sum + item.line_subtotal, 0);
+    const discount = items.reduce((sum, item) => sum + item.line_discount, 0);
+    const tax = items.reduce((sum, item) => sum + item.line_tax, 0);
+    const total = subtotal - discount + tax;
+    document.getElementById('subtotal').textContent = money(subtotal);
+    document.getElementById('discount').textContent = money(discount);
+    document.getElementById('tax').textContent = money(tax);
+    document.getElementById('total').textContent = money(total);
+    return { items, subtotal, discount, tax, total };
+  }
+
+  document.getElementById('addItem').addEventListener('click', () => addItemRow());
+  addItemRow();
+
   async function load(){
     const res = await fetch('/api/invoices',{headers:{authorization:'Bearer '+token}});
     if (!res.ok) return;
@@ -64,7 +149,7 @@
       tr.innerHTML = `
         <td>${i.number || ''}</td>
         <td>${i.customer_name || ''}</td>
-        <td class="text-end">${parseFloat(i.amount||0).toFixed(2)}</td>
+        <td class="text-end">${i.currency || (i.data && i.data.currency) || 'SGD'} ${parseFloat(i.amount||0).toFixed(2)}</td>
         <td>${i.due_date ? new Date(i.due_date).toLocaleDateString() : ''}</td>
         <td>${i.status || ''}</td>
         <td class="text-end">
@@ -81,10 +166,37 @@
 
   document.getElementById('create').addEventListener('submit', async e=>{
     e.preventDefault();
-    const payload = { customer_name:document.getElementById('customer').value, amount:document.getElementById('amount').value, due_date:document.getElementById('due').value };
+    const totals = computeTotals();
+    if (!totals.items.length) {
+      alert('Add at least one line item');
+      return;
+    }
+    const payload = {
+      customer_name: document.getElementById('customer').value,
+      amount: totals.total,
+      due_date: document.getElementById('due').value,
+      currency: 'SGD',
+      items: totals.items.map((item) => ({
+        description: item.description,
+        qty: item.qty,
+        unit_price: item.unit_price,
+        discount_rate: item.discount_rate,
+        tax_rate: item.tax_rate
+      })),
+      data: {
+        summary: {
+          subtotal: Number(totals.subtotal.toFixed(2)),
+          discount_total: Number(totals.discount.toFixed(2)),
+          tax_total: Number(totals.tax.toFixed(2)),
+          total: Number(totals.total.toFixed(2))
+        }
+      }
+    };
     const res = await fetch('/api/invoices',{method:'POST',headers:{authorization:'Bearer '+token,'content-type':'application/json'},body:JSON.stringify(payload)});
     if (res.ok){
       document.getElementById('create').reset();
+      document.getElementById('itemBody').innerHTML = '';
+      addItemRow();
       load();
     } else {
       const err = await res.json(); alert(err.error || 'Failed to create invoice');
