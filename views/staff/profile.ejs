@@ -5,6 +5,19 @@
 const token = localStorage.getItem('token');
 if (!token) location = '/login';
 
+function setProfileImage(url) {
+  const profileImg = document.getElementById('profileImage');
+  const fallback = document.getElementById('avatarFallback');
+  if (url) {
+    profileImg.src = url;
+    profileImg.classList.remove('d-none');
+    fallback.classList.add('d-none');
+  } else {
+    profileImg.classList.add('d-none');
+    fallback.classList.remove('d-none');
+  }
+}
+
 async function loadProfile() {
   const res = await fetch('/api/auth/me', { headers: { authorization: 'Bearer ' + token } });
   if (!res.ok) return location = '/login';
@@ -24,46 +37,68 @@ async function loadProfile() {
   document.getElementById('profilePhone').textContent = user.phone || '-';
   document.getElementById('profileAddress').textContent = user.address || '-';
   document.getElementById('profileBio').textContent = user.bio || 'Add a short summary about yourself so your team can know more about you.';
+  setProfileImage(user.profileImage);
+}
+
+// legacy upload helper removed — profile image is uploaded together with the form
+
+function previewImage() {
+  const fileInput = document.getElementById('profileImageInput');
+  const file = fileInput.files[0];
+  if (file) {
+    setProfileImage(URL.createObjectURL(file));
+  }
 }
 
 async function saveProfile(event) {
   event.preventDefault();
-  const payload = {
-    name: document.getElementById('name').value,
-    email: document.getElementById('email').value,
-    phone: document.getElementById('phone').value,
-    title: document.getElementById('title').value,
-    department: document.getElementById('department').value,
-    address: document.getElementById('address').value,
-    bio: document.getElementById('bio').value,
-  };
-  const res = await fetch('/api/auth/profile', {
-    method: 'POST',
-    headers: {
-      authorization: 'Bearer ' + token,
-      'content-type': 'application/json'
-    },
-    body: JSON.stringify(payload)
-  });
-  const result = await res.json();
-  const messageEl = document.getElementById('statusMessage');
-  if (!res.ok) {
-    messageEl.textContent = result.error || 'Unable to update profile';
-    messageEl.className = 'alert alert-danger';
-    return;
+  const statusEl = document.getElementById('statusMessage');
+  const form = document.getElementById('profileForm');
+  const submitBtn = form ? form.querySelector('button[type="submit"]') : null;
+  const originalText = submitBtn ? submitBtn.textContent : null;
+  if (submitBtn) { submitBtn.disabled = true; submitBtn.textContent = 'Saving...'; }
+  try {
+    const fd = new FormData(form);
+    const res = await fetch('/api/auth/profile', {
+      method: 'POST',
+      headers: { authorization: 'Bearer ' + token },
+      body: fd
+    });
+    let data;
+    try { data = await res.json(); } catch (e) { data = { error: 'Invalid server response' }; }
+    if (!res.ok) {
+      statusEl.textContent = data.error || 'Unable to update profile';
+      statusEl.className = 'alert alert-danger';
+      return;
+    }
+    statusEl.textContent = 'Profile updated successfully.';
+    statusEl.className = 'alert alert-success';
+    if (data.user && data.user.profileImage) setProfileImage(data.user.profileImage);
+    loadProfile();
+  } catch (err) {
+    statusEl.textContent = err.message || 'Request failed';
+    statusEl.className = 'alert alert-danger';
+  } finally {
+    if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = originalText || 'Save profile'; }
   }
-  messageEl.textContent = 'Profile updated successfully.';
-  messageEl.className = 'alert alert-success';
-  loadProfile();
 }
 
-window.addEventListener('DOMContentLoaded', loadProfile);
+window.addEventListener('DOMContentLoaded', () => {
+  loadProfile();
+  const imageInput = document.getElementById('profileImageInput');
+  if (imageInput) imageInput.addEventListener('change', previewImage);
+  const profileForm = document.getElementById('profileForm');
+  if (profileForm) profileForm.addEventListener('submit', saveProfile);
+});
 </script>
 
 <div class="profile-page">
   <div class="profile-banner">
     <div class="profile-banner-overlay"></div>
-    <div class="profile-avatar">👤</div>
+    <div class="profile-avatar" id="profileAvatar">
+      <span id="avatarFallback">👤</span>
+      <img id="profileImage" class="profile-image d-none rounded-circle" alt="Profile photo">
+    </div>
   </div>
 
   <div class="profile-main row gx-4 gy-4">
@@ -92,34 +127,42 @@ window.addEventListener('DOMContentLoaded', loadProfile);
           </div>
         </div>
         <div id="statusMessage" role="status"></div>
-        <form onsubmit="saveProfile(event)">
+        <form id="profileForm" enctype="multipart/form-data">
+          <div class="mb-4 profile-photo-uploader">
+            <label for="profileImageInput" class="form-label">Profile photo</label>
+            <div class="d-flex flex-wrap gap-2 align-items-center">
+              <input type="file" id="profileImageInput" name="profileImage" accept="image/*" class="form-control form-control-sm" style="max-width:260px;">
+              <span class="text-muted">PNG, JPG, GIF, WEBP</span>
+            </div>
+            <div id="uploadStatus" class="mt-2"></div>
+          </div>
           <div class="row g-3">
             <div class="col-md-6">
               <label for="name" class="form-label">Full name</label>
-              <input type="text" id="name" class="form-control" required>
+              <input type="text" id="name" name="name" class="form-control" required>
             </div>
             <div class="col-md-6">
               <label for="email" class="form-label">Email address</label>
-              <input type="email" id="email" class="form-control" required>
+              <input type="email" id="email" name="email" class="form-control" required>
             </div>
             <div class="col-md-6">
               <label for="phone" class="form-label">Phone</label>
-              <input type="text" id="phone" class="form-control">
+              <input type="text" id="phone" name="phone" class="form-control">
             </div>
             <div class="col-md-6">
               <label for="title" class="form-label">Job title</label>
-              <input type="text" id="title" class="form-control">
+              <input type="text" id="title" name="title" class="form-control">
             </div>
             <div class="col-md-12">
               <label for="department" class="form-label">Department</label>
-              <input type="text" id="department" class="form-control">
+              <input type="text" id="department" name="department" class="form-control">
             </div>
             <div class="col-md-12">
-              <label for="address" class="form-label">Location</label>
-              <input type="text" id="address" class="form-control">
+              <label for="address" class="form-label">Address</label>
+              <input type="text" id="address" name="address" class="form-control">
             </div>
             <div class="col-md-12">
-              <label for="bio" class="form-label">About you</label>
+              <label for="bio" class="form-label">About you</label><br>
               <input type="text" id="bio" class="form-control" placeholder="A short profile summary">
             </div>
           </div>

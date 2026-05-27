@@ -5,7 +5,7 @@ const auth = require('../controllers/authController');
 router.post('/register', auth.register);
 router.post('/login', auth.login);
 router.get('/me', require('../middlewares/auth'), auth.me);
-router.post('/profile', require('../middlewares/auth'), auth.updateProfile);
+router.post('/profile', require('../middlewares/auth'), auth.profileUploadMiddleware, auth.updateProfile);
 router.post('/invite', require('../middlewares/auth'), auth.invite);
 router.get('/verify-invite', auth.verifyInvite);
 router.post('/request-reset', auth.requestPasswordReset);
