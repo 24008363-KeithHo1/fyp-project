@@ -3,6 +3,7 @@ const express = require('express');
 const bodyParser = require('body-parser');
 const cors = require('cors');
 const path = require('path');
+const requireRole = require('./middlewares/roles');
 
 const { sequelize } = require('./config/db');
 
@@ -41,6 +42,7 @@ app.get('/reports', require('./middlewares/auth'), (req, res) => res.render('rep
 app.get('/register', (req, res) => res.render('register', { token: req.query.token || '', email: req.query.email || '', title: 'Register' }));
 app.get('/reset', (req, res) => res.render('reset', { token: req.query.token || '' }));
 app.get('/mfa-setup', (req, res) => res.render('mfa-setup'));
+app.get('/profile', require('./middlewares/auth'), requireRole(['Admin','Staff']), (req, res) => res.render('staff/profile'));
 
 // Routes
 app.use('/api/auth', require('./routes/auth'));
@@ -64,7 +66,7 @@ async function start() {
   try {
     await sequelize.authenticate();
     console.log('DB connected');
-    await sequelize.sync();
+    await sequelize.sync({ alter: true });
     app.listen(PORT, () => {
       console.log(`Server running at http://localhost:${PORT}`);
     });

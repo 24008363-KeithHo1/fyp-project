@@ -1,0 +1,135 @@
+<%- include('../partials/header', { title: 'My Profile' }) %>
+<%- include('../partials/navbar') %>
+
+<script>
+const token = localStorage.getItem('token');
+if (!token) location = '/login';
+
+async function loadProfile() {
+  const res = await fetch('/api/auth/me', { headers: { authorization: 'Bearer ' + token } });
+  if (!res.ok) return location = '/login';
+  const data = await res.json();
+  const user = data.user;
+  document.getElementById('name').value = user.name || '';
+  document.getElementById('email').value = user.email || '';
+  document.getElementById('phone').value = user.phone || '';
+  document.getElementById('title').value = user.title || '';
+  document.getElementById('department').value = user.department || '';
+  document.getElementById('address').value = user.address || '';
+  document.getElementById('bio').value = user.bio || '';
+  document.getElementById('profileName').textContent = user.name || 'Staff member';
+  document.getElementById('profileTitle').textContent = user.title || 'Staff Member';
+  document.getElementById('profileDepartment').textContent = user.department || 'General Office';
+  document.getElementById('profileEmail').textContent = user.email || '-';
+  document.getElementById('profilePhone').textContent = user.phone || '-';
+  document.getElementById('profileAddress').textContent = user.address || '-';
+  document.getElementById('profileBio').textContent = user.bio || 'Add a short summary about yourself so your team can know more about you.';
+}
+
+async function saveProfile(event) {
+  event.preventDefault();
+  const payload = {
+    name: document.getElementById('name').value,
+    email: document.getElementById('email').value,
+    phone: document.getElementById('phone').value,
+    title: document.getElementById('title').value,
+    department: document.getElementById('department').value,
+    address: document.getElementById('address').value,
+    bio: document.getElementById('bio').value,
+  };
+  const res = await fetch('/api/auth/profile', {
+    method: 'POST',
+    headers: {
+      authorization: 'Bearer ' + token,
+      'content-type': 'application/json'
+    },
+    body: JSON.stringify(payload)
+  });
+  const result = await res.json();
+  const messageEl = document.getElementById('statusMessage');
+  if (!res.ok) {
+    messageEl.textContent = result.error || 'Unable to update profile';
+    messageEl.className = 'alert alert-danger';
+    return;
+  }
+  messageEl.textContent = 'Profile updated successfully.';
+  messageEl.className = 'alert alert-success';
+  loadProfile();
+}
+
+window.addEventListener('DOMContentLoaded', loadProfile);
+</script>
+
+<div class="profile-page">
+  <div class="profile-banner">
+    <div class="profile-banner-overlay"></div>
+    <div class="profile-avatar">👤</div>
+  </div>
+
+  <div class="profile-main row gx-4 gy-4">
+    <div class="col-lg-4">
+      <div class="profile-card shadow-sm">
+        <div class="profile-header">
+          <h1 id="profileName">Staff Member</h1>
+          <p id="profileTitle" class="profile-subtitle">Staff Member</p>
+        </div>
+        <p id="profileBio" class="profile-bio">Add a short summary about yourself so your team can know more about you.</p>
+        <div class="profile-details">
+          <div><strong>Department</strong><span id="profileDepartment">General Office</span></div>
+          <div><strong>Email</strong><span id="profileEmail">-</span></div>
+          <div><strong>Phone</strong><span id="profilePhone">-</span></div>
+          <div><strong>Location</strong><span id="profileAddress">-</span></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-lg-8">
+      <div class="profile-edit-card shadow-sm p-4">
+        <div class="d-flex justify-content-between align-items-start mb-4">
+          <div>
+            <h2>Profile details</h2>
+            <p class="text-muted">Keep your information up to date for better team collaboration.</p>
+          </div>
+        </div>
+        <div id="statusMessage" role="status"></div>
+        <form onsubmit="saveProfile(event)">
+          <div class="row g-3">
+            <div class="col-md-6">
+              <label for="name" class="form-label">Full name</label>
+              <input type="text" id="name" class="form-control" required>
+            </div>
+            <div class="col-md-6">
+              <label for="email" class="form-label">Email address</label>
+              <input type="email" id="email" class="form-control" required>
+            </div>
+            <div class="col-md-6">
+              <label for="phone" class="form-label">Phone</label>
+              <input type="text" id="phone" class="form-control">
+            </div>
+            <div class="col-md-6">
+              <label for="title" class="form-label">Job title</label>
+              <input type="text" id="title" class="form-control">
+            </div>
+            <div class="col-md-12">
+              <label for="department" class="form-label">Department</label>
+              <input type="text" id="department" class="form-control">
+            </div>
+            <div class="col-md-12">
+              <label for="address" class="form-label">Location</label>
+              <input type="text" id="address" class="form-control">
+            </div>
+            <div class="col-md-12">
+              <label for="bio" class="form-label">About you</label>
+              <input type="text" id="bio" class="form-control" placeholder="A short profile summary">
+            </div>
+          </div>
+          <div class="mt-4 text-end">
+            <button type="submit" class="btn btn-primary">Save profile</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
+<%- include('../partials/footer') %>

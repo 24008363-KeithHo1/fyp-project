@@ -3,6 +3,7 @@ const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
 const speakeasy = require('speakeasy');
 const qrcode = require('qrcode');
+const { Op } = require('sequelize');
 const { jwtSecret, jwtExpiry } = require('../config/config');
 const User = require('../models/User');
 const InviteToken = require('../models/InviteToken');
@@ -152,6 +153,31 @@ exports.requestPasswordReset = async (req, res) => {
   } catch (err) { res.status(400).json({ error: err.message }); }
 };
 
+exports.updateProfile = async (req, res) => {
+  try {
+    const user = req.user;
+    if (!user) return res.status(401).json({ error: 'Unauthenticated' });
+    const { name, email, phone, title, department, address, bio } = req.body;
+    if (!name || !email) return res.status(400).json({ error: 'Name and email are required' });
+    const normalizedEmail = email.trim().toLowerCase();
+    const existing = await User.findOne({ where: { email: normalizedEmail, id: { [Op.ne]: user.id } } });
+    if (existing) return res.status(400).json({ error: 'Email already in use' });
+    user.name = name.trim();
+    user.email = normalizedEmail;
+    user.phone = phone || null;
+    user.title = title || null;
+    user.department = department || null;
+    user.address = address || null;
+    user.bio = bio || null;
+    await user.save();
+    const { ip, userAgent } = getRequestMetadata(req);
+    await logAudit({ userId: user.id, action: 'update_profile', entity: 'User', entityId: user.id, meta: { name: user.name, email: user.email }, ip, userAgent });
+    res.json({ user: { id: user.id, name: user.name, email: user.email, phone: user.phone, title: user.title, department: user.department, address: user.address, bio: user.bio, role: user.role } });
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+};
+
 exports.resetPassword = async (req, res) => {
   try {
     const { token, password } = req.body;
@@ -178,7 +204,17 @@ exports.me = async (req, res) => {
     else if (role === 'Finance') dashboard = '/finance/dashboard';
     else if (role === 'HR') dashboard = '/hr/dashboard';
 
-    res.json({ user: { id: user.id, name: user.name, email: user.email, role }, dashboard });
+    res.json({ user: {
+      id: user.id,
+      name: user.name,
+      email: user.email,
+      phone: user.phone,
+      title: user.title,
+      department: user.department,
+      address: user.address,
+      bio: user.bio,
+      role
+    }, dashboard });
   } catch (err) {
     res.status(400).json({ error: err.message });
   }
