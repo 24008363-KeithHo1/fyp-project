@@ -1,0 +1,58 @@
+<%- include('../partials/header', { title: 'New Request' }) %>
+<%- include('../partials/navbar') %>
+
+<script>
+const token = localStorage.getItem('token');
+if (!token) location = '/login';
+try{ const payload = JSON.parse(atob(token.split('.')[1])); if (payload.role !== 'Staff' && payload.role !== 'Admin') location = '/dashboard'; }catch(e){ location = '/login'; }
+</script>
+
+<div class="container mt-4">
+  <h2>Send Request</h2>
+  <form id="reqForm" class="mt-3">
+    <div class="mb-3">
+      <label class="form-label">Title</label>
+      <input name="title" class="form-control" required />
+    </div>
+    <div class="mb-3">
+      <label class="form-label">Recipient</label>
+        <select name="recipient" class="form-select" required>
+          <option value="HR">HR</option>
+          <option value="Finance">Finance</option>
+          <option value="Admin">Admin</option>
+        </select>
+    </div>
+    <div class="mb-3">
+      <label class="form-label">Message</label>
+      <input name="message" class="form-control" rows="6" required></input>
+    </div>
+    <div class="mb-3">
+      <label class="form-label">Attachments (optional)</label>
+      <input type="file" name="attachments" multiple class="form-control" />
+    </div>
+    <div>
+      <button class="btn btn-primary" type="submit">Send Request</button>
+      <a href="/requests" class="btn btn-link">Back</a>
+    </div>
+  </form>
+
+  <div id="msg" class="mt-3"></div>
+</div>
+
+<script>
+document.getElementById('reqForm').addEventListener('submit', async (e)=>{
+  e.preventDefault();
+  const form = e.target;
+  const fd = new FormData(form); // includes file inputs automatically, avoid double-appending
+  const token = localStorage.getItem('token');
+  const res = await fetch('/api/requests', { method: 'POST', body: fd, headers: { Authorization: `Bearer ${token}` } });
+  let data = {};
+  try { data = await res.json(); } catch (err) { }
+  const msg = document.getElementById('msg');
+  if (!res.ok) { msg.innerText = (data && data.error) ? data.error : 'Failed'; msg.className='text-danger'; return; }
+  msg.innerText = 'Request sent.'; msg.className='text-success';
+  setTimeout(()=> location = '/requests', 900);
+});
+</script>
+
+<%- include('../partials/footer') %>

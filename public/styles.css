@@ -209,3 +209,11 @@ header .btn-outline-primary{border-radius:20px;padding:.35rem .6rem}
 @media(max-width:480px){
   .report-kpis{grid-template-columns:1fr}
 }
+
+/* Requests box styling */
+.requests-card{background:#fff;border-radius:12px;padding:1rem;border:1px solid rgba(11,94,58,0.08);box-shadow:0 8px 20px rgba(16,24,40,0.04);margin-bottom:1rem}
+.requests-card h2{margin-top:0;color:#0b5e3a}
+.requests-card .table{background:transparent;margin-bottom:0}
+.request-message{white-space:pre-wrap;color:#333;margin:0}
+.request-attachments a{color:#0b63a4}
+.request-badge{font-weight:600}

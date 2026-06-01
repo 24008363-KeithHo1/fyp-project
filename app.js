@@ -49,6 +49,7 @@ app.use('/api/auth', require('./routes/auth'));
 app.use('/api/invoices', require('./routes/invoice'));
 app.use('/api/payroll', require('./routes/payroll'));
 app.use('/api/reports', require('./routes/report'));
+app.use('/api/requests', require('./routes/requestsApi'));
 app.use('/payment', require('./routes/payment'));
 // Admin routes (UI)
 app.use('/admin', require('./routes/admin'));
@@ -56,6 +57,11 @@ app.use('/admin', require('./routes/admin'));
 app.use('/finance', require('./routes/finance'));
 app.use('/hr', require('./routes/hr'));
 app.use('/staff', require('./routes/staff'));
+
+// Requests UI (staff)
+app.get('/requests', require('./middlewares/auth'), requireRole(['Admin','Staff']), require('./controllers/requestsController').staffListPage);
+app.get('/requests/new', require('./middlewares/auth'), requireRole(['Admin','Staff']), require('./controllers/requestsController').newRequestPage);
+app.get('/requests/:id/view', require('./middlewares/auth'), require('./controllers/requestsController').viewPage);
 
 // health
 app.get('/api/health', (req, res) => res.json({ status: 'ok' }));

@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const auth = require('../middlewares/auth');
 const requireRole = require('../middlewares/roles');
+const reqCtrl = require('../controllers/requestsController');
 
 router.use(auth);
 router.use(requireRole(['Admin', 'Finance']));
@@ -17,5 +18,7 @@ router.get('/payments', (req, res) => {
 router.get('/bank-reconcile', (req, res) => {
   res.render('finance/bank-reconcile');
 });
+
+router.get('/requests', reqCtrl.deptInboxPage);
 
 module.exports = router;

@@ -1,0 +1,62 @@
+<%- include('../partials/header', { title: 'My Requests' }) %>
+<%- include('../partials/navbar') %>
+
+<script>
+const token = localStorage.getItem('token');
+if (!token) location = '/login';
+try{ const payload = JSON.parse(atob(token.split('.')[1])); if (payload.role !== 'Staff' && payload.role !== 'Admin') location = '/dashboard'; }catch(e){ location = '/login'; }
+</script>
+
+<div class="container mt-4">
+  <div class="d-flex justify-content-between align-items-center">
+    <h2>My Requests</h2>
+    <button id="newRequestBtn" type="button" class="btn btn-primary" aria-label="New Request">➕ New Request</button>
+  </div>
+
+  <div class="content-card requests-card mt-3">
+    <% if (!requests || !requests.length) { %>
+      <div class="alert alert-info">No requests yet.</div>
+    <% } else { %>
+      <div class="table-responsive mt-2">
+        <table class="table table-striped table-hover table-bordered align-middle">
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Title</th>
+              <th>Recipient</th>
+              <th>Message</th>
+              <th>Status</th>
+              <th>Attachments</th>
+              <th>Created</th>
+            </tr>
+          </thead>
+          <tbody>
+            <% requests.forEach(r => { %>
+              <tr>
+                <td><%= r.id %></td>
+                <td><a href="/requests/<%= r.id %>/view"><%= r.title %></a></td>
+                <td><%= r.recipient %></td>
+                <td><%= r.message && r.message.length > 100 ? (r.message.substring(0,100) + '...') : r.message %></td>
+                <td><span class="badge <%= r.status === 'Pending' ? 'bg-warning text-dark' : (r.status === 'Completed' ? 'bg-success' : 'bg-secondary') %>"><%= r.status %></span></td>
+                <td>
+                  <% if (r.data && Array.isArray(r.data.attachments) && r.data.attachments.length) { %>
+                    <% r.data.attachments.forEach(a => { %>
+                      <div><a href="<%= a.path %>" target="_blank" rel="noopener noreferrer"><%= a.originalname %></a></div>
+                    <% }) %>
+                  <% } %>
+                </td>
+                <td><%= new Date(r.createdAt).toLocaleString() %></td>
+              </tr>
+            <% }) %>
+          </tbody>
+        </table>
+      </div>
+    <% } %>
+  </div>
+  </div>
+
+  <script>
+    document.getElementById('newRequestBtn')?.addEventListener('click', () => { location.href = '/requests/new'; });
+  </script>
+
+<%- include('../partials/footer') %>

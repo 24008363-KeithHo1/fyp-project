@@ -1,0 +1,73 @@
+<%- include('../partials/header', { title: 'Finance Inbox' }) %>
+<%- include('../partials/navbar') %>
+
+<div class="container mt-4">
+  <h2>Finance Requests Inbox</h2>
+  <div class="content-card requests-card mt-3">
+    <% if (!requests || !requests.length) { %>
+      <div class="alert alert-info">No requests.</div>
+    <% } else { %>
+      <div class="table-responsive mt-2">
+        <table class="table table-striped table-hover table-bordered align-middle table-sm">
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>From</th>
+              <th>Title</th>
+              <th>Message</th>
+              <th>Status</th>
+              <th>Attachments</th>
+              <th>Created</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody>
+            <% requests.forEach(r => { %>
+              <tr>
+                <td><%= r.id %></td>
+                <td><%= r.senderName || r.senderId %></td>
+                <td><a href="/requests/<%= r.id %>/view"><%= r.title %></a></td>
+                <td><%= r.message && r.message.length > 120 ? (r.message.substring(0,120) + '...') : r.message %></td>
+                <td id="status-<%= r.id %>"><span class="badge <%= r.status === 'Pending' ? 'bg-warning text-dark' : (r.status === 'Completed' ? 'bg-success' : 'bg-secondary') %>"><%= r.status %></span></td>
+                <td>
+                  <% if (r.data && Array.isArray(r.data.attachments) && r.data.attachments.length) { %>
+                    <% r.data.attachments.forEach(a => { %>
+                      <div><a href="<%= a.path %>" target="_blank" rel="noopener noreferrer"><%= a.originalname %></a></div>
+                    <% }) %>
+                  <% } %>
+                </td>
+                <td><%= new Date(r.createdAt).toLocaleString() %></td>
+                <td>
+                  <select id="sel-<%= r.id %>" class="form-select form-select-sm">
+                    <option value="Pending" <%= r.status==='Pending' ? 'selected' : '' %>>Pending</option>
+                    <option value="Completed" <%= r.status==='Completed' ? 'selected' : '' %>>Completed</option>
+                    <option value="Incomplete" <%= r.status==='Incomplete' ? 'selected' : '' %>>Incomplete</option>
+                  </select>
+                  <button class="btn btn-sm btn-primary mt-1 update-btn" data-id="<%= r.id %>">Update</button>
+                </td>
+              </tr>
+            <% }) %>
+          </tbody>
+        </table>
+      </div>
+    <% } %>
+  </div>
+</div>
+
+<script>
+async function updateStatus(id){
+  const sel = document.getElementById('sel-'+id);
+  const status = sel.value;
+  const token = localStorage.getItem('token');
+  const res = await fetch('/api/requests/'+id+'/status', { method: 'PUT', headers: { 'Content-Type':'application/json', Authorization: `Bearer ${token}` }, body: JSON.stringify({ status }) });
+  if (res.ok) document.getElementById('status-'+id).innerText = status;
+  else alert('Failed to update');
+}
+
+document.querySelectorAll('.update-btn').forEach(b => b.addEventListener('click', (e) => {
+  const id = e.currentTarget.dataset.id;
+  updateStatus(id);
+}));
+</script>
+
+<%- include('../partials/footer') %>
