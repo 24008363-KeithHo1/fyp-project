@@ -138,6 +138,27 @@
   document.getElementById('addItem').addEventListener('click', () => addItemRow());
   addItemRow();
 
+  let paypalSdkPromise;
+
+  async function loadPayPalSdk(){
+    if (window.paypal) return window.paypal;
+    if (!paypalSdkPromise) {
+      paypalSdkPromise = fetch('/payment/paypal/config')
+        .then(async res => {
+          const data = await res.json();
+          if (!res.ok) throw new Error(data.error || 'Unable to load PayPal configuration');
+          return new Promise((resolve, reject) => {
+            const script = document.createElement('script');
+            script.src = `https://www.paypal.com/sdk/js?client-id=${encodeURIComponent(data.clientId)}&currency=${encodeURIComponent(data.currency)}`;
+            script.onload = () => resolve(window.paypal);
+            script.onerror = () => reject(new Error('Unable to load PayPal SDK'));
+            document.head.appendChild(script);
+          });
+        });
+    }
+    return paypalSdkPromise;
+  }
+
   async function load(){
     const res = await fetch('/api/invoices',{headers:{authorization:'Bearer '+token}});
     if (!res.ok) return;
@@ -156,8 +177,10 @@
           <a class="btn btn-sm btn-outline-primary me-1" href="/api/invoices/${i.id}/pdf" target="_blank">PDF</a>
           <a class="btn btn-sm btn-outline-secondary me-1" href="/api/invoices/${i.id}/excel" target="_blank">CSV</a>
           ${i.status !== 'Paid' ? `<button class="btn btn-sm btn-outline-success me-1" onclick="payByCard(${i.id})">Pay by Card</button>` : ''}
+          ${i.status !== 'Paid' ? `<button class="btn btn-sm btn-outline-warning me-1" onclick="payByPayPal(${i.id})">PayPal</button>` : ''}
           ${i.status !== 'Paid' ? `<button class="btn btn-sm btn-outline-info me-1" onclick="showBankTransfer(${i.id})">Bank Transfer</button>` : ''}
           <button class="btn btn-sm btn-outline-success" onclick="sendInvoice(${i.id}, '${(i.data && i.data.email) || ''}')">Send</button>
+          <div id="paypal-buttons-${i.id}" class="mt-2"></div>
         </td>
       `;
       tbody.appendChild(tr);
@@ -216,6 +239,35 @@
     const data = await res.json();
     if (res.ok && data.url) location = data.url;
     else alert(data.error || 'Unable to start card payment');
+  }
+
+  async function payByPayPal(id){
+    const container = document.getElementById(`paypal-buttons-${id}`);
+    container.innerHTML = '';
+
+    try {
+      const paypal = await loadPayPalSdk();
+      paypal.Buttons({
+        createOrder: async () => {
+          const res = await fetch(`/payment/paypal/orders/${id}`, { method: 'POST' });
+          const data = await res.json();
+          if (!res.ok) throw new Error(data.error || 'Unable to create PayPal order');
+          return data.id;
+        },
+        onApprove: async data => {
+          const res = await fetch(`/payment/paypal/orders/${data.orderID}/capture`, { method: 'POST' });
+          const result = await res.json();
+          if (!res.ok) throw new Error(result.error || 'Unable to capture PayPal payment');
+          alert('PayPal payment successful');
+          load();
+        },
+        onError: err => {
+          alert(err.message || 'PayPal payment failed');
+        }
+      }).render(container);
+    } catch (err) {
+      alert(err.message || 'Unable to start PayPal payment');
+    }
   }
 
   async function showBankTransfer(id){

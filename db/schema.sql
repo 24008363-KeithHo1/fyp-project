@@ -67,12 +67,12 @@ CREATE TABLE IF NOT EXISTS Payrolls (
   updatedAt DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
--- Payment history for Stripe and bank-transfer confirmations
+-- Payment history for Stripe, PayPal and bank-transfer confirmations
 CREATE TABLE IF NOT EXISTS Payments (
   id INT AUTO_INCREMENT PRIMARY KEY,
   invoiceId INT NOT NULL,
   invoiceNumber VARCHAR(100) NOT NULL,
-  method ENUM('Stripe','BankTransfer','Manual') NOT NULL,
+  method ENUM('Stripe','PayPal','BankTransfer','Manual') NOT NULL,
   amount DECIMAL(10,2) NOT NULL,
   currency VARCHAR(10) DEFAULT 'SGD',
   status ENUM('Paid','Failed','Pending') DEFAULT 'Paid',
@@ -134,6 +134,8 @@ ALTER TABLE Users
 
 ALTER TABLE Invoices
   ADD COLUMN IF NOT EXISTS currency VARCHAR(10) NOT NULL DEFAULT 'SGD';
+ALTER TABLE Payments
+  MODIFY COLUMN method ENUM('Stripe','PayPal','BankTransfer','Manual') NOT NULL;
 
 -- Roles are stored directly on Users.role. The old Roles table is no longer used.
 DROP TABLE IF EXISTS Roles;
