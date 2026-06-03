@@ -10,66 +10,221 @@ try{
 }catch(e){ location = '/login'; }
 </script>
 
-<div class="container mt-4">
-  <h2>Payments</h2>
-  <p>Record, review, and reconcile payments for invoices and bank activity.</p>
-
-  <div class="row gy-3 mt-2">
-    <div class="col-lg-5">
-      <div class="report-panel">
-        <h5>Confirm Bank Transfer</h5>
-        <form id="bankTransferForm">
-          <div class="mb-3">
-            <label class="form-label" for="invoiceId">Invoice</label>
-            <select id="invoiceId" class="form-select" required></select>
-          </div>
-          <div class="mb-3">
-            <label class="form-label" for="reference">Bank reference</label>
-            <input id="reference" class="form-control" placeholder="Transaction reference" required>
-          </div>
-          <div class="mb-3">
-            <label class="form-label" for="paidAt">Paid date</label>
-            <input id="paidAt" type="datetime-local" class="form-control">
-          </div>
-          <div class="mb-3">
-            <label class="form-label" for="note">Note</label>
-            <input id="note" class="form-control" placeholder="Optional note">
-          </div>
-          <button class="btn btn-primary" type="submit">Mark as Paid</button>
-        </form>
-      </div>
+<div class="container mt-4 payments-page">
+  <div class="d-flex flex-wrap align-items-end justify-content-between gap-2 mb-3">
+    <div>
+      <h2>Payments</h2>
+      <p class="text-muted mb-0">Record, review, and reconcile payments for invoices and bank activity.</p>
     </div>
+    <button class="btn btn-sm btn-outline-primary" type="button" onclick="refreshPayments()">Refresh</button>
+  </div>
 
-    <div class="col-lg-7">
-      <div class="report-panel">
-        <div class="d-flex justify-content-between align-items-center mb-2">
-          <h5 class="mb-0">Payment History</h5>
-          <button class="btn btn-sm btn-outline-primary" type="button" onclick="loadPayments()">Refresh</button>
-        </div>
-        <div class="table-responsive">
-          <table class="table table-sm align-middle">
-            <thead class="table-light">
-              <tr>
-                <th>Date</th>
-                <th>Invoice</th>
-                <th>Method</th>
-                <th class="text-end">Amount</th>
-                <th>Reference</th>
-              </tr>
-            </thead>
-            <tbody id="historyBody">
-              <tr><td colspan="5" class="text-muted text-center">Loading...</td></tr>
-            </tbody>
-          </table>
-        </div>
-      </div>
+  <div class="report-kpis finance-row">
+    <div class="report-kpi">
+      <span>Total Paid Today</span>
+      <strong id="totalPaidToday">SGD 0.00</strong>
+    </div>
+    <div class="report-kpi">
+      <span>Stripe Payments</span>
+      <strong id="stripePayments">SGD 0.00</strong>
+    </div>
+    <div class="report-kpi">
+      <span>PayPal Payments</span>
+      <strong id="paypalPayments">SGD 0.00</strong>
+    </div>
+    <div class="report-kpi">
+      <span>Pending Transfers</span>
+      <strong id="pendingTransfers">0</strong>
     </div>
   </div>
+
+  <div id="paymentAlerts" class="finance-alerts mt-3"></div>
+
+  <section class="report-panel finance-row">
+    <ul class="nav nav-tabs payment-tabs" id="paymentMethodTabs" role="tablist">
+      <li class="nav-item" role="presentation">
+        <button class="nav-link active" id="bank-tab" data-bs-toggle="tab" data-bs-target="#bankPanel" type="button" role="tab">Bank Transfer</button>
+      </li>
+      <li class="nav-item" role="presentation">
+        <button class="nav-link" id="stripe-tab" data-bs-toggle="tab" data-bs-target="#stripePanel" type="button" role="tab">Stripe</button>
+      </li>
+      <li class="nav-item" role="presentation">
+        <button class="nav-link" id="paypal-tab" data-bs-toggle="tab" data-bs-target="#paypalPanel" type="button" role="tab">PayPal</button>
+      </li>
+    </ul>
+
+    <div class="tab-content pt-3">
+      <div class="tab-pane fade show active" id="bankPanel" role="tabpanel">
+        <div class="row g-3">
+          <div class="col-lg-5">
+            <div class="bank-instructions">
+              <h5>Bank Transfer Instructions</h5>
+              <p class="mb-1"><strong>Bank:</strong> <span id="bankName">DBS Business Account</span></p>
+              <p class="mb-1"><strong>Account Name:</strong> <span id="bankAccountName">Your Company Name</span></p>
+              <p class="mb-1"><strong>Account No:</strong> <span id="bankAccountNumber">123-456789-0</span></p>
+              <p class="mb-0"><strong>Reference:</strong> Use invoice number</p>
+            </div>
+          </div>
+          <div class="col-lg-7">
+            <form id="bankTransferForm">
+              <div class="mb-3">
+                <label class="form-label" for="invoiceId">Invoice</label>
+                <select id="invoiceId" class="form-select" required></select>
+              </div>
+              <div class="mb-3">
+                <label class="form-label" for="reference">Bank reference</label>
+                <input id="reference" class="form-control" placeholder="Required transaction reference" required>
+              </div>
+              <div class="mb-3">
+                <label class="form-label" for="paidAt">Paid date</label>
+                <input id="paidAt" type="datetime-local" class="form-control">
+              </div>
+              <div class="mb-3">
+                <label class="form-label" for="note">Note</label>
+                <input id="note" class="form-control" placeholder="Optional note">
+              </div>
+              <button class="btn btn-primary" type="submit">Mark as Paid</button>
+            </form>
+          </div>
+        </div>
+      </div>
+
+      <div class="tab-pane fade" id="stripePanel" role="tabpanel">
+        <div class="payment-method-card">
+          <h5>Stripe Card Payment</h5>
+          <p class="text-muted">Start a Stripe Checkout session for an unpaid invoice.</p>
+          <div class="row g-2 align-items-end">
+            <div class="col-md-8">
+              <label class="form-label" for="stripeInvoiceId">Invoice</label>
+              <select id="stripeInvoiceId" class="form-select"></select>
+            </div>
+            <div class="col-md-4">
+              <button class="btn btn-primary w-100" type="button" onclick="startStripePayment()">Pay with Stripe</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="tab-pane fade" id="paypalPanel" role="tabpanel">
+        <div class="payment-method-card">
+          <h5>PayPal Payment</h5>
+          <p class="text-muted">Create and capture a PayPal order for an unpaid invoice.</p>
+          <div class="row g-2 align-items-end">
+            <div class="col-md-8">
+              <label class="form-label" for="paypalInvoiceId">Invoice</label>
+              <select id="paypalInvoiceId" class="form-select"></select>
+            </div>
+            <div class="col-md-4">
+              <button class="btn btn-outline-primary w-100" type="button" onclick="renderPayPalButtons()">Load PayPal</button>
+            </div>
+          </div>
+          <div id="paypalButtons" class="mt-3" style="max-width:320px"></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="report-panel finance-row">
+    <h5>Search and Filter</h5>
+    <div class="row g-2">
+      <div class="col-md-4">
+        <input id="paymentSearch" class="form-control" placeholder="Search invoice or reference">
+      </div>
+      <div class="col-md-2">
+        <select id="methodFilter" class="form-select">
+          <option value="">All methods</option>
+          <option value="Stripe">Stripe</option>
+          <option value="PayPal">PayPal</option>
+          <option value="BankTransfer">Bank</option>
+          <option value="Manual">Manual</option>
+        </select>
+      </div>
+      <div class="col-md-2">
+        <select id="statusFilter" class="form-select">
+          <option value="">All status</option>
+          <option value="Paid">Paid</option>
+          <option value="Pending">Pending</option>
+          <option value="Failed">Failed</option>
+        </select>
+      </div>
+      <div class="col-md-2">
+        <input id="dateFrom" type="date" class="form-control">
+      </div>
+      <div class="col-md-2">
+        <input id="dateTo" type="date" class="form-control">
+      </div>
+    </div>
+  </section>
+
+  <section class="report-panel finance-row">
+    <div class="d-flex justify-content-between align-items-center mb-2">
+      <h5 class="mb-0">Payment History</h5>
+      <span class="text-muted small" id="paymentCount">0 payments</span>
+    </div>
+    <div class="table-responsive">
+      <table class="table table-hover align-middle">
+        <thead class="table-light">
+          <tr>
+            <th>Date</th>
+            <th>Invoice</th>
+            <th>Customer</th>
+            <th>Method</th>
+            <th class="text-end">Amount</th>
+            <th>Status</th>
+            <th>Reference</th>
+            <th>Action</th>
+          </tr>
+        </thead>
+        <tbody id="historyBody">
+          <tr><td colspan="8" class="text-muted text-center">Loading...</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="report-panel finance-row">
+    <h5>Recent Payment Activity</h5>
+    <div id="recentActivity" class="payment-activity">
+      <div class="text-muted">Loading activity...</div>
+    </div>
+  </section>
 </div>
 
 <script>
+let allInvoices = [];
+let allPayments = [];
+let paypalSdkPromise;
+
 function money(value, currency){
-  return `${currency || 'SGD'} ${Number(value || 0).toFixed(2)}`;
+  return `${currency || 'SGD'} ${Number(value || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+}
+
+function normalizeStatus(status){
+  if (status === 'COMPLETED' || status === 'paid') return 'Paid';
+  return status || 'Paid';
+}
+
+function statusBadge(status, method){
+  const cleanStatus = normalizeStatus(status);
+  if (cleanStatus === 'Paid') return '<span class="badge bg-success">Paid</span>';
+  if (cleanStatus === 'Pending') return '<span class="badge bg-warning text-dark">Pending</span>';
+  if (cleanStatus === 'Failed') return '<span class="badge bg-danger">Failed</span>';
+  if (method === 'Manual') return '<span class="badge bg-primary">Manual</span>';
+  return `<span class="badge bg-secondary">${cleanStatus}</span>`;
+}
+
+function showAlert(message, type){
+  const container = document.getElementById('paymentAlerts');
+  container.innerHTML = `
+    <div class="finance-alert ${type === 'success' ? 'finance-alert-success' : ''}">
+      <i class="fa-solid ${type === 'success' ? 'fa-circle-check' : 'fa-triangle-exclamation'}" aria-hidden="true"></i>
+      <span>${message}</span>
+    </div>
+  `;
+}
+
+function clearAlerts(){
+  document.getElementById('paymentAlerts').innerHTML = '';
 }
 
 async function fetchJson(url, options){
@@ -85,9 +240,28 @@ async function fetchJson(url, options){
   return data;
 }
 
-async function loadInvoices(){
-  const invoices = await fetchJson('/api/invoices');
-  const select = document.getElementById('invoiceId');
+async function loadPayPalSdk(){
+  if (window.paypal) return window.paypal;
+  if (!paypalSdkPromise) {
+    paypalSdkPromise = fetch('/payment/paypal/config', {
+      headers: { authorization: 'Bearer ' + token }
+    }).then(async res => {
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Unable to load PayPal configuration');
+      return new Promise((resolve, reject) => {
+        const script = document.createElement('script');
+        script.src = `https://www.paypal.com/sdk/js?client-id=${encodeURIComponent(data.clientId)}&currency=${encodeURIComponent(data.currency)}`;
+        script.onload = () => resolve(window.paypal);
+        script.onerror = () => reject(new Error('Unable to load PayPal SDK'));
+        document.head.appendChild(script);
+      });
+    });
+  }
+  return paypalSdkPromise;
+}
+
+function populateInvoiceSelect(selectId, invoices){
+  const select = document.getElementById(selectId);
   const unpaid = invoices.filter(inv => inv.status !== 'Paid');
   select.innerHTML = '';
 
@@ -101,59 +275,214 @@ async function loadInvoices(){
   unpaid.forEach(inv => {
     const option = document.createElement('option');
     option.value = inv.id;
-    option.textContent = `${inv.number} - ${inv.customer_name} - ${money(inv.amount, 'SGD')}`;
+    option.textContent = `${inv.number} - ${inv.customer_name} - ${money(inv.amount, inv.currency || 'SGD')}`;
+    option.dataset.invoiceNumber = inv.number;
     select.appendChild(option);
   });
 }
 
-async function loadPayments(){
-  const payments = await fetchJson('/payment/history');
+async function loadInvoices(){
+  allInvoices = await fetchJson('/api/invoices');
+  populateInvoiceSelect('invoiceId', allInvoices);
+  populateInvoiceSelect('stripeInvoiceId', allInvoices);
+  populateInvoiceSelect('paypalInvoiceId', allInvoices);
+  updateBankInstructions();
+}
+
+function updateBankInstructions(){
+  const select = document.getElementById('invoiceId');
+  const invoiceId = select.value;
+  if (!invoiceId) return;
+  fetchJson(`/payment/bank-transfer/${invoiceId}`).then(data => {
+    document.getElementById('bankName').textContent = data.bankName;
+    document.getElementById('bankAccountName').textContent = data.accountName;
+    document.getElementById('bankAccountNumber').textContent = data.accountNumber;
+    document.getElementById('reference').placeholder = `Use ${data.reference}`;
+  }).catch(() => {});
+}
+
+function paymentDate(payment){
+  return payment.paidAt ? new Date(payment.paidAt) : null;
+}
+
+function isToday(date){
+  if (!date) return false;
+  const now = new Date();
+  return date.getFullYear() === now.getFullYear() && date.getMonth() === now.getMonth() && date.getDate() === now.getDate();
+}
+
+function updateSummaryCards(payments){
+  const totalPaidToday = payments
+    .filter(payment => normalizeStatus(payment.status) === 'Paid' && isToday(paymentDate(payment)))
+    .reduce((sum, payment) => sum + Number(payment.amount || 0), 0);
+  const stripeTotal = payments
+    .filter(payment => payment.method === 'Stripe' && normalizeStatus(payment.status) === 'Paid')
+    .reduce((sum, payment) => sum + Number(payment.amount || 0), 0);
+  const paypalTotal = payments
+    .filter(payment => payment.method === 'PayPal' && normalizeStatus(payment.status) === 'Paid')
+    .reduce((sum, payment) => sum + Number(payment.amount || 0), 0);
+  const pendingTransfers = allInvoices.filter(invoice => invoice.status !== 'Paid').length;
+
+  document.getElementById('totalPaidToday').textContent = money(totalPaidToday);
+  document.getElementById('stripePayments').textContent = money(stripeTotal);
+  document.getElementById('paypalPayments').textContent = money(paypalTotal);
+  document.getElementById('pendingTransfers').textContent = pendingTransfers;
+}
+
+function filteredPayments(){
+  const search = document.getElementById('paymentSearch').value.trim().toLowerCase();
+  const method = document.getElementById('methodFilter').value;
+  const status = document.getElementById('statusFilter').value;
+  const dateFrom = document.getElementById('dateFrom').value ? new Date(document.getElementById('dateFrom').value) : null;
+  const dateTo = document.getElementById('dateTo').value ? new Date(document.getElementById('dateTo').value + 'T23:59:59') : null;
+
+  return allPayments.filter(payment => {
+    const haystack = `${payment.invoiceNumber || ''} ${payment.providerReference || ''} ${payment.customerName || ''}`.toLowerCase();
+    const paidDate = paymentDate(payment);
+    if (search && !haystack.includes(search)) return false;
+    if (method && payment.method !== method) return false;
+    if (status && normalizeStatus(payment.status) !== status) return false;
+    if (dateFrom && (!paidDate || paidDate < dateFrom)) return false;
+    if (dateTo && (!paidDate || paidDate > dateTo)) return false;
+    return true;
+  });
+}
+
+function renderPayments(){
+  const payments = filteredPayments();
   const tbody = document.getElementById('historyBody');
+  document.getElementById('paymentCount').textContent = `${payments.length} payment${payments.length === 1 ? '' : 's'}`;
   tbody.innerHTML = '';
 
   if (!payments.length) {
-    tbody.innerHTML = '<tr><td colspan="5" class="text-muted text-center">No payments recorded yet</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="8" class="text-muted text-center">No payments match your filters</td></tr>';
     return;
   }
 
   payments.forEach(payment => {
+    const date = paymentDate(payment);
     const tr = document.createElement('tr');
     tr.innerHTML = `
-      <td>${payment.paidAt ? new Date(payment.paidAt).toLocaleString() : ''}</td>
-      <td>${payment.invoiceNumber}</td>
-      <td>${payment.method}</td>
+      <td>${date ? date.toLocaleString() : ''}</td>
+      <td>${payment.invoiceNumber || ''}</td>
+      <td>${payment.customerName || ''}</td>
+      <td><span class="method-pill method-${payment.method}">${payment.method || ''}</span></td>
       <td class="text-end">${money(payment.amount, payment.currency)}</td>
-      <td>${payment.providerReference || ''}</td>
+      <td>${statusBadge(payment.status, payment.method)}</td>
+      <td class="text-break">${payment.providerReference || ''}</td>
+      <td>
+        <div class="btn-group btn-group-sm">
+          <a class="btn btn-outline-primary" href="/api/invoices/${payment.invoiceId}/pdf" target="_blank">View Invoice</a>
+          <a class="btn btn-outline-secondary" href="/api/invoices/${payment.invoiceId}/pdf" target="_blank" download>Receipt</a>
+        </div>
+      </td>
     `;
     tbody.appendChild(tr);
   });
 }
 
+function renderRecentActivity(){
+  const container = document.getElementById('recentActivity');
+  if (!allPayments.length) {
+    container.innerHTML = '<div class="text-muted">No payment activity yet.</div>';
+    return;
+  }
+
+  container.innerHTML = allPayments.slice(0, 5).map(payment => {
+    const status = normalizeStatus(payment.status);
+    const action = status === 'Failed'
+      ? `${payment.method} payment failed for ${payment.invoiceNumber}`
+      : payment.method === 'BankTransfer'
+        ? `${payment.invoiceNumber} marked paid by bank transfer`
+        : `${payment.invoiceNumber} paid via ${payment.method}`;
+    return `<div class="activity-item">${statusBadge(status, payment.method)} <span>${action}</span></div>`;
+  }).join('');
+}
+
+async function loadPayments(){
+  allPayments = await fetchJson('/payment/history');
+  updateSummaryCards(allPayments);
+  renderPayments();
+  renderRecentActivity();
+}
+
+async function refreshPayments(){
+  clearAlerts();
+  await Promise.all([loadInvoices(), loadPayments()]);
+}
+
+async function startStripePayment(){
+  const invoiceId = document.getElementById('stripeInvoiceId').value;
+  if (!invoiceId) return showAlert('Select an unpaid invoice first');
+  try {
+    const data = await fetchJson(`/payment/checkout/${invoiceId}`, { method: 'POST' });
+    if (data.url) location = data.url;
+  } catch (err) {
+    showAlert(err.message);
+  }
+}
+
+function renderPayPalButtons(){
+  const invoiceId = document.getElementById('paypalInvoiceId').value;
+  const container = document.getElementById('paypalButtons');
+  container.innerHTML = '';
+  if (!invoiceId) return showAlert('Select an unpaid invoice first');
+
+  try {
+    const paypal = await loadPayPalSdk();
+    paypal.Buttons({
+      createOrder: async () => {
+        const data = await fetchJson(`/payment/paypal/orders/${invoiceId}`, { method: 'POST' });
+        return data.id;
+      },
+      onApprove: async data => {
+        await fetchJson(`/payment/paypal/orders/${data.orderID}/capture`, { method: 'POST' });
+        showAlert('PayPal payment recorded successfully', 'success');
+        await refreshPayments();
+      },
+      onError: err => showAlert(err.message || 'PayPal payment failed')
+    }).render(container);
+  } catch (err) {
+    showAlert(err.message || 'Unable to load PayPal');
+  }
+}
+
+document.getElementById('invoiceId').addEventListener('change', updateBankInstructions);
+['paymentSearch','methodFilter','statusFilter','dateFrom','dateTo'].forEach(id => {
+  document.getElementById(id).addEventListener('input', renderPayments);
+});
+
 document.getElementById('bankTransferForm').addEventListener('submit', async (event) => {
   event.preventDefault();
+  clearAlerts();
   const invoiceId = document.getElementById('invoiceId').value;
-  if (!invoiceId) return;
+  const reference = document.getElementById('reference').value.trim();
+  const paidAt = document.getElementById('paidAt').value;
+
+  if (!invoiceId) return showAlert('Select an unpaid invoice first');
+  if (!reference) return showAlert('Bank reference is required');
+  if (paidAt && new Date(paidAt) > new Date()) return showAlert('Paid date cannot be future date');
 
   try {
     await fetchJson(`/payment/bank-transfer/${invoiceId}/confirm`, {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({
-        reference: document.getElementById('reference').value,
-        paidAt: document.getElementById('paidAt').value,
+        reference,
+        paidAt,
         note: document.getElementById('note').value
       })
     });
     document.getElementById('bankTransferForm').reset();
-    await Promise.all([loadInvoices(), loadPayments()]);
-    alert('Bank transfer recorded and invoice marked Paid.');
+    showAlert('Bank transfer recorded and invoice marked Paid.', 'success');
+    await refreshPayments();
   } catch (err) {
-    alert(err.message);
+    showAlert(err.message);
   }
 });
 
-Promise.all([loadInvoices(), loadPayments()]).catch(err => {
-  document.getElementById('historyBody').innerHTML = `<tr><td colspan="5" class="text-danger">${err.message}</td></tr>`;
+refreshPayments().catch(err => {
+  document.getElementById('historyBody').innerHTML = `<tr><td colspan="8" class="text-danger">${err.message}</td></tr>`;
 });
 </script>
 

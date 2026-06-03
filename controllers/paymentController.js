@@ -1,5 +1,6 @@
 const Stripe = require('stripe');
-const stripe = Stripe(process.env.STRIPE_SECRET_KEY);
+const stripeSecretKey = process.env.STRIPE_SECRET_KEY || process.env.STRIPE_SECRET;
+const stripe = stripeSecretKey ? Stripe(stripeSecretKey) : null;
 
 const Invoice = require('../models/Invoice');
 const Payment = require('../models/Payment');
@@ -13,6 +14,14 @@ const PAYPAL_API_BASE = process.env.PAYPAL_API_BASE || (
 );
 const PAYPAL_CURRENCY = process.env.PAYPAL_CURRENCY || 'SGD';
 
+function normalizePaymentStatus(status) {
+  if (!status) return 'Paid';
+  const value = String(status).toLowerCase();
+  if (value === 'paid' || value === 'complete' || value === 'completed' || value === 'succeeded') return 'Paid';
+  if (value === 'failed' || value === 'declined') return 'Failed';
+  return 'Pending';
+}
+
 async function recordPayment(invoice, paymentData) {
   const providerReference = paymentData.providerReference || `${paymentData.method}-${invoice.id}-${Date.now()}`;
   const payload = {
@@ -21,7 +30,7 @@ async function recordPayment(invoice, paymentData) {
     method: paymentData.method,
     amount: paymentData.amount || Number(invoice.amount),
     currency: paymentData.currency || 'SGD',
-    status: paymentData.status || 'Paid',
+    status: normalizePaymentStatus(paymentData.status),
     providerReference,
     paidAt: paymentData.paidAt || new Date(),
     recordedBy: paymentData.recordedBy || null,
@@ -122,6 +131,9 @@ exports.createPayPalOrder = async (req, res) => {
     const invoice = await Invoice.findByPk(req.params.id);
     if (!invoice) return res.status(404).json({ error: 'Invoice not found' });
     if (invoice.status === 'Paid') return res.status(400).json({ error: 'Invoice is already paid' });
+    if (!Number.isFinite(Number(invoice.amount)) || Number(invoice.amount) <= 0) {
+      return res.status(400).json({ error: 'Invoice amount must be greater than zero' });
+    }
 
     const order = await paypalRequest('/v2/checkout/orders', {
       method: 'POST',
@@ -192,16 +204,29 @@ exports.capturePayPalOrder = async (req, res) => {
     res.json({ ok: true, order });
   } catch (err) {
     console.error(err);
+    if (err.name === 'SequelizeDatabaseError' && /Data truncated|PayPal|enum/i.test(err.message)) {
+      return res.status(500).json({
+        error: "Database needs PayPal enabled in Payments.method. Run: ALTER TABLE Payments MODIFY COLUMN method ENUM('Stripe','PayPal','BankTransfer','Manual') NOT NULL;"
+      });
+    }
     res.status(500).json({ error: err.message });
   }
 };
 
 exports.createCheckoutSession = async (req, res) => {
   try {
+    if (!stripe) {
+      return res.status(500).json({ error: 'Stripe is not configured. Set STRIPE_SECRET_KEY in your environment.' });
+    }
+
     const invoice = await Invoice.findByPk(req.params.id);
 
     if (!invoice) {
       return res.status(404).json({ error: 'Invoice not found' });
+    }
+    if (invoice.status === 'Paid') return res.status(400).json({ error: 'Invoice is already paid' });
+    if (!Number.isFinite(Number(invoice.amount)) || Number(invoice.amount) <= 0) {
+      return res.status(400).json({ error: 'Invoice amount must be greater than zero' });
     }
 
     const session = await stripe.checkout.sessions.create({
@@ -217,7 +242,7 @@ exports.createCheckoutSession = async (req, res) => {
         quantity: 1
       }],
       mode: 'payment',
-      success_url: `${getBaseUrl(req)}/payment/success?invoice=${invoice.id}`,
+      success_url: `${getBaseUrl(req)}/payment/success?session_id={CHECKOUT_SESSION_ID}&invoice=${invoice.id}`,
       cancel_url: `${getBaseUrl(req)}/payment/cancel?invoice=${invoice.id}`,
       metadata: {
         invoiceId: invoice.id
@@ -241,6 +266,46 @@ exports.createCheckoutSession = async (req, res) => {
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: err.message });
+  }
+};
+
+exports.handleSuccess = async (req, res) => {
+  const invoiceId = req.query.invoice;
+
+  try {
+    if (!stripe) {
+      return res.redirect(`/finance/dashboard?payment=stripe&status=config_error${invoiceId ? `&invoice=${encodeURIComponent(invoiceId)}` : ''}`);
+    }
+
+    let sessionId = req.query.session_id;
+    if (!sessionId && invoiceId) {
+      const invoice = await Invoice.findByPk(invoiceId);
+      sessionId = invoice && invoice.data && invoice.data.payment && invoice.data.payment.checkoutSessionId;
+    }
+
+    if (!sessionId) {
+      return res.redirect(`/finance/dashboard?payment=stripe&status=missing_session${invoiceId ? `&invoice=${encodeURIComponent(invoiceId)}` : ''}`);
+    }
+
+    const session = await stripe.checkout.sessions.retrieve(sessionId);
+    const resolvedInvoiceId = (session.metadata && session.metadata.invoiceId) || invoiceId;
+
+    if (session.payment_status === 'paid' || session.status === 'complete') {
+      await markInvoicePaid(resolvedInvoiceId, {
+        provider: 'stripe',
+        method: 'Stripe',
+        checkoutSessionId: session.id,
+        paymentIntentId: session.payment_intent,
+        amountReceived: session.amount_total ? session.amount_total / 100 : undefined,
+        currency: session.currency,
+        status: session.payment_status || 'paid'
+      });
+    }
+
+    return res.redirect(`/finance/dashboard?payment=stripe&status=${encodeURIComponent(session.payment_status || session.status || 'complete')}${resolvedInvoiceId ? `&invoice=${encodeURIComponent(resolvedInvoiceId)}` : ''}`);
+  } catch (err) {
+    console.error('Stripe success handling error:', err);
+    return res.redirect(`/finance/dashboard?payment=stripe&status=error${invoiceId ? `&invoice=${encodeURIComponent(invoiceId)}` : ''}`);
   }
 };
 
@@ -320,11 +385,18 @@ exports.confirmBankTransfer = async (req, res) => {
   try {
     const invoice = await Invoice.findByPk(req.params.id);
     if (!invoice) return res.status(404).json({ error: 'Invoice not found' });
+    if (invoice.status === 'Paid') return res.status(400).json({ error: 'Invoice already marked as paid' });
 
-    const reference = (req.body && req.body.reference) || `BANK-${invoice.number}`;
+    const reference = req.body && req.body.reference ? String(req.body.reference).trim() : '';
+    if (!reference) {
+      return res.status(400).json({ error: 'Bank reference is required' });
+    }
     const paidAt = req.body && req.body.paidAt ? new Date(req.body.paidAt) : new Date();
     if (Number.isNaN(paidAt.getTime())) {
       return res.status(400).json({ error: 'Invalid paid date' });
+    }
+    if (paidAt > new Date()) {
+      return res.status(400).json({ error: 'Paid date cannot be future date' });
     }
 
     const data = Object.assign({}, invoice.data || {}, {
@@ -363,7 +435,18 @@ exports.confirmBankTransfer = async (req, res) => {
 exports.history = async (req, res) => {
   try {
     const payments = await Payment.findAll({ order: [['paidAt', 'DESC'], ['id', 'DESC']] });
-    res.json(payments);
+    const invoiceIds = [...new Set(payments.map(payment => payment.invoiceId).filter(Boolean))];
+    const invoices = invoiceIds.length ? await Invoice.findAll({ where: { id: invoiceIds } }) : [];
+    const invoiceMap = new Map(invoices.map(invoice => [invoice.id, invoice]));
+
+    res.json(payments.map(payment => {
+      const payload = payment.toJSON();
+      const invoice = invoiceMap.get(payment.invoiceId);
+      return Object.assign(payload, {
+        customerName: invoice ? invoice.customer_name : '',
+        invoiceStatus: invoice ? invoice.status : ''
+      });
+    }));
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

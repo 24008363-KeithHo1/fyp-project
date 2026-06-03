@@ -1,5 +1,6 @@
 const Invoice = require('../models/Invoice');
 const Payroll = require('../models/Payroll');
+const Payment = require('../models/Payment');
 
 function money(value) {
   const parsed = Number(value || 0);
@@ -21,19 +22,41 @@ function addValidationIssue(issues, type, record, field, message) {
   });
 }
 
+function getPayrollDueDate(payroll) {
+  const data = payroll.data || {};
+  const value = data.nextRunDate || data.dueDate || data.payrollDueDate;
+  if (!value) return null;
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? null : date;
+}
+
 exports.summary = async (req, res) => {
   try {
-    const [invoices, payrolls] = await Promise.all([
+    const [invoices, payrolls, payments] = await Promise.all([
       Invoice.findAll({ order: [['createdAt', 'ASC']] }),
-      Payroll.findAll({ order: [['createdAt', 'ASC']] })
+      Payroll.findAll({ order: [['createdAt', 'ASC']] }),
+      Payment.findAll({ order: [['paidAt', 'DESC'], ['id', 'DESC']] })
     ]);
 
     const invoiceStatus = {};
     const monthlyRevenue = {};
+    const paymentMethodRevenue = { Stripe: 0, PayPal: 0 };
+    const recentTransactions = payments.slice(0, 5).map((payment) => ({
+      invoiceNumber: payment.invoiceNumber,
+      method: payment.method,
+      amount: money(payment.amount),
+      currency: payment.currency || 'SGD',
+      status: payment.status || 'Paid',
+      paidAt: payment.paidAt
+    }));
     let totalInvoiced = 0;
     let paidRevenue = 0;
     let outstandingRevenue = 0;
     let overdueRevenue = 0;
+    let paidInvoiceCount = 0;
+    let pendingPaymentCount = 0;
+    let overdueInvoiceCount = 0;
+    let failedPayPalCount = 0;
 
     invoices.forEach((invoice) => {
       const amount = money(invoice.amount);
@@ -42,19 +65,38 @@ exports.summary = async (req, res) => {
       totalInvoiced += amount;
 
       if (status === 'Paid') {
+        paidInvoiceCount += 1;
         paidRevenue += amount;
         const key = monthKey(invoice.updatedAt || invoice.createdAt);
         monthlyRevenue[key] = (monthlyRevenue[key] || 0) + amount;
       } else {
         outstandingRevenue += amount;
+        pendingPaymentCount += 1;
       }
 
-      if (status === 'Overdue') overdueRevenue += amount;
+      if (status === 'Overdue') {
+        overdueRevenue += amount;
+        overdueInvoiceCount += 1;
+      }
+    });
+
+    payments.forEach((payment) => {
+      const method = payment.method || 'Manual';
+      const amount = money(payment.amount);
+      if ((method === 'Stripe' || method === 'PayPal') && payment.status === 'Paid') {
+        paymentMethodRevenue[method] = (paymentMethodRevenue[method] || 0) + amount;
+      }
+      if (method === 'PayPal' && payment.status === 'Failed') {
+        failedPayPalCount += 1;
+      }
     });
 
     let payrollGross = 0;
     let payrollNet = 0;
     const payrollByPeriod = {};
+    const now = new Date();
+    const twoDaysFromNow = new Date(now.getTime() + (2 * 24 * 60 * 60 * 1000));
+    let payrollDueSoonCount = 0;
 
     payrolls.forEach((payroll) => {
       const gross = money(payroll.gross);
@@ -63,6 +105,10 @@ exports.summary = async (req, res) => {
       payrollNet += net;
       const period = payroll.period || 'Unassigned';
       payrollByPeriod[period] = (payrollByPeriod[period] || 0) + net;
+      const dueDate = getPayrollDueDate(payroll);
+      if (dueDate && dueDate >= now && dueDate <= twoDaysFromNow) {
+        payrollDueSoonCount += 1;
+      }
     });
 
     res.json({
@@ -73,14 +119,21 @@ exports.summary = async (req, res) => {
         paidRevenue,
         outstandingRevenue,
         overdueRevenue,
+        paidInvoiceCount,
+        pendingPaymentCount,
+        overdueInvoiceCount,
+        failedPayPalCount,
+        payrollDueSoonCount,
         payrollGross,
         payrollNet
       },
       charts: {
         invoiceStatus,
         monthlyRevenue,
-        payrollByPeriod
-      }
+        payrollByPeriod,
+        paymentMethodRevenue
+      },
+      recentTransactions
     });
   } catch (err) {
     res.status(500).json({ error: err.message });

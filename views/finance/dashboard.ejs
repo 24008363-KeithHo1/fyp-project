@@ -1,6 +1,7 @@
 <%- include('../partials/header', { title: 'Finance Dashboard' }) %>
 <%- include('../partials/navbar') %>
 
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
 const token = localStorage.getItem('token');
 if (!token) location = '/login';
@@ -10,16 +11,108 @@ try{
 }catch(e){ location = '/login'; }
 </script>
 
-<div class="container mt-4">
-  <h2>Finance Dashboard</h2>
-  <p>Invoices, payments and financial summaries.</p>
-  <div class="content-card mt-3">
+<div class="container mt-4 finance-dashboard">
+  <div id="paymentSuccessAlert" class="alert d-none" role="alert">
+    Stripe payment completed successfully.
+  </div>
+
+  <div class="d-flex flex-wrap align-items-end justify-content-between gap-2 mb-3">
+    <div>
+      <h2>Finance Dashboard</h2>
+      <p class="text-muted mb-0">Payment performance, invoice status, and finance alerts.</p>
+    </div>
+    <a href="/finance/payments" class="btn btn-sm btn-outline-primary">Payments</a>
+  </div>
+
+  <section class="report-kpis finance-row">
+    <div class="report-kpi finance-kpi">
+      <span>Revenue</span>
+      <strong id="financeTotalRevenue">SGD 0.00</strong>
+    </div>
+    <div class="report-kpi finance-kpi">
+      <span>Paid Inv.</span>
+      <strong id="financePaidInvoices">0</strong>
+    </div>
+    <div class="report-kpi finance-kpi">
+      <span>Pending Pay</span>
+      <strong id="financePendingPayments">0</strong>
+    </div>
+    <div class="report-kpi finance-kpi">
+      <span>Overdue Inv.</span>
+      <strong id="financeOverdueInvoices">0</strong>
+    </div>
+  </section>
+
+  <section class="row g-3 finance-row">
+    <div class="col-lg-5">
+      <div class="report-panel h-100">
+        <h5>Payment Analytics</h5>
+        <div class="payment-breakdown">
+          <div>
+            <span>Stripe Revenue</span>
+            <strong id="stripeRevenue">SGD 0.00</strong>
+          </div>
+          <div>
+            <span>PayPal Revenue</span>
+            <strong id="paypalRevenue">SGD 0.00</strong>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="col-lg-7">
+      <div class="report-panel h-100">
+        <h5>Gateway Share</h5>
+        <div class="chart-box">
+          <canvas id="paymentPieChart"></canvas>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="report-panel finance-row">
+    <div class="d-flex align-items-center justify-content-between gap-2 mb-2">
+      <h5 class="mb-0">Recent Payments</h5>
+      <a href="/finance/payments" class="btn btn-sm btn-outline-secondary">View all</a>
+    </div>
+    <div class="table-responsive">
+      <table class="table table-hover align-middle mb-0">
+        <thead class="table-light">
+          <tr>
+            <th>Invoice</th>
+            <th>Method</th>
+            <th class="text-end">Amount</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+        <tbody id="recentPaymentsBody">
+          <tr><td colspan="4" class="text-center text-muted">Loading payments...</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="report-panel finance-row">
+    <h5>Alerts</h5>
+    <div id="financeAlerts" class="finance-alerts">
+      <div class="text-muted">Loading alerts...</div>
+    </div>
+  </section>
+
+  <section class="report-panel finance-row">
+    <h5>Monthly Revenue</h5>
+    <div class="chart-box chart-box-tall">
+      <canvas id="monthlyRevenueChart"></canvas>
+    </div>
+  </section>
+
+  <section class="report-panel finance-row">
+    <h5 class="mb-3">Quick Actions</h5>
     <div class="dashboard-cards">
       <div class="col">
         <a href="/invoices" class="card-link">
           <div class="card h-100 text-center shadow-sm">
             <div class="card-body">
-              <div class="card-icon mb-3" aria-hidden="true">📄</div>
+              <div class="card-icon mb-3" aria-hidden="true"><i class="fa-solid fa-file-invoice"></i></div>
               <div>
                 <h5 class="card-title">Invoices</h5>
                 <p class="card-text">Create, view and manage invoices.</p>
@@ -28,13 +121,11 @@ try{
           </div>
         </a>
       </div>
-  
-
       <div class="col">
         <a href="/reports" class="card-link">
           <div class="card h-100 text-center shadow-sm">
             <div class="card-body">
-              <div class="card-icon mb-3" aria-hidden="true">📊</div>
+              <div class="card-icon mb-3" aria-hidden="true"><i class="fa-solid fa-chart-column"></i></div>
               <div>
                 <h5 class="card-title">Reports</h5>
                 <p class="card-text">Financial summaries and exports.</p>
@@ -43,12 +134,11 @@ try{
           </div>
         </a>
       </div>
-
       <div class="col">
         <a href="/finance/payments" class="card-link">
           <div class="card h-100 text-center shadow-sm">
             <div class="card-body">
-              <div class="card-icon mb-3" aria-hidden="true">💳</div>
+              <div class="card-icon mb-3" aria-hidden="true"><i class="fa-solid fa-credit-card"></i></div>
               <div>
                 <h5 class="card-title">Payments</h5>
                 <p class="card-text">Record and reconcile payments.</p>
@@ -57,26 +147,11 @@ try{
           </div>
         </a>
       </div>
-      
-      <div class="col">
-        <a href="/invoices/new" class="card-link">
-          <div class="card h-100 text-center shadow-sm">
-            <div class="card-body">
-              <div class="card-icon mb-3" aria-hidden="true">🆕</div>
-              <div>
-                <h5 class="card-title">Quick Invoice</h5>
-                <p class="card-text">Create and send an invoice quickly.</p>
-              </div>
-            </div>
-          </div>
-        </a>
-      </div>
-
       <div class="col">
         <a href="/finance/bank-reconcile" class="card-link">
           <div class="card h-100 text-center shadow-sm">
             <div class="card-body">
-              <div class="card-icon mb-3" aria-hidden="true">🏦</div>
+              <div class="card-icon mb-3" aria-hidden="true"><i class="fa-solid fa-building-columns"></i></div>
               <div>
                 <h5 class="card-title">Bank Reconciliation</h5>
                 <p class="card-text">Import statements and reconcile accounts.</p>
@@ -85,12 +160,11 @@ try{
           </div>
         </a>
       </div>
-
       <div class="col">
         <a href="/payroll" class="card-link">
           <div class="card h-100 text-center shadow-sm">
             <div class="card-body">
-              <div class="card-icon mb-3" aria-hidden="true">💼</div>
+              <div class="card-icon mb-3" aria-hidden="true"><i class="fa-solid fa-briefcase"></i></div>
               <div>
                 <h5 class="card-title">Payroll</h5>
                 <p class="card-text">Manage payroll runs and settings.</p>
@@ -99,11 +173,11 @@ try{
           </div>
         </a>
       </div>
-          <div class="col">
+      <div class="col">
         <a href="/finance/requests" class="card-link">
           <div class="card h-100 text-center shadow-sm">
             <div class="card-body">
-              <div class="card-icon mb-3" aria-hidden="true">✉️</div>
+              <div class="card-icon mb-3" aria-hidden="true"><i class="fa-solid fa-envelope"></i></div>
               <div>
                 <h5 class="card-title">Requests</h5>
                 <p class="card-text">Submit HR or finance requests.</p>
@@ -113,89 +187,173 @@ try{
         </a>
       </div>
     </div>
-  </div>
-
-
-
-  <div class="report-kpis mt-4">
-    <div class="report-kpi">
-      <span>Paid revenue</span>
-      <strong id="financePaidRevenue">SGD 0.00</strong>
-    </div>
-    <div class="report-kpi">
-      <span>Outstanding</span>
-      <strong id="financeOutstandingRevenue">SGD 0.00</strong>
-    </div>
-    <div class="report-kpi">
-      <span>Invoices</span>
-      <strong id="financeInvoiceCount">0</strong>
-    </div>
-    <div class="report-kpi">
-      <span>Validation issues</span>
-      <strong id="financeIssueCount">0</strong>
-    </div>
-  </div>
-
-  <div class="row g-3 mt-1">
-    <div class="col-lg-6">
-      <div class="report-panel">
-        <h5>Invoice Status</h5>
-        <canvas id="financeInvoiceChart" width="420" height="220"></canvas>
-      </div>
-    </div>
-    <div class="col-lg-6">
-      <div class="report-panel">
-        <h5>Paid Revenue</h5>
-        <canvas id="financeRevenueChart" width="420" height="220"></canvas>
-      </div>
-    </div>
-  </div>
+  </section>
 </div>
 
 <script>
-function financeMoney(value){
-  return 'SGD ' + Number(value || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+let paymentPieChart;
+let monthlyRevenueChart;
+
+const dashboardParams = new URLSearchParams(window.location.search);
+if (dashboardParams.get('payment') === 'stripe') {
+  const alert = document.getElementById('paymentSuccessAlert');
+  const status = dashboardParams.get('status');
+  const isPaid = !status || status === 'paid' || status === 'complete';
+  alert.classList.remove('d-none');
+  alert.classList.add(isPaid ? 'alert-success' : 'alert-warning');
+  alert.textContent = isPaid
+    ? 'Stripe payment completed successfully and the invoice was marked Paid.'
+    : 'Stripe returned to the dashboard, but the payment could not be confirmed automatically. Check the invoice and payment history.';
 }
 
-function financeBars(canvasId, labels, values, color){
-  const canvas = document.getElementById(canvasId);
-  const ctx = canvas.getContext('2d');
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
-  ctx.font = '12px Segoe UI, Arial';
-  if (!labels.length) {
-    ctx.fillStyle = '#667085';
-    ctx.fillText('No data available', 18, 32);
-    return;
-  }
-  const max = Math.max(...values, 1);
-  const barWidth = Math.max(22, (canvas.width - 42) / labels.length - 10);
-  labels.forEach((label, index) => {
-    const x = 18 + index * (barWidth + 10);
-    const height = Math.round((values[index] / max) * 145);
-    const y = 165 - height;
-    ctx.fillStyle = color;
-    ctx.fillRect(x, y, barWidth, height);
-    ctx.fillStyle = '#344054';
-    ctx.fillText(String(values[index].toFixed ? values[index].toFixed(0) : values[index]), x, y - 5);
-    ctx.fillStyle = '#667085';
-    ctx.fillText(label.slice(0, 14), x, 205);
+function financeMoney(value, currency){
+  return `${currency || 'SGD'} ${Number(value || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+}
+
+function statusClass(status){
+  if (status === 'Paid') return 'success';
+  if (status === 'Failed') return 'danger';
+  if (status === 'Pending') return 'warning text-dark';
+  return 'secondary';
+}
+
+function renderPaymentPie(stripeRevenue, paypalRevenue){
+  const canvas = document.getElementById('paymentPieChart');
+  const values = [stripeRevenue, paypalRevenue];
+  if (paymentPieChart) paymentPieChart.destroy();
+  paymentPieChart = new Chart(canvas, {
+    type: 'pie',
+    data: {
+      labels: ['Stripe', 'PayPal'],
+      datasets: [{
+        data: values,
+        backgroundColor: ['#635bff', '#0070ba'],
+        borderColor: '#fff',
+        borderWidth: 2
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { position: 'bottom' },
+        tooltip: {
+          callbacks: {
+            label: context => {
+              const total = values.reduce((sum, value) => sum + value, 0);
+              const percent = total ? Math.round((context.raw / total) * 100) : 0;
+              return `${context.label}: ${percent}% (${financeMoney(context.raw)})`;
+            }
+          }
+        }
+      }
+    }
   });
 }
 
+function renderMonthlyRevenue(monthlyRevenue){
+  const labels = Object.keys(monthlyRevenue || {});
+  const values = Object.values(monthlyRevenue || {}).map(Number);
+  const canvas = document.getElementById('monthlyRevenueChart');
+  if (monthlyRevenueChart) monthlyRevenueChart.destroy();
+  monthlyRevenueChart = new Chart(canvas, {
+    type: 'bar',
+    data: {
+      labels: labels.map(label => {
+        const parts = String(label).split('-');
+        if (parts.length !== 2) return label;
+        const date = new Date(Number(parts[0]), Number(parts[1]) - 1, 1);
+        return date.toLocaleString(undefined, { month: 'short' });
+      }),
+      datasets: [{
+        label: 'Revenue',
+        data: values,
+        backgroundColor: '#0b63a4',
+        borderRadius: 4
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      scales: {
+        y: {
+          beginAtZero: true,
+          ticks: { callback: value => financeMoney(value) }
+        }
+      },
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          callbacks: { label: context => financeMoney(context.raw) }
+        }
+      }
+    }
+  });
+}
+
+function renderRecentPayments(payments){
+  const tbody = document.getElementById('recentPaymentsBody');
+  if (!payments || !payments.length) {
+    tbody.innerHTML = '<tr><td colspan="4" class="text-center text-muted">No payments recorded yet</td></tr>';
+    return;
+  }
+
+  tbody.innerHTML = payments.map(payment => `
+    <tr>
+      <td>${payment.invoiceNumber || ''}</td>
+      <td>${payment.method || ''}</td>
+      <td class="text-end">${financeMoney(payment.amount, payment.currency)}</td>
+      <td><span class="badge bg-${statusClass(payment.status)}">${payment.status || ''}</span></td>
+    </tr>
+  `).join('');
+}
+
+function renderAlerts(totals){
+  const alerts = [];
+  if ((totals.overdueInvoiceCount || 0) > 0) {
+    alerts.push(`${totals.overdueInvoiceCount} overdue invoice${totals.overdueInvoiceCount === 1 ? '' : 's'}`);
+  }
+  if ((totals.failedPayPalCount || 0) > 0) {
+    alerts.push(`${totals.failedPayPalCount} failed PayPal transaction${totals.failedPayPalCount === 1 ? '' : 's'}`);
+  }
+  if ((totals.payrollDueSoonCount || 0) > 0) {
+    alerts.push(`${totals.payrollDueSoonCount} payroll run${totals.payrollDueSoonCount === 1 ? '' : 's'} due in 2 days`);
+  }
+
+  const container = document.getElementById('financeAlerts');
+  if (!alerts.length) {
+    container.innerHTML = '<div class="text-muted">No active finance alerts.</div>';
+    return;
+  }
+
+  container.innerHTML = alerts.map(alert => `
+    <div class="finance-alert">
+      <i class="fa-solid fa-triangle-exclamation" aria-hidden="true"></i>
+      <span>${alert}</span>
+    </div>
+  `).join('');
+}
+
 async function loadFinanceDashboard(){
-  const [summaryRes, validationRes] = await Promise.all([
-    fetch('/api/reports/summary', { headers: { authorization: 'Bearer ' + token } }),
-    fetch('/api/reports/validation', { headers: { authorization: 'Bearer ' + token } })
-  ]);
-  if (!summaryRes.ok || !validationRes.ok) return;
+  const summaryRes = await fetch('/api/reports/summary', { headers: { authorization: 'Bearer ' + token } });
+  if (!summaryRes.ok) return;
   const summary = await summaryRes.json();
-  const validation = await validationRes.json();
-  document.getElementById('financePaidRevenue').textContent = financeMoney(summary.totals.paidRevenue);
-  document.getElementById('financeOutstandingRevenue').textContent = financeMoney(summary.totals.outstandingRevenue);
-  document.getElementById('financeInvoiceCount').textContent = summary.totals.invoiceCount;
-  document.getElementById('financeIssueCount').textContent = validation.issueCount;
-  financeBars('financeInvoiceChart', Object.keys(summary.charts.invoiceStatus || {}), Object.values(summary.charts.invoiceStatus || {}).map(Number), '#0b5e3a');
-  financeBars('financeRevenueChart', Object.keys(summary.charts.monthlyRevenue || {}), Object.values(summary.charts.monthlyRevenue || {}).map(Number), '#0b63a4');
+  const totals = summary.totals || {};
+  const paymentRevenue = (summary.charts && summary.charts.paymentMethodRevenue) || {};
+  const stripeRevenue = Number(paymentRevenue.Stripe || 0);
+  const paypalRevenue = Number(paymentRevenue.PayPal || 0);
+
+  document.getElementById('financeTotalRevenue').textContent = financeMoney(totals.paidRevenue);
+  document.getElementById('financePaidInvoices').textContent = totals.paidInvoiceCount || 0;
+  document.getElementById('financePendingPayments').textContent = totals.pendingPaymentCount || 0;
+  document.getElementById('financeOverdueInvoices').textContent = totals.overdueInvoiceCount || 0;
+  document.getElementById('stripeRevenue').textContent = financeMoney(stripeRevenue);
+  document.getElementById('paypalRevenue').textContent = financeMoney(paypalRevenue);
+
+  renderPaymentPie(stripeRevenue, paypalRevenue);
+  renderRecentPayments(summary.recentTransactions || []);
+  renderAlerts(totals);
+  renderMonthlyRevenue((summary.charts && summary.charts.monthlyRevenue) || {});
 }
 
 loadFinanceDashboard();
