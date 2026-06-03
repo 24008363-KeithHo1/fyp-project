@@ -1,15 +1,18 @@
 <%- include('partials/header', { title: 'Register' }) %>
 <%- include('partials/navbar') %>
 
-  <h2>Create account</h2>
-  <form id="register">
-    <input type="hidden" id="inviteToken" value="<%= token %>">
-    <label>Email: <input type="email" id="email" value="<%= email %>" required></label><br>
-    <label>Name: <input id="name"></label><br>
-    <label>Password: <input type="password" id="password" required></label><br>
-    <label>Role: <select id="role"><option>Staff</option><option>Finance</option><option>HR</option><option>Admin</option></select></label><br>
-    <button>Create account</button>
-  </form>
+  <div class="auth-card">
+    <h2>Create account</h2>
+    <p class="text-muted">Create a user profile for the invoicing and payroll workspace.</p>
+    <form id="register">
+      <input type="hidden" id="inviteToken" value="<%= token %>">
+      <label>Email <input type="email" id="email" value="<%= email %>" required></label>
+      <label>Name <input id="name"></label>
+      <label>Password <input type="password" id="password" required></label>
+      <label>Role <select id="role"><option>Staff</option><option>Finance</option><option>HR</option><option>Admin</option></select></label>
+      <button>Create account</button>
+    </form>
+  </div>
  
 
 <script>

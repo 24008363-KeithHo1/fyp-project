@@ -1,7 +1,8 @@
 <%- include('../partials/header') -%>
 <%- include('../partials/navbar') -%>
+<%- include('./_admin_nav') -%>
 
-<div class="container mt-4">
+<section class="admin-page admin-form-page">
   <h2>Edit User</h2>
   <form method="post" action="/admin/users/<%= user.id %>">
     <div class="mb-3">
@@ -28,6 +29,6 @@
     <button class="btn btn-primary" type="submit">Save</button>
     <a class="btn btn-secondary" href="/admin/users">Cancel</a>
   </form>
-</div>
+</section>
 
 <%- include('../partials/footer') -%>

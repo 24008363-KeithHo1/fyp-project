@@ -1,5 +1,6 @@
 <%- include('../partials/header', { title: 'Admin Dashboard' }) %>
 <%- include('../partials/navbar') %>
+<%- include('./_admin_nav') %>
 
 <script>
 const token = localStorage.getItem('token');
@@ -10,8 +11,7 @@ try{
 }catch(e){ location = '/login'; }
 </script>
 
-<div class="app-container mt-4">
-  <div class="content-card">
+<section class="admin-page">
     <h2>Admin Dashboard</h2>
     <p>Overview and quick actions for administrators.</p>
     <div class="dashboard-cards">
@@ -127,7 +127,6 @@ try{
         </a>
       </div>
     </div>
-  </div>
-</div>
+</section>
 
 <%- include('../partials/footer') %>

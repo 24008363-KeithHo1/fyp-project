@@ -1,22 +1,24 @@
 <%- include('partials/header', { title: 'Reset Password' }) %>
 <%- include('partials/navbar') %>
 
-  <h2>Reset Password</h2>
-  <div id="request">
-    <p>Enter your email to request a password reset.</p>
-    <form id="requestForm">
-      <label>Email: <input type="email" id="emailReq" required></label>
-      <button>Request reset</button>
-    </form>
-  </div>
+  <div class="auth-card">
+    <h2>Reset Password</h2>
+    <div id="request">
+      <p class="text-muted">Enter your email to request a password reset.</p>
+      <form id="requestForm">
+        <label>Email <input type="email" id="emailReq" required></label>
+        <button>Request reset</button>
+      </form>
+    </div>
 
-  <div id="perform" style="display:none;">
-    <p>Set a new password</p>
-    <form id="resetForm">
-      <input type="hidden" id="token" value="<%= token %>">
-      <label>New password: <input type="password" id="newPass" required></label>
-      <button>Reset password</button>
-    </form>
+    <div id="perform" style="display:none;">
+      <p class="text-muted">Set a new password</p>
+      <form id="resetForm">
+        <input type="hidden" id="token" value="<%= token %>">
+        <label>New password <input type="password" id="newPass" required></label>
+        <button>Reset password</button>
+      </form>
+    </div>
   </div>
  
 

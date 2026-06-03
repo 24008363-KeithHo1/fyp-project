@@ -139,7 +139,7 @@ async function loadReports(){
   drawBarChart('invoiceStatusChart', Object.keys(invoiceStatus), Object.values(invoiceStatus).map(Number), '#0b5e3a');
 
   const monthlyRevenue = summary.charts.monthlyRevenue || {};
-  drawBarChart('revenueChart', Object.keys(monthlyRevenue), Object.values(monthlyRevenue).map(Number), '#0b63a4');
+  drawBarChart('revenueChart', Object.keys(monthlyRevenue), Object.values(monthlyRevenue).map(Number), '#0b8f3e');
 
   const payrollByPeriod = summary.charts.payrollByPeriod || {};
   drawBarChart('payrollChart', Object.keys(payrollByPeriod), Object.values(payrollByPeriod).map(Number), '#8a5a12');

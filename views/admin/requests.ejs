@@ -1,7 +1,8 @@
 <%- include('../partials/header', { title: 'Admin Inbox' }) %>
 <%- include('../partials/navbar') %>
+<%- include('./_admin_nav') %>
 
-<div class="container mt-4">
+<section class="admin-page">
   <h2>Admin Requests Inbox</h2>
   <div class="content-card requests-card mt-3">
     <% if (!requests || !requests.length) { %>
@@ -52,7 +53,7 @@
       </div>
     <% } %>
   </div>
-</div>
+</section>
 
 <script>
 async function updateStatus(id){

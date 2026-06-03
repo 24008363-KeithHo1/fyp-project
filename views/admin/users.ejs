@@ -1,25 +1,28 @@
 <%- include('../partials/header') -%>
 <%- include('../partials/navbar') -%>
+<%- include('./_admin_nav') -%>
 
-<div class="container mt-4">
+<section class="admin-page">
   <h2>Users</h2>
-  <table class="table table-striped">
-    <thead>
-      <tr><th>ID</th><th>Name</th><th>Email</th><th>Role</th><th>Active</th><th>Actions</th></tr>
-    </thead>
-    <tbody>
-      <% users.forEach(function(u){ %>
-        <tr>
-          <td><%= u.id %></td>
-          <td><%= u.name %></td>
-          <td><%= u.email %></td>
-          <td><%= u.role %></td>
-          <td><%= u.isActive ? 'Yes' : 'No' %></td>
-          <td><a class="btn btn-sm btn-primary" href="/admin/users/<%= u.id %>/edit">Edit</a></td>
-        </tr>
-      <% }) %>
-    </tbody>
-  </table>
-</div>
+  <div class="table-responsive admin-table-wrap">
+    <table class="table table-striped table-hover align-middle mb-0 admin-users-table">
+      <thead>
+        <tr><th>ID</th><th>Name</th><th>Email</th><th>Role</th><th>Active</th><th>Actions</th></tr>
+      </thead>
+      <tbody>
+        <% users.forEach(function(u){ %>
+          <tr>
+            <td><%= u.id %></td>
+            <td><%= u.name %></td>
+            <td><%= u.email %></td>
+            <td><%= u.role %></td>
+            <td><%= u.isActive ? 'Yes' : 'No' %></td>
+            <td><a class="btn btn-sm btn-primary" href="/admin/users/<%= u.id %>/edit">Edit</a></td>
+          </tr>
+        <% }) %>
+      </tbody>
+    </table>
+  </div>
+</section>
 
 <%- include('../partials/footer') -%>
