@@ -10,9 +10,17 @@
     background: #0a0f0d;
   }
 
+  .auth-main {
+    flex: 1;
+    min-height: 100vh;
+    padding: 0;
+    margin: 0;
+  }
+
   /* ─── Full-page layout ─── */
   .login-scene {
     min-height: 100vh;
+    width: 100%;
     display: flex;
     align-items: stretch;
     position: relative;
@@ -563,4 +571,4 @@
   });
 </script>
 
-<%- include('partials/footer') %>
+<%- include('partials/footer', { title: 'Login' }) %>
