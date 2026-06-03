@@ -1,0 +1,80 @@
+<%- include('../partials/header', { title: 'Leave Request' }) %>
+<%- include('../partials/navbar') %>
+
+<script>
+const token = localStorage.getItem('token');
+if (!token) location = '/login';
+try{ const payload = JSON.parse(atob(token.split('.')[1])); if (payload.role !== 'Staff' && payload.role !== 'Admin') location = '/dashboard'; }catch(e){ location = '/login'; }
+</script>
+
+<div class="container mt-4">
+  <h2>Request Time Off</h2>
+  <form id="leaveForm" class="mt-3">
+    <div class="row">
+      <div class="col-md-4 mb-3">
+        <label class="form-label">Start Date</label>
+        <input type="date" name="start_date" required class="form-control" />
+      </div>
+      <div class="col-md-4 mb-3">
+        <label class="form-label">End Date</label>
+        <input type="date" name="end_date" required class="form-control" />
+      </div>
+      <div class="col-md-4 mb-3">
+        <label class="form-label">Half day</label>
+        <select name="half_day" class="form-select">
+          <option value="none">None</option>
+          <option value="morning">Morning (AM)</option>
+          <option value="afternoon">Afternoon (PM)</option>
+        </select>
+      </div>
+    </div>
+    <div class="mb-3">
+      <label class="form-label">Title</label>
+      <input name="title" value="Leave Request" class="form-control" required />
+    </div>
+    <div class="mb-3">
+      <label class="form-label">Reason / Message</label>
+        <input name="message" class="form-control" rows="6" required></input>
+    </div>
+    <div class="mb-3">
+      <label class="form-label">Attachments (optional)</label>
+      <input type="file" name="attachments" multiple class="form-control" />
+    </div>
+    <div>
+      <button class="btn btn-primary" type="submit">Submit Leave Request</button>
+      <a href="/dashboard" class="btn btn-link">Back</a>
+    </div>
+  </form>
+
+  <div id="msg" class="mt-3"></div>
+</div>
+
+<script>
+document.getElementById('leaveForm').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const form = e.target;
+  const start = form.start_date.value;
+  const end = form.end_date.value;
+  if (!start || !end) { document.getElementById('msg').innerText = 'Please select start and end dates'; document.getElementById('msg').className='text-danger'; return; }
+  if (new Date(start) > new Date(end)) { document.getElementById('msg').innerText = 'Start date must be before end date'; document.getElementById('msg').className='text-danger'; return; }
+
+  const fd = new FormData();
+  fd.append('title', form.title.value.trim());
+  fd.append('recipient', 'HR');
+  fd.append('message', form.message.value.trim());
+  const meta = { startDate: start, endDate: end, halfDay: form.half_day.value, type: 'leave' };
+  fd.append('data', JSON.stringify(meta));
+  for (const f of form.attachments.files) fd.append('attachments', f);
+
+  const token = localStorage.getItem('token');
+  const res = await fetch('/api/requests', { method: 'POST', body: fd, headers: { Authorization: `Bearer ${token}` } });
+  let data = {};
+  try { data = await res.json(); } catch(e) {}
+  const msg = document.getElementById('msg');
+  if (!res.ok) { msg.innerText = (data && data.error) ? data.error : 'Failed to send'; msg.className='text-danger'; return; }
+  msg.innerText = 'Leave request submitted.'; msg.className='text-success';
+  setTimeout(()=> location = '/requests', 900);
+});
+</script>
+
+<%- include('../partials/footer') %>

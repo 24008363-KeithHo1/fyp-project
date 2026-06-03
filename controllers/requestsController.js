@@ -123,3 +123,25 @@ exports.viewPage = async (req, res) => {
     res.status(500).send('Failed to open request');
   }
 };
+
+// Render leave request page for staff
+exports.leaveRequestPage = async (req, res) => {
+  try {
+    res.render('staff/leave_requests');
+  } catch (err) {
+    res.status(500).send('Failed to load leave request page');
+  }
+};
+
+// Render leave inbox for HR / Admin
+exports.leaveInboxPage = async (req, res) => {
+  try {
+    const role = req.user.role;
+    const items = await Request.findAll({ where: { recipient: role }, order: [['id', 'DESC']] });
+    if (role === 'HR') return res.render('hr/leave_requests', { requests: items });
+    // Admin fallback: show admin requests view
+    return res.render('admin/requests', { requests: items, role });
+  } catch (err) {
+    res.status(500).send('Failed to load leave requests');
+  }
+};

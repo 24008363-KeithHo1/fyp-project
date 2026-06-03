@@ -62,7 +62,9 @@ app.use('/staff', require('./routes/staff'));
 app.get('/requests', require('./middlewares/auth'), requireRole(['Admin','Staff']), require('./controllers/requestsController').staffListPage);
 app.get('/requests/new', require('./middlewares/auth'), requireRole(['Admin','Staff']), require('./controllers/requestsController').newRequestPage);
 app.get('/requests/:id/view', require('./middlewares/auth'), require('./controllers/requestsController').viewPage);
+app.get('/leave-request', require('./middlewares/auth'), requireRole(['Admin','Staff']), require('./controllers/requestsController').leaveRequestPage);
 
+app.get('/leave-requests', require('./middlewares/auth'), requireRole(['HR','Admin']), require('./controllers/requestsController').leaveInboxPage);
 // health
 app.get('/api/health', (req, res) => res.json({ status: 'ok' }));
 
