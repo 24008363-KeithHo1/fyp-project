@@ -2,73 +2,547 @@
 <%- include('partials/navbar') %>
   <script>const token = localStorage.getItem('token'); if (!token) location = '/login';</script>
 
-  <div class="row">
-    <div class="col-lg-4">
-      <div class="card mb-3 shadow-sm">
-        <div class="card-body">
-          <h5 class="card-title">Create Invoice</h5>
-          <form id="create">
-            <div class="mb-3">
-              <label for="customer" class="form-label">Customer name</label>
-              <input id="customer" class="form-control" placeholder="Customer name" required>
-            </div>
-            <div class="mb-3">
-              <label class="form-label">Line items</label>
-              <div class="table-responsive">
-                <table class="table table-sm align-middle" id="itemTable">
-                  <thead>
-                    <tr>
-                      <th>Description</th>
-                      <th style="width: 80px;">Qty</th>
-                      <th style="width: 120px;">Unit</th>
-                      <th style="width: 90px;">Disc %</th>
-                      <th style="width: 90px;">Tax %</th>
-                      <th class="text-end" style="width: 120px;">Line total</th>
-                      <th style="width: 40px;"></th>
-                    </tr>
-                  </thead>
-                  <tbody id="itemBody"></tbody>
-                </table>
-              </div>
-              <button type="button" id="addItem" class="btn btn-sm btn-outline-secondary">Add line item</button>
-            </div>
-            <div class="mb-3">
-              <label for="due" class="form-label">Due date</label>
-              <input type="date" id="due" class="form-control">
-            </div>
-            <div class="border rounded p-2 bg-light mb-3">
-              <div class="d-flex justify-content-between"><span>Subtotal</span><strong id="subtotal">0.00</strong></div>
-              <div class="d-flex justify-content-between"><span>Discount</span><strong id="discount">0.00</strong></div>
-              <div class="d-flex justify-content-between"><span>Tax</span><strong id="tax">0.00</strong></div>
-              <div class="d-flex justify-content-between border-top pt-2 mt-2"><span>Total</span><strong id="total">0.00</strong></div>
-            </div>
-            <div class="d-grid gap-2">
-              <button class="btn btn-primary" type="submit">Create Invoice</button>
-            </div>
-          </form>
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,300&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+
+  <style>
+  :root {
+    --inv-bg:        #0d0f14;
+    --inv-surface:   #13161e;
+    --inv-surface2:  #1a1e2a;
+    --inv-border:    rgba(255,255,255,0.07);
+    --inv-border2:   rgba(255,255,255,0.12);
+    --inv-text:      #e8eaf0;
+    --inv-muted:     #636b80;
+    --inv-accent:    #3dd68c;
+    --inv-accent2:   #2fb87a;
+    --inv-blue:      #4f8ef7;
+    --inv-amber:     #f59e0b;
+    --inv-red:       #f05252;
+    --inv-radius:    14px;
+    --inv-radius-sm: 8px;
+  }
+
+  body {
+    background: var(--inv-bg) !important;
+    color: var(--inv-text);
+    font-family: 'DM Sans', sans-serif;
+  }
+
+  .invoice-page {
+    max-width: 1280px;
+    margin: 0 auto;
+    padding: 2rem 1.5rem 4rem;
+    animation: invoice-in .45s cubic-bezier(.22,.8,.36,1) both;
+  }
+
+  @keyframes invoice-in {
+    from { opacity: 0; transform: translateY(16px); }
+    to { opacity: 1; transform: none; }
+  }
+
+  .invoice-header {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 1rem;
+    margin-bottom: 1.75rem;
+    padding-bottom: 1.25rem;
+    border-bottom: 1px solid var(--inv-border);
+  }
+
+  .invoice-header-left {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+  }
+
+  .invoice-header-icon {
+    width: 48px;
+    height: 48px;
+    border-radius: 12px;
+    background: linear-gradient(135deg, #1a2e20 0%, #1e3828 100%);
+    border: 1px solid rgba(61,214,140,.25);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.1rem;
+    color: var(--inv-accent);
+  }
+
+  .invoice-title {
+    font-family: 'Syne', sans-serif;
+    font-size: 1.65rem;
+    font-weight: 700;
+    color: #fff;
+    margin: 0;
+    line-height: 1;
+  }
+
+  .invoice-subtitle {
+    font-size: .875rem;
+    color: var(--inv-muted);
+    margin: .35rem 0 0;
+  }
+
+  .invoice-header-actions {
+    display: flex;
+    gap: .6rem;
+    flex-wrap: wrap;
+  }
+
+  .invoice-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: .4rem;
+    padding: .5rem 1.05rem;
+    border-radius: var(--inv-radius-sm);
+    font-family: 'DM Sans', sans-serif;
+    font-size: .85rem;
+    font-weight: 500;
+    cursor: pointer;
+    text-decoration: none;
+    transition: all .15s;
+    border: 1.5px solid var(--inv-border2);
+    background: var(--inv-surface2);
+    color: var(--inv-text);
+  }
+
+  .invoice-btn:hover {
+    background: var(--inv-surface);
+    border-color: var(--inv-accent);
+    color: var(--inv-accent);
+  }
+
+  .invoice-btn-primary {
+    background: var(--inv-accent);
+    border-color: var(--inv-accent);
+    color: #061a10;
+    font-weight: 600;
+  }
+
+  .invoice-btn-primary:hover {
+    background: var(--inv-accent2);
+    border-color: var(--inv-accent2);
+    color: #061a10;
+  }
+
+  .invoice-kpis {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 1rem;
+    margin-bottom: 1.25rem;
+  }
+
+  .invoice-kpi {
+    background: var(--inv-surface);
+    border: 1px solid var(--inv-border);
+    border-radius: var(--inv-radius);
+    padding: 1.15rem 1.25rem;
+    position: relative;
+    overflow: hidden;
+    transition: border-color .2s, transform .15s;
+  }
+
+  .invoice-kpi:hover {
+    border-color: var(--inv-border2);
+    transform: translateY(-2px);
+  }
+
+  .invoice-kpi::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 2px;
+  }
+
+  .invoice-kpi.kpi-count::before { background: linear-gradient(90deg, var(--inv-accent), transparent); }
+  .invoice-kpi.kpi-paid::before { background: linear-gradient(90deg, var(--inv-blue), transparent); }
+  .invoice-kpi.kpi-pending::before { background: linear-gradient(90deg, var(--inv-amber), transparent); }
+  .invoice-kpi.kpi-overdue::before { background: linear-gradient(90deg, var(--inv-red), transparent); }
+
+  .invoice-kpi-icon {
+    width: 34px;
+    height: 34px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: .9rem;
+    margin-bottom: .85rem;
+  }
+
+  .kpi-count .invoice-kpi-icon { background: rgba(61,214,140,.12); color: var(--inv-accent); }
+  .kpi-paid .invoice-kpi-icon { background: rgba(79,142,247,.12); color: var(--inv-blue); }
+  .kpi-pending .invoice-kpi-icon { background: rgba(245,158,11,.12); color: var(--inv-amber); }
+  .kpi-overdue .invoice-kpi-icon { background: rgba(240,82,82,.12); color: var(--inv-red); }
+
+  .invoice-kpi-label {
+    font-size: .78rem;
+    color: var(--inv-muted);
+    text-transform: uppercase;
+    letter-spacing: .08em;
+    margin-bottom: .35rem;
+  }
+
+  .invoice-kpi-value {
+    font-family: 'Syne', sans-serif;
+    font-size: 1.55rem;
+    font-weight: 700;
+    color: #fff;
+    line-height: 1;
+  }
+
+  .invoice-kpi-sub {
+    font-size: .78rem;
+    color: var(--inv-muted);
+    margin-top: .35rem;
+  }
+
+  .invoice-grid {
+    display: grid;
+    grid-template-columns: 1.15fr 1.3fr;
+    gap: 1rem;
+  }
+
+  @media (max-width: 980px) {
+    .invoice-grid { grid-template-columns: 1fr; }
+    .invoice-kpis { grid-template-columns: repeat(2, 1fr); }
+  }
+
+  @media (max-width: 560px) {
+    .invoice-page { padding: 1.25rem 1rem 3rem; }
+    .invoice-kpis { grid-template-columns: 1fr; }
+  }
+
+  .invoice-panel {
+    background: var(--inv-surface);
+    border: 1px solid var(--inv-border);
+    border-radius: var(--inv-radius);
+    padding: 1.35rem;
+    box-shadow: 0 16px 36px rgba(0,0,0,.18);
+  }
+
+  .invoice-panel-title {
+    font-family: 'Syne', sans-serif;
+    font-size: 1rem;
+    font-weight: 600;
+    color: #fff;
+    margin: 0 0 1rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: .5rem;
+  }
+
+  .invoice-panel-subtitle {
+    font-family: 'DM Sans', sans-serif;
+    font-size: .8rem;
+    font-weight: 400;
+    color: var(--inv-muted);
+  }
+
+  .invoice-field label {
+    color: #cfd4df;
+    font-size: .85rem;
+    font-weight: 500;
+  }
+
+  .invoice-field .form-control {
+    background: var(--inv-surface2);
+    color: var(--inv-text);
+    border: 1px solid var(--inv-border);
+    border-radius: var(--inv-radius-sm);
+    box-shadow: none;
+    min-height: 42px;
+  }
+
+  .invoice-field .form-control::placeholder {
+    color: #77809a;
+  }
+
+  .invoice-field .form-control:focus {
+    border-color: var(--inv-accent);
+    box-shadow: 0 0 0 .15rem rgba(61,214,140,.12);
+    background: var(--inv-surface2);
+    color: var(--inv-text);
+  }
+
+  .invoice-summary {
+    border: 1px solid var(--inv-border);
+    background: rgba(255,255,255,.02);
+    border-radius: var(--inv-radius-sm);
+    padding: .95rem 1rem;
+    margin-bottom: 1rem;
+  }
+
+  .invoice-summary-row {
+    display: flex;
+    justify-content: space-between;
+    gap: 1rem;
+    color: var(--inv-muted);
+    font-size: .9rem;
+    margin-bottom: .45rem;
+  }
+
+  .invoice-summary-row:last-child { margin-bottom: 0; }
+  .invoice-summary-row strong {
+    color: #fff;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: .9rem;
+  }
+
+  .invoice-table-wrap {
+    overflow-x: auto;
+  }
+
+  table.invoice-table {
+    width: 100%;
+    border-collapse: collapse;
+  }
+
+  .invoice-table th {
+    font-size: .75rem;
+    text-transform: uppercase;
+    letter-spacing: .08em;
+    color: var(--inv-muted);
+    font-weight: 500;
+    padding: .6rem .85rem;
+    border-bottom: 1px solid var(--inv-border);
+    white-space: nowrap;
+  }
+
+  .invoice-table td {
+    padding: .9rem .85rem;
+    border-bottom: 1px solid var(--inv-border);
+    font-size: .9rem;
+    color: var(--inv-text);
+    vertical-align: middle;
+  }
+
+  .invoice-table tbody tr:last-child td { border-bottom: none; }
+  .invoice-table tbody tr:hover td { background: var(--inv-surface2); }
+  .invoice-table .amount { text-align: right; font-family: 'JetBrains Mono', monospace; font-size: .88rem; }
+  .invoice-table .mono { font-family: 'JetBrains Mono', monospace; font-size: .85rem; }
+
+  .invoice-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: .35rem;
+    padding: .22rem .65rem;
+    border-radius: 100px;
+    font-size: .75rem;
+    font-weight: 500;
+  }
+
+  .invoice-badge::before {
+    content: '';
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+
+  .invoice-badge-paid { background: rgba(61,214,140,.12); color: #6debb0; }
+  .invoice-badge-paid::before { background: var(--inv-accent); }
+  .invoice-badge-pending { background: rgba(245,158,11,.12); color: #fbd068; }
+  .invoice-badge-pending::before { background: var(--inv-amber); }
+  .invoice-badge-overdue { background: rgba(240,82,82,.12); color: #f8908a; }
+  .invoice-badge-overdue::before { background: var(--inv-red); }
+
+  .invoice-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: .45rem;
+    justify-content: flex-end;
+  }
+
+  .invoice-action-btn {
+    border-radius: 999px;
+    border: 1px solid var(--inv-border2);
+    background: var(--inv-surface2);
+    color: var(--inv-text);
+    padding: .32rem .72rem;
+    font-size: .78rem;
+    font-weight: 500;
+    text-decoration: none;
+    transition: all .15s ease;
+    display: inline-flex;
+    align-items: center;
+    gap: .35rem;
+  }
+
+  .invoice-action-btn:hover {
+    border-color: var(--inv-accent);
+    color: var(--inv-accent);
+    transform: translateY(-1px);
+  }
+
+  .invoice-action-btn-primary {
+    background: var(--inv-accent);
+    border-color: var(--inv-accent);
+    color: #061a10;
+  }
+
+  .invoice-action-btn-primary:hover {
+    background: var(--inv-accent2);
+    border-color: var(--inv-accent2);
+    color: #061a10;
+  }
+
+  .invoice-action-btn-success {
+    border-color: rgba(61,214,140,.25);
+    color: #6debb0;
+  }
+
+  .invoice-action-btn-warning {
+    border-color: rgba(245,158,11,.25);
+    color: #fbd068;
+  }
+
+  .invoice-action-btn-info {
+    border-color: rgba(79,142,247,.25);
+    color: #9fc0ff;
+  }
+
+  .invoice-empty {
+    text-align: center;
+    color: var(--inv-muted);
+    padding: 2rem 1rem !important;
+  }
+
+  .invoice-empty i {
+    display: block;
+    font-size: 1.4rem;
+    margin-bottom: .55rem;
+    color: var(--inv-accent);
+  }
+
+  .item-remove {
+    color: var(--inv-red) !important;
+  }
+
+  .item-remove:hover {
+    color: #ff7d7d !important;
+  }
+
+  .table-light {
+    --bs-table-bg: transparent;
+    --bs-table-border-color: rgba(255,255,255,.07);
+    color: var(--inv-muted);
+  }
+  </style>
+
+  <div class="invoice-page">
+    <div class="invoice-header">
+      <div class="invoice-header-left">
+        <div class="invoice-header-icon"><i class="fa-solid fa-file-invoice-dollar"></i></div>
+        <div>
+          <h1 class="invoice-title">Invoices</h1>
+          <p class="invoice-subtitle">Create invoices and track payment status in one workspace</p>
         </div>
+      </div>
+      <div class="invoice-header-actions">
+        <a href="/finance/dashboard" class="invoice-btn"><i class="fa-solid fa-chart-line"></i> Finance Dashboard</a>
+        <a href="/reports" class="invoice-btn invoice-btn-primary"><i class="fa-solid fa-download"></i> Reports</a>
       </div>
     </div>
 
-    <div class="col-lg-8">
-      <div class="card shadow-sm">
-        <div class="card-body">
-          <h5 class="card-title">Invoices</h5>
-          <div class="table-responsive">
-            <table class="table table-hover align-middle">
-              <thead class="table-light">
-                <tr>
-                  <th>Number</th>
-                  <th>Customer</th>
-                  <th class="text-end">Amount</th>
-                  <th>Due</th>
-                  <th>Status</th>
-                  <th></th>
-                </tr>
-              </thead>
-              <tbody id="list"></tbody>
-            </table>
+    <div class="invoice-kpis">
+      <div class="invoice-kpi kpi-count">
+        <div class="invoice-kpi-icon"><i class="fa-solid fa-file-invoice"></i></div>
+        <div class="invoice-kpi-label">Invoices</div>
+        <div class="invoice-kpi-value" id="invoiceTotalCount">0</div>
+        <div class="invoice-kpi-sub">All records</div>
+      </div>
+      <div class="invoice-kpi kpi-paid">
+        <div class="invoice-kpi-icon"><i class="fa-solid fa-file-circle-check"></i></div>
+        <div class="invoice-kpi-label">Paid</div>
+        <div class="invoice-kpi-value" id="invoicePaidCount">0</div>
+        <div class="invoice-kpi-sub">Settled invoices</div>
+      </div>
+      <div class="invoice-kpi kpi-pending">
+        <div class="invoice-kpi-icon"><i class="fa-solid fa-hourglass-half"></i></div>
+        <div class="invoice-kpi-label">Pending</div>
+        <div class="invoice-kpi-value" id="invoicePendingCount">0</div>
+        <div class="invoice-kpi-sub">Awaiting payment</div>
+      </div>
+      <div class="invoice-kpi kpi-overdue">
+        <div class="invoice-kpi-icon"><i class="fa-solid fa-triangle-exclamation"></i></div>
+        <div class="invoice-kpi-label">Overdue</div>
+        <div class="invoice-kpi-value" id="invoiceOverdueCount">0</div>
+        <div class="invoice-kpi-sub">Needs attention</div>
+      </div>
+    </div>
+
+    <div class="invoice-grid">
+      <div class="invoice-panel">
+        <div class="invoice-panel-title">
+          Create Invoice
+          <span class="invoice-panel-subtitle">Build line items and preview totals live</span>
+        </div>
+        <form id="create">
+          <div class="mb-3 invoice-field">
+            <label for="customer" class="form-label">Customer name</label>
+            <input id="customer" class="form-control" placeholder="Customer name" required>
           </div>
+          <div class="mb-3 invoice-field">
+            <label class="form-label">Line items</label>
+            <div class="invoice-table-wrap">
+              <table class="invoice-table" id="itemTable">
+                <thead>
+                  <tr>
+                    <th>Description</th>
+                    <th style="width: 80px;">Qty</th>
+                    <th style="width: 120px;">Unit</th>
+                    <th style="width: 90px;">Disc %</th>
+                    <th style="width: 90px;">Tax %</th>
+                    <th class="text-end" style="width: 120px;">Line total</th>
+                    <th style="width: 40px;"></th>
+                  </tr>
+                </thead>
+                <tbody id="itemBody"></tbody>
+              </table>
+            </div>
+            <button type="button" id="addItem" class="invoice-btn mt-3"><i class="fa-solid fa-plus"></i> Add line item</button>
+          </div>
+          <div class="mb-3 invoice-field">
+            <label for="due" class="form-label">Due date</label>
+            <input type="date" id="due" class="form-control">
+          </div>
+          <div class="invoice-summary">
+            <div class="invoice-summary-row"><span>Subtotal</span><strong id="subtotal">0.00</strong></div>
+            <div class="invoice-summary-row"><span>Discount</span><strong id="discount">0.00</strong></div>
+            <div class="invoice-summary-row"><span>Tax</span><strong id="tax">0.00</strong></div>
+            <div class="invoice-summary-row"><span>Total</span><strong id="total">0.00</strong></div>
+          </div>
+          <div class="d-grid gap-2">
+            <button class="invoice-btn invoice-btn-primary" type="submit"><i class="fa-solid fa-circle-plus"></i> Create Invoice</button>
+          </div>
+        </form>
+      </div>
+
+      <div class="invoice-panel">
+        <div class="invoice-panel-title">
+          Invoice Register
+          <span class="invoice-panel-subtitle">Download, send, or collect payment from each record</span>
+        </div>
+        <div class="invoice-table-wrap">
+          <table class="invoice-table">
+            <thead>
+              <tr>
+                <th>Number</th>
+                <th>Customer</th>
+                <th class="text-end">Amount</th>
+                <th>Due</th>
+                <th>Status</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody id="list"></tbody>
+          </table>
         </div>
       </div>
     </div>
@@ -82,6 +556,44 @@
 
   function money(value){
     return toNum(value).toFixed(2);
+  }
+
+  function statusClass(status, dueDate){
+    if (status === 'Paid') return 'invoice-badge-paid';
+    if (status === 'Failed') return 'invoice-badge-overdue';
+    if (status === 'Pending') {
+      const due = dueDate ? new Date(dueDate) : null;
+      const overdue = due && !Number.isNaN(due.getTime()) && due.getTime() < new Date().setHours(0, 0, 0, 0);
+      return overdue ? 'invoice-badge-overdue' : 'invoice-badge-pending';
+    }
+    return 'invoice-badge-pending';
+  }
+
+  function statusLabel(status, dueDate){
+    if (status === 'Paid') return 'Paid';
+    if (status === 'Failed') return 'Failed';
+    if (status === 'Pending') {
+      const due = dueDate ? new Date(dueDate) : null;
+      const overdue = due && !Number.isNaN(due.getTime()) && due.getTime() < new Date().setHours(0, 0, 0, 0);
+      return overdue ? 'Overdue' : 'Pending';
+    }
+    return status || 'Pending';
+  }
+
+  function isOverdueInvoice(invoice){
+    if (!invoice || invoice.status === 'Paid') return false;
+    const due = invoice.due_date ? new Date(invoice.due_date) : null;
+    return !!(due && !Number.isNaN(due.getTime()) && due.getTime() < new Date().setHours(0, 0, 0, 0));
+  }
+
+  function updateInvoiceSummary(items){
+    const paid = items.filter((item) => item.status === 'Paid');
+    const pending = items.filter((item) => item.status === 'Pending');
+    const overdue = items.filter((item) => isOverdueInvoice(item));
+    document.getElementById('invoiceTotalCount').textContent = items.length;
+    document.getElementById('invoicePaidCount').textContent = paid.length;
+    document.getElementById('invoicePendingCount').textContent = pending.length;
+    document.getElementById('invoiceOverdueCount').textContent = overdue.length;
   }
 
   function addItemRow(item){
@@ -163,23 +675,26 @@
     const res = await fetch('/api/invoices',{headers:{authorization:'Bearer '+token}});
     if (!res.ok) return;
     const items = await res.json();
+    updateInvoiceSummary(items || []);
     const tbody = document.getElementById('list'); tbody.innerHTML='';
-    if (!items || !items.length) tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted">No invoices</td></tr>';
+    if (!items || !items.length) tbody.innerHTML = '<tr><td colspan="6" class="invoice-empty"><i class="fa-solid fa-receipt"></i>No invoices yet</td></tr>';
     items.forEach(i=>{
       const tr = document.createElement('tr');
       tr.innerHTML = `
-        <td>${i.number || ''}</td>
+        <td class="mono">${i.number || ''}</td>
         <td>${i.customer_name || ''}</td>
         <td class="text-end">${i.currency || (i.data && i.data.currency) || 'SGD'} ${parseFloat(i.amount||0).toFixed(2)}</td>
         <td>${i.due_date ? new Date(i.due_date).toLocaleDateString() : ''}</td>
-        <td>${i.status || ''}</td>
+        <td><span class="invoice-badge ${statusClass(i.status, i.due_date)}">${statusLabel(i.status, i.due_date)}</span></td>
         <td class="text-end">
-          <a class="btn btn-sm btn-outline-primary me-1" href="/api/invoices/${i.id}/pdf" target="_blank">PDF</a>
-          <a class="btn btn-sm btn-outline-secondary me-1" href="/api/invoices/${i.id}/excel" target="_blank">CSV</a>
-          ${i.status !== 'Paid' ? `<button class="btn btn-sm btn-outline-success me-1" onclick="payByCard(${i.id})">Pay by Card</button>` : ''}
-          ${i.status !== 'Paid' ? `<button class="btn btn-sm btn-outline-warning me-1" onclick="payByPayPal(${i.id})">PayPal</button>` : ''}
-          ${i.status !== 'Paid' ? `<button class="btn btn-sm btn-outline-info me-1" onclick="showBankTransfer(${i.id})">Bank Transfer</button>` : ''}
-          <button class="btn btn-sm btn-outline-success" onclick="sendInvoice(${i.id}, '${(i.data && i.data.email) || ''}')">Send</button>
+          <div class="invoice-actions">
+            <a class="invoice-action-btn" href="/api/invoices/${i.id}/pdf" target="_blank"><i class="fa-solid fa-file-pdf"></i> PDF</a>
+            <a class="invoice-action-btn" href="/api/invoices/${i.id}/excel" target="_blank"><i class="fa-solid fa-file-csv"></i> CSV</a>
+            ${i.status !== 'Paid' ? `<button class="invoice-action-btn invoice-action-btn-success" onclick="payByCard(${i.id})"><i class="fa-solid fa-credit-card"></i> Card</button>` : ''}
+            ${i.status !== 'Paid' ? `<button class="invoice-action-btn invoice-action-btn-warning" onclick="payByPayPal(${i.id})"><i class="fa-brands fa-paypal"></i> PayPal</button>` : ''}
+            ${i.status !== 'Paid' ? `<button class="invoice-action-btn invoice-action-btn-info" onclick="showBankTransfer(${i.id})"><i class="fa-solid fa-building-columns"></i> Bank</button>` : ''}
+            <button class="invoice-action-btn invoice-action-btn-primary" onclick="sendInvoice(${i.id}, '${(i.data && i.data.email) || ''}')"><i class="fa-solid fa-paper-plane"></i> Send</button>
+          </div>
           <div id="paypal-buttons-${i.id}" class="mt-2"></div>
         </td>
       `;
