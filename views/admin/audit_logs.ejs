@@ -2,12 +2,316 @@
 <%- include('../partials/navbar') %>
 <%- include('./_admin_nav') %>
 
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+
+<style>
+:root {
+  --al-bg: #f0fdf4;
+  --al-surface: #ffffff;
+  --al-surface2: #f8fdf9;
+  --al-border: #d1fae5;
+  --al-border2: #bbf7d0;
+  --al-text: #0f1c14;
+  --al-muted: #6b8c78;
+  --al-accent: #16a34a;
+  --al-accent2: #22c55e;
+  --al-blue: #2563eb;
+  --al-amber: #d97706;
+  --al-red: #dc2626;
+  --al-shadow-sm: 0 1px 3px rgba(6,78,39,.08), 0 1px 2px rgba(6,78,39,.04);
+  --al-shadow-md: 0 4px 16px rgba(6,78,39,.1), 0 2px 6px rgba(6,78,39,.06);
+  --al-radius: 18px;
+  --al-radius-sm: 12px;
+}
+
+body {
+  background: var(--al-bg) !important;
+  color: var(--al-text);
+  font-family: 'Sora', sans-serif;
+}
+
+.audit-page {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 2rem 1.5rem 4rem;
+  animation: audit-in .45s cubic-bezier(.22,.8,.36,1) both;
+}
+
+@keyframes audit-in {
+  from { opacity: 0; transform: translateY(16px); }
+  to { opacity: 1; transform: none; }
+}
+
+.audit-header,
+.audit-filters,
+.audit-table-wrap,
+.no-results {
+  background: var(--al-surface);
+  border: 1px solid var(--al-border);
+  border-radius: var(--al-radius);
+  box-shadow: var(--al-shadow-sm);
+}
+
+.audit-header {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+  margin-bottom: 1rem;
+  padding: 1.25rem 1.35rem;
+}
+
+.section-eyebrow {
+  margin: 0 0 .35rem;
+  color: #15803d;
+  font-size: .72rem;
+  font-weight: 700;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+
+.audit-header h2 {
+  margin: 0;
+  font-size: 1.75rem;
+  font-weight: 700;
+  color: var(--al-text);
+}
+
+.audit-header .text-muted {
+  color: var(--al-muted) !important;
+  font-size: .92rem;
+}
+
+.audit-filters {
+  margin-bottom: 1rem;
+  padding: 1rem 1.1rem;
+}
+
+.audit-filter-form {
+  display: grid;
+  grid-template-columns: 1.2fr 1.2fr .9fr .9fr auto;
+  gap: .9rem;
+  align-items: end;
+}
+
+.filter-group {
+  display: flex;
+  flex-direction: column;
+  gap: .35rem;
+}
+
+.filter-group label {
+  color: var(--al-muted);
+  font-size: .8rem;
+  font-weight: 600;
+}
+
+.filter-group select,
+.filter-group input {
+  min-height: 42px;
+  border: 1px solid var(--al-border);
+  border-radius: var(--al-radius-sm);
+  background: var(--al-surface2);
+  color: var(--al-text);
+  padding: .55rem .75rem;
+  box-shadow: none;
+}
+
+.filter-group select:focus,
+.filter-group input:focus {
+  outline: none;
+  border-color: var(--al-accent);
+  box-shadow: 0 0 0 .15rem rgba(22,163,74,.12);
+}
+
+.filter-action button {
+  min-height: 42px;
+  padding: .55rem 1rem;
+  border: 1px solid var(--al-accent);
+  border-radius: var(--al-radius-sm);
+  background: var(--al-accent);
+  color: #fff;
+  font-weight: 600;
+  box-shadow: var(--al-shadow-sm);
+  transition: transform .15s ease, background .15s ease, border-color .15s ease;
+}
+
+.filter-action button:hover {
+  transform: translateY(-1px);
+  background: var(--al-accent2);
+  border-color: var(--al-accent2);
+}
+
+.audit-table-wrap {
+  overflow: hidden;
+}
+
+.audit-table {
+  margin-bottom: 0;
+  width: 100%;
+}
+
+.audit-table thead th {
+  font-size: .72rem;
+  text-transform: uppercase;
+  letter-spacing: .08em;
+  color: var(--al-muted);
+  font-weight: 700;
+  border-bottom: 1px solid var(--al-border);
+  background: linear-gradient(180deg, #ffffff 0%, #f8fdf9 100%);
+}
+
+.audit-table td,
+.audit-table th {
+  padding: .9rem .85rem;
+  border-color: var(--al-border);
+  vertical-align: middle;
+}
+
+.audit-table tbody tr:hover td {
+  background: var(--al-surface2);
+}
+
+.timestamp,
+.meta,
+.audit-table td:last-child,
+.audit-table td:nth-child(5) {
+  font-family: 'DM Mono', monospace;
+  font-size: .85rem;
+}
+
+.user-info strong {
+  color: var(--al-text);
+  font-size: .9rem;
+}
+
+.user-info small {
+  color: var(--al-muted);
+}
+
+.action-badge,
+.entity-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: .35rem;
+  padding: .25rem .7rem;
+  border-radius: 999px;
+  font-size: .75rem;
+  font-weight: 600;
+  line-height: 1.2;
+}
+
+.action-badge::before,
+.entity-badge::before {
+  content: '';
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.action-badge {
+  background: #eef6ff;
+  color: #1d4ed8;
+}
+
+.action-badge::before {
+  background: var(--al-blue);
+}
+
+.action-create {
+  background: rgba(22,163,74,.12);
+  color: #15803d;
+}
+
+.action-create::before {
+  background: var(--al-accent);
+}
+
+.action-update {
+  background: rgba(217,119,6,.12);
+  color: #b45309;
+}
+
+.action-update::before {
+  background: var(--al-amber);
+}
+
+.action-delete,
+.action-failed {
+  background: rgba(220,38,38,.12);
+  color: #b91c1c;
+}
+
+.action-delete::before,
+.action-failed::before {
+  background: var(--al-red);
+}
+
+.action-login {
+  background: rgba(37,99,235,.12);
+  color: #1d4ed8;
+}
+
+.action-login::before {
+  background: var(--al-blue);
+}
+
+.entity-badge {
+  background: rgba(22,163,74,.08);
+  color: #15803d;
+}
+
+.entity-badge::before {
+  background: var(--al-accent);
+}
+
+.no-results {
+  padding: 2rem 1rem;
+  text-align: center;
+  color: var(--al-muted);
+}
+
+.no-results p {
+  margin: 0;
+}
+
+@media (max-width: 1100px) {
+  .audit-filter-form {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .filter-action {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (max-width: 640px) {
+  .audit-page {
+    padding: 1.25rem 1rem 3rem;
+  }
+
+  .audit-header {
+    padding: 1.1rem;
+  }
+
+  .audit-header h2 {
+    font-size: 1.45rem;
+  }
+
+  .audit-filter-form {
+    grid-template-columns: 1fr;
+  }
+}
+</style>
+
 <section class="admin-page audit-page">
   <div class="audit-header">
     <div>
       <p class="section-eyebrow">Administration</p>
       <h2>Audit Logs</h2>
-      <p class="text-muted mb-0">Review authentication, user, payment, and system activity.</p>
+      <p class="text-muted mb-0">Review authentication, user, payment, and system activity in one control center.</p>
     </div>
   </div>
 

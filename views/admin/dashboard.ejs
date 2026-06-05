@@ -2,131 +2,291 @@
 <%- include('../partials/navbar') %>
 <%- include('./_admin_nav') %>
 
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+
 <script>
 const token = localStorage.getItem('token');
 if (!token) location = '/login';
-try{
+try {
   const payload = JSON.parse(atob(token.split('.')[1]));
   if (payload.role !== 'Admin') location = '/dashboard';
-}catch(e){ location = '/login'; }
+} catch (e) { location = '/login'; }
 </script>
 
+<style>
+:root {
+  --ad-bg: #f0fdf4;
+  --ad-surface: #ffffff;
+  --ad-surface2: #f8fdf9;
+  --ad-border: #d1fae5;
+  --ad-border2: #bbf7d0;
+  --ad-text: #0f1c14;
+  --ad-muted: #6b8c78;
+  --ad-accent: #16a34a;
+  --ad-accent2: #22c55e;
+  --ad-shadow-sm: 0 1px 3px rgba(6,78,39,.08), 0 1px 2px rgba(6,78,39,.04);
+  --ad-shadow-md: 0 4px 16px rgba(6,78,39,.1), 0 2px 6px rgba(6,78,39,.06);
+  --ad-radius: 18px;
+}
+
+body {
+  background: var(--ad-bg) !important;
+  color: var(--ad-text);
+  font-family: 'Sora', sans-serif;
+}
+
+.admin-page {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 2rem 1.5rem 4rem;
+  animation: admin-in .45s cubic-bezier(.22,.8,.36,1) both;
+}
+
+@keyframes admin-in {
+  from { opacity: 0; transform: translateY(16px); }
+  to { opacity: 1; transform: none; }
+}
+
+.admin-hero {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+  margin-bottom: 1.5rem;
+  padding-bottom: 1.25rem;
+  border-bottom: 1px solid var(--ad-border);
+}
+
+.admin-hero-left {
+  display: flex;
+  flex-direction: column;
+  gap: .35rem;
+}
+
+.admin-kicker {
+  display: inline-flex;
+  align-items: center;
+  gap: .45rem;
+  width: fit-content;
+  padding: .35rem .7rem;
+  border-radius: 999px;
+  background: #dcfce7;
+  color: #15803d;
+  border: 1px solid var(--ad-border2);
+  font-size: .72rem;
+  font-weight: 700;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+
+.admin-title {
+  font-size: 1.8rem;
+  line-height: 1.15;
+  margin: 0;
+  color: var(--ad-text);
+  font-weight: 700;
+}
+
+.admin-subtitle {
+  margin: 0;
+  font-size: .92rem;
+  color: var(--ad-muted);
+  max-width: 60ch;
+}
+
+.admin-meta {
+  display: inline-flex;
+  align-items: center;
+  gap: .45rem;
+  padding: .5rem .8rem;
+  border-radius: 999px;
+  border: 1px solid var(--ad-border);
+  background: var(--ad-surface);
+  color: var(--ad-muted);
+  font-size: .8rem;
+  font-weight: 500;
+  box-shadow: var(--ad-shadow-sm);
+}
+
+.dashboard-cards {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 1rem;
+}
+
+.card-link {
+  display: block;
+  text-decoration: none;
+  height: 100%;
+}
+
+.card-link .card {
+  height: 100%;
+  border: 1px solid var(--ad-border);
+  border-radius: var(--ad-radius);
+  background: var(--ad-surface);
+  box-shadow: var(--ad-shadow-sm);
+  overflow: hidden;
+  transition: transform .16s ease, box-shadow .16s ease, border-color .16s ease, background .16s ease;
+}
+
+.card-link .card::before {
+  content: '';
+  display: block;
+  height: 3px;
+  background: linear-gradient(90deg, var(--ad-accent), rgba(34,197,94,.2));
+}
+
+.card-link:hover .card {
+  transform: translateY(-3px);
+  box-shadow: var(--ad-shadow-md);
+  border-color: var(--ad-border2);
+  background: var(--ad-surface2);
+}
+
+.card-body {
+  display: flex;
+  align-items: flex-start;
+  gap: .95rem;
+  padding: 1.2rem;
+  text-align: left;
+}
+
+.card-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.15rem;
+  background: #dcfce7;
+  color: #15803d;
+  flex-shrink: 0;
+  box-shadow: inset 0 0 0 1px rgba(21,128,61,.08);
+}
+
+.card-title {
+  margin: 0 0 .35rem;
+  color: var(--ad-text);
+  font-size: .98rem;
+  font-weight: 700;
+}
+
+.card-text {
+  margin: 0;
+  color: var(--ad-muted);
+  font-size: .82rem;
+  line-height: 1.45;
+}
+
+@media (max-width: 1100px) {
+  .dashboard-cards { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+@media (max-width: 640px) {
+  .admin-page { padding: 1.25rem 1rem 3rem; }
+  .dashboard-cards { grid-template-columns: 1fr; }
+  .admin-title { font-size: 1.45rem; }
+}
+</style>
+
 <section class="admin-page">
-    <h2>Admin Dashboard</h2>
-    <p>Overview and quick actions for administrators.</p>
-    <div class="dashboard-cards">
-      <div class="col">
-        <a href="/admin/users" class="card-link">
-          <div class="card h-100 text-center shadow-sm">
-            <div class="card-body">
-              <div class="card-icon mb-3" aria-hidden="true">👥</div>
-              <div>
-                <h5 class="card-title">Manage Users</h5>
-                <p class="card-text">View, edit, and manage user accounts and roles.</p>
-              </div>
-            </div>
-          </div>
-        </a>
-      </div>
-
-      <div class="col">
-        <a href="/admin/audit-logs" class="card-link">
-          <div class="card h-100 text-center shadow-sm">
-            <div class="card-body">
-              <div class="card-icon mb-3" aria-hidden="true">📝</div>
-              <div>
-                <h5 class="card-title">Audit Logs</h5>
-                <p class="card-text">Review recent administrative actions and changes.</p>
-              </div>
-            </div>
-          </div>
-        </a>
-      </div>
-
-      <div class="col">
-        <a href="/admin/invite-tokens" class="card-link">
-          <div class="card h-100 text-center shadow-sm">
-            <div class="card-body">
-              <div class="card-icon mb-3" aria-hidden="true">✉️</div>
-              <div>
-                <h5 class="card-title">Invite Tokens</h5>
-                <p class="card-text">View outstanding invites and their status.</p>
-              </div>
-            </div>
-          </div>
-        </a>
-      </div>
-
-      <div class="col">
-        <a href="/register" class="card-link">
-          <div class="card h-100 text-center shadow-sm">
-            <div class="card-body">
-              <div class="card-icon mb-3" aria-hidden="true">➕</div>
-              <div>
-                <h5 class="card-title">Register User</h5>
-                <p class="card-text">Create a new user account or send an invite.</p>
-              </div>
-            </div>
-          </div>
-        </a>
-      </div>
-
-      <div class="col">
-        <a href="/admin/password-resets" class="card-link">
-          <div class="card h-100 text-center shadow-sm">
-            <div class="card-body">
-              <div class="card-icon mb-3" aria-hidden="true">🔒</div>
-              <div>
-                <h5 class="card-title">Password Resets</h5>
-                <p class="card-text">Monitor password reset requests and usage.</p>
-              </div>
-            </div>
-          </div>
-        </a>
-      </div>
-
-      <div class="col">
-        <a href="/admin/settings" class="card-link">
-          <div class="card h-100 text-center shadow-sm">
-            <div class="card-body">
-              <div class="card-icon mb-3" aria-hidden="true">⚙️</div>
-              <div>
-                <h5 class="card-title">System Settings</h5>
-                <p class="card-text">Organization settings, branding, and SMTP.</p>
-              </div>
-            </div>
-          </div>
-        </a>
-      </div>
-
-      <div class="col">
-        <a href="/admin/integrations" class="card-link">
-          <div class="card h-100 text-center shadow-sm">
-            <div class="card-body">
-              <div class="card-icon mb-3" aria-hidden="true">🔌</div>
-              <div>
-                <h5 class="card-title">Integrations</h5>
-                <p class="card-text">Connect Xero, payment gateways and webhooks.</p>
-              </div>
-            </div>
-          </div>
-        </a>
-      </div>
-
-      <div class="col">
-        <a href="/admin/approvals" class="card-link">
-          <div class="card h-100 text-center shadow-sm">
-            <div class="card-body">
-              <div class="card-icon mb-3" aria-hidden="true">✅</div>
-              <div>
-                <h5 class="card-title">Approvals</h5>
-                <p class="card-text">Pending approvals for invoices and payroll.</p>
-              </div>
-            </div>
-          </div>
-        </a>
-      </div>
+  <div class="admin-hero">
+    <div class="admin-hero-left">
+      <span class="admin-kicker"><i class="fa-solid fa-shield-halved"></i> Administration</span>
+      <h2 class="admin-title">Admin Dashboard</h2>
+      <p class="admin-subtitle">Overview and quick actions for administrators.</p>
     </div>
+    <div class="admin-meta"><i class="fa-solid fa-circle-check"></i> System control center</div>
+  </div>
+
+  <div class="dashboard-cards">
+    <div class="col">
+      <a href="/admin/users" class="card-link">
+        <div class="card h-100 text-center shadow-sm">
+          <div class="card-body">
+            <div class="card-icon" aria-hidden="true"><i class="fa-solid fa-users"></i></div>
+            <div>
+              <h5 class="card-title">Manage Users</h5>
+              <p class="card-text">View, edit, and manage user accounts and roles.</p>
+            </div>
+          </div>
+        </div>
+      </a>
+    </div>
+
+    <div class="col">
+      <a href="/admin/audit-logs" class="card-link">
+        <div class="card h-100 text-center shadow-sm">
+          <div class="card-body">
+            <div class="card-icon" aria-hidden="true"><i class="fa-solid fa-clipboard-list"></i></div>
+            <div>
+              <h5 class="card-title">Audit Logs</h5>
+              <p class="card-text">Review recent administrative actions and changes.</p>
+            </div>
+          </div>
+        </div>
+      </a>
+    </div>
+
+    <div class="col">
+      <a href="/admin/invite-tokens" class="card-link">
+        <div class="card h-100 text-center shadow-sm">
+          <div class="card-body">
+            <div class="card-icon" aria-hidden="true"><i class="fa-solid fa-envelope-open-text"></i></div>
+            <div>
+              <h5 class="card-title">Invite Tokens</h5>
+              <p class="card-text">View outstanding invites and their status.</p>
+            </div>
+          </div>
+        </div>
+      </a>
+    </div>
+
+    <div class="col">
+      <a href="/register" class="card-link">
+        <div class="card h-100 text-center shadow-sm">
+          <div class="card-body">
+            <div class="card-icon" aria-hidden="true"><i class="fa-solid fa-user-plus"></i></div>
+            <div>
+              <h5 class="card-title">Register User</h5>
+              <p class="card-text">Create a new user account or send an invite.</p>
+            </div>
+          </div>
+        </div>
+      </a>
+    </div>
+
+    <div class="col">
+      <a href="/admin/password-resets" class="card-link">
+        <div class="card h-100 text-center shadow-sm">
+          <div class="card-body">
+            <div class="card-icon" aria-hidden="true"><i class="fa-solid fa-lock"></i></div>
+            <div>
+              <h5 class="card-title">Password Resets</h5>
+              <p class="card-text">Monitor password reset requests and usage.</p>
+            </div>
+          </div>
+        </div>
+      </a>
+    </div>
+
+    <div class="col">
+      <a href="/admin/approvals" class="card-link">
+        <div class="card h-100 text-center shadow-sm">
+          <div class="card-body">
+            <div class="card-icon" aria-hidden="true"><i class="fa-solid fa-circle-check"></i></div>
+            <div>
+              <h5 class="card-title">Approvals</h5>
+              <p class="card-text">Pending approvals for invoices and payroll.</p>
+            </div>
+          </div>
+        </div>
+      </a>
+    </div>
+  </div>
 </section>
 
 <%- include('../partials/footer') %>
