@@ -1,6 +1,8 @@
 <%- include('../partials/header', { title: 'HR Dashboard' }) %>
 <%- include('../partials/navbar') %>
 
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+
 <script>
 const token = localStorage.getItem('token');
 if (!token) location = '/login';
@@ -10,124 +12,312 @@ try{
 }catch(e){ location = '/login'; }
 </script>
 
-<div class="container mt-4">
-  <h2>HR Dashboard</h2>
-  <p>Payroll, employees and HR actions.</p>
-  <div class="content-card mt-3">
-    <div class="dashboard-cards">
-      <div class="col">
-        <a href="/reminders" class="card-link">
-          <div class="card h-100 text-center shadow-sm">
-            <div class="card-body">
-              <div class="card-icon mb-3" aria-hidden="true">⏰</div>
-              <div>
-                <h5 class="card-title">Reminders</h5>
-                <p class="card-text">Manage payment reminders and dunning.</p>
-              </div>
-            </div>
-          </div>
-        </a>
-      </div>
+<style>
+:root {
+  --hr-bg: #f0fdf4;
+  --hr-surface: #ffffff;
+  --hr-surface2: #f8fdf9;
+  --hr-border: #d1fae5;
+  --hr-border2: #bbf7d0;
+  --hr-text: #0f1c14;
+  --hr-muted: #6b8c78;
+  --hr-accent: #16a34a;
+  --hr-accent2: #22c55e;
+  --hr-blue: #2563eb;
+  --hr-amber: #d97706;
+  --hr-red: #dc2626;
+  --hr-shadow-sm: 0 1px 3px rgba(6,78,39,.08), 0 1px 2px rgba(6,78,39,.04);
+  --hr-shadow-md: 0 4px 16px rgba(6,78,39,.1), 0 2px 6px rgba(6,78,39,.06);
+  --hr-radius: 18px;
+  --hr-radius-sm: 12px;
+}
 
-      <div class="col">
-        <a href="/admin/users" class="card-link">
-          <div class="card h-100 text-center shadow-sm">
-            <div class="card-body">
-              <div class="card-icon mb-3" aria-hidden="true">👥</div>
-              <div>
-                <h5 class="card-title">Employees</h5>
-                <p class="card-text">View, edit and manage employee records.</p>
-              </div>
-            </div>
-          </div>
-        </a>
-      </div>
+body {
+  background: var(--hr-bg) !important;
+  color: var(--hr-text);
+  font-family: 'Sora', sans-serif;
+}
 
-      <div class="col">
-        <a href="/hr/requests" class="card-link">
-          <div class="card h-100 text-center shadow-sm">
-            <div class="card-body">
-              <div class="card-icon mb-3" aria-hidden="true">✉️</div>
-              <div>
-                <h5 class="card-title">Requests</h5>
-                <p class="card-text">Submit HR or finance requests.</p>
-              </div>
-            </div>
-          </div>
-        </a>
-      </div>
+.hr-page {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 2rem 1.5rem 4rem;
+  animation: hr-in .45s cubic-bezier(.22,.8,.36,1) both;
+}
 
-      <div class="col">
-        <a href="/mypayslips" class="card-link">
-          <div class="card h-100 text-center shadow-sm">
-            <div class="card-body">
-              <div class="card-icon mb-3" aria-hidden="true">🧾</div>
-              <div>
-                <h5 class="card-title">Payslips</h5>
-                <p class="card-text">Access past payslips and downloads.</p>
-              </div>
-            </div>
-          </div>
-        </a>
-      </div>
-      
-      <div class="col">
-        <a href="/leave-requests" class="card-link">
-          <div class="card h-100 text-center shadow-sm">
-            <div class="card-body">
-              <div class="card-icon mb-3" aria-hidden="true">🕒</div>
-              <div>
-                <h5 class="card-title">Leave Requests</h5>
-                <p class="card-text">Approve or review pending leave requests.</p>
-              </div>
-            </div>
-          </div>
-        </a>
-      </div>
+@keyframes hr-in {
+  from { opacity: 0; transform: translateY(16px); }
+  to { opacity: 1; transform: none; }
+}
 
-      <div class="col">
-        <a href="/onboarding" class="card-link">
-          <div class="card h-100 text-center shadow-sm">
-            <div class="card-body">
-              <div class="card-icon mb-3" aria-hidden="true">📋</div>
-              <div>
-                <h5 class="card-title">Onboarding</h5>
-                <p class="card-text">Track new hires and onboarding tasks.</p>
-              </div>
-            </div>
-          </div>
-        </a>
-      </div>
+.hr-hero {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+  margin-bottom: 1.5rem;
+  padding-bottom: 1.25rem;
+  border-bottom: 1px solid var(--hr-border);
+}
 
-      <div class="col">
-        <a href="/contracts" class="card-link">
-          <div class="card h-100 text-center shadow-sm">
-            <div class="card-body">
-              <div class="card-icon mb-3" aria-hidden="true">📁</div>
-              <div>
-                <h5 class="card-title">Contracts & Docs</h5>
-                <p class="card-text">Manage employment contracts and documents.</p>
-              </div>
-            </div>
-          </div>
-        </a>
-      </div>
+.hr-hero-left {
+  display: flex;
+  flex-direction: column;
+  gap: .35rem;
+}
 
-      <div class="col">
-        <a href="/time-attendance" class="card-link">
-          <div class="card h-100 text-center shadow-sm">
-            <div class="card-body">
-              <div class="card-icon mb-3" aria-hidden="true">⏱️</div>
-              <div>
-                <h5 class="card-title">Time & Attendance</h5>
-                <p class="card-text">Timesheets, approvals and attendance logs.</p>
-              </div>
+.hr-kicker {
+  display: inline-flex;
+  align-items: center;
+  gap: .45rem;
+  width: fit-content;
+  padding: .35rem .7rem;
+  border-radius: 999px;
+  background: #dcfce7;
+  color: #15803d;
+  border: 1px solid var(--hr-border2);
+  font-size: .72rem;
+  font-weight: 700;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+
+.hr-title {
+  margin: 0;
+  color: var(--hr-text);
+  font-size: 1.8rem;
+  font-weight: 700;
+  line-height: 1.15;
+}
+
+.hr-subtitle {
+  margin: 0;
+  color: var(--hr-muted);
+  font-size: .92rem;
+  max-width: 60ch;
+}
+
+.hr-meta {
+  display: inline-flex;
+  align-items: center;
+  gap: .45rem;
+  padding: .5rem .8rem;
+  border-radius: 999px;
+  border: 1px solid var(--hr-border);
+  background: var(--hr-surface);
+  color: var(--hr-muted);
+  font-size: .8rem;
+  font-weight: 500;
+  box-shadow: var(--hr-shadow-sm);
+}
+
+.dashboard-cards {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 1rem;
+}
+
+.card-link {
+  display: block;
+  text-decoration: none;
+  height: 100%;
+}
+
+.card-link .card {
+  height: 100%;
+  border: 1px solid var(--hr-border);
+  border-radius: var(--hr-radius);
+  background: var(--hr-surface);
+  box-shadow: var(--hr-shadow-sm);
+  overflow: hidden;
+  transition: transform .16s ease, box-shadow .16s ease, border-color .16s ease, background .16s ease;
+}
+
+.card-link .card::before {
+  content: '';
+  display: block;
+  height: 3px;
+  background: linear-gradient(90deg, var(--hr-accent), rgba(34,197,94,.2));
+}
+
+.card-link:hover .card {
+  transform: translateY(-3px);
+  box-shadow: var(--hr-shadow-md);
+  border-color: var(--hr-border2);
+  background: var(--hr-surface2);
+}
+
+.card-body {
+  display: flex;
+  align-items: flex-start;
+  gap: .95rem;
+  padding: 1.2rem;
+  text-align: left;
+}
+
+.card-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.15rem;
+  background: #dcfce7;
+  color: #15803d;
+  flex-shrink: 0;
+  box-shadow: inset 0 0 0 1px rgba(21,128,61,.08);
+}
+
+.card-title {
+  margin: 0 0 .35rem;
+  color: var(--hr-text);
+  font-size: .98rem;
+  font-weight: 700;
+}
+
+.card-text {
+  margin: 0;
+  color: var(--hr-muted);
+  font-size: .82rem;
+  line-height: 1.45;
+}
+
+@media (max-width: 1100px) {
+  .dashboard-cards { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+@media (max-width: 640px) {
+  .hr-page { padding: 1.25rem 1rem 3rem; }
+  .dashboard-cards { grid-template-columns: 1fr; }
+  .hr-title { font-size: 1.45rem; }
+}
+</style>
+
+<section class="hr-page">
+  <div class="hr-hero">
+    <div class="hr-hero-left">
+      <span class="hr-kicker"><i class="fa-solid fa-people-group"></i> HR Workspace</span>
+      <h2 class="hr-title">HR Dashboard</h2>
+      <p class="hr-subtitle">Payroll, employees, and HR actions in one streamlined workspace.</p>
+    </div>
+    <div class="hr-meta"><i class="fa-solid fa-circle-check"></i> Team operations center</div>
+  </div>
+
+  <div class="dashboard-cards">
+    <div class="col">
+      <a href="/reminders" class="card-link">
+        <div class="card h-100 text-center shadow-sm">
+          <div class="card-body">
+            <div class="card-icon" aria-hidden="true"><i class="fa-solid fa-bell"></i></div>
+            <div>
+              <h5 class="card-title">Reminders</h5>
+              <p class="card-text">Manage payment reminders and dunning.</p>
             </div>
           </div>
-        </a>
-      </div>
+        </div>
+      </a>
+    </div>
+
+    <div class="col">
+      <a href="/admin/users" class="card-link">
+        <div class="card h-100 text-center shadow-sm">
+          <div class="card-body">
+            <div class="card-icon" aria-hidden="true"><i class="fa-solid fa-users"></i></div>
+            <div>
+              <h5 class="card-title">Employees</h5>
+              <p class="card-text">View, edit and manage employee records.</p>
+            </div>
+          </div>
+        </div>
+      </a>
+    </div>
+
+    <div class="col">
+      <a href="/hr/requests" class="card-link">
+        <div class="card h-100 text-center shadow-sm">
+          <div class="card-body">
+            <div class="card-icon" aria-hidden="true"><i class="fa-solid fa-envelope"></i></div>
+            <div>
+              <h5 class="card-title">Requests</h5>
+              <p class="card-text">Submit HR or finance requests.</p>
+            </div>
+          </div>
+        </div>
+      </a>
+    </div>
+
+    <div class="col">
+      <a href="/mypayslips" class="card-link">
+        <div class="card h-100 text-center shadow-sm">
+          <div class="card-body">
+            <div class="card-icon" aria-hidden="true"><i class="fa-solid fa-file-invoice-dollar"></i></div>
+            <div>
+              <h5 class="card-title">Payslips</h5>
+              <p class="card-text">Access past payslips and downloads.</p>
+            </div>
+          </div>
+        </div>
+      </a>
+    </div>
+    
+    <div class="col">
+      <a href="/leave-requests" class="card-link">
+        <div class="card h-100 text-center shadow-sm">
+          <div class="card-body">
+            <div class="card-icon" aria-hidden="true"><i class="fa-solid fa-clock"></i></div>
+            <div>
+              <h5 class="card-title">Leave Requests</h5>
+              <p class="card-text">Approve or review pending leave requests.</p>
+            </div>
+          </div>
+        </div>
+      </a>
+    </div>
+
+    <div class="col">
+      <a href="/onboarding" class="card-link">
+        <div class="card h-100 text-center shadow-sm">
+          <div class="card-body">
+            <div class="card-icon" aria-hidden="true"><i class="fa-solid fa-clipboard-list"></i></div>
+            <div>
+              <h5 class="card-title">Onboarding</h5>
+              <p class="card-text">Track new hires and onboarding tasks.</p>
+            </div>
+          </div>
+        </div>
+      </a>
+    </div>
+
+    <div class="col">
+      <a href="/contracts" class="card-link">
+        <div class="card h-100 text-center shadow-sm">
+          <div class="card-body">
+            <div class="card-icon" aria-hidden="true"><i class="fa-solid fa-folder-open"></i></div>
+            <div>
+              <h5 class="card-title">Contracts & Docs</h5>
+              <p class="card-text">Manage employment contracts and documents.</p>
+            </div>
+          </div>
+        </div>
+      </a>
+    </div>
+
+    <div class="col">
+      <a href="/time-attendance" class="card-link">
+        <div class="card h-100 text-center shadow-sm">
+          <div class="card-body">
+            <div class="card-icon" aria-hidden="true"><i class="fa-solid fa-stopwatch"></i></div>
+            <div>
+              <h5 class="card-title">Time & Attendance</h5>
+              <p class="card-text">Timesheets, approvals and attendance logs.</p>
+            </div>
+          </div>
+        </div>
+      </a>
     </div>
   </div>
-</div>
+</section>
 
 <%- include('../partials/footer') %>

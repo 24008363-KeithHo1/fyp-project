@@ -1,6 +1,8 @@
 <%- include('../partials/header', { title: 'Staff Dashboard' }) %>
 <%- include('../partials/navbar') %>
 
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+
 <script>
 const token = localStorage.getItem('token');
 if (!token) location = '/login';
@@ -10,96 +12,284 @@ try{
 }catch(e){ location = '/login'; }
 </script>
 
-<div class="container mt-4">
-  <h2>Staff Dashboard</h2>
-  <p>Your payslips and personal information.</p>
-  <div class="content-card mt-3">
-    <div class="dashboard-cards">
-      <div class="col">
-        <a href="/mypayslips" class="card-link">
-          <div class="card h-100 text-center shadow-sm">
-            <div class="card-body">
-              <div class="card-icon mb-3" aria-hidden="true">🧾</div>
-              <div>
-                <h5 class="card-title">Payslips</h5>
-                <p class="card-text">View and download your payslips.</p>
-              </div>
-            </div>
-          </div>
-        </a>
-      </div>
+<style>
+:root {
+  --st-bg: #f0fdf4;
+  --st-surface: #ffffff;
+  --st-surface2: #f8fdf9;
+  --st-border: #d1fae5;
+  --st-border2: #bbf7d0;
+  --st-text: #0f1c14;
+  --st-muted: #6b8c78;
+  --st-accent: #16a34a;
+  --st-accent2: #22c55e;
+  --st-blue: #2563eb;
+  --st-amber: #d97706;
+  --st-red: #dc2626;
+  --st-shadow-sm: 0 1px 3px rgba(6,78,39,.08), 0 1px 2px rgba(6,78,39,.04);
+  --st-shadow-md: 0 4px 16px rgba(6,78,39,.1), 0 2px 6px rgba(6,78,39,.06);
+  --st-radius: 18px;
+  --st-radius-sm: 12px;
+}
 
-      <div class="col">
-        <a href="/profile" class="card-link">
-          <div class="card h-100 text-center shadow-sm">
-            <div class="card-body">
-              <div class="card-icon mb-3" aria-hidden="true">👤</div>
-              <div>
-                <h5 class="card-title">My Profile</h5>
-                <p class="card-text">Update contact and personal details.</p>
-              </div>
-            </div>
-          </div>
-        </a>
-      </div>
+body {
+  background: var(--st-bg) !important;
+  color: var(--st-text);
+  font-family: 'Sora', sans-serif;
+}
 
-      <div class="col">
-        <a href="/requests" class="card-link">
-          <div class="card h-100 text-center shadow-sm">
-            <div class="card-body">
-              <div class="card-icon mb-3" aria-hidden="true">✉️</div>
-              <div>
-                <h5 class="card-title">Requests</h5>
-                <p class="card-text">Submit HR or finance requests.</p>
-              </div>
-            </div>
-          </div>
-        </a>
-      </div>
+.staff-page {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 2rem 1.5rem 4rem;
+  animation: staff-in .45s cubic-bezier(.22,.8,.36,1) both;
+}
 
-      <div class="col">
-        <a href="/announcements" class="card-link">
-          <div class="card h-100 text-center shadow-sm">
-            <div class="card-body">
-              <div class="card-icon mb-3" aria-hidden="true">🔔</div>
-              <div>
-                <h5 class="card-title">Announcements</h5>
-                <p class="card-text">Company news and unread items.</p>
-              </div>
-            </div>
-          </div>
-        </a>
-      </div>
+@keyframes staff-in {
+  from { opacity: 0; transform: translateY(16px); }
+  to { opacity: 1; transform: none; }
+}
 
-      <div class="col">
-        <a href="/expenses" class="card-link">
-          <div class="card h-100 text-center shadow-sm">
-            <div class="card-body">
-              <div class="card-icon mb-3" aria-hidden="true">💸</div>
-              <div>
-                <h5 class="card-title">Expense Claims</h5>
-                <p class="card-text">Submit and track reimbursements.</p>
-              </div>
-            </div>
-          </div>
-        </a>
-      </div>
+.staff-hero {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+  margin-bottom: 1.5rem;
+  padding-bottom: 1.25rem;
+  border-bottom: 1px solid var(--st-border);
+}
 
-      <div class="col">
-        <a href="/leave-request" class="card-link">
-          <div class="card h-100 text-center shadow-sm">
-            <div class="card-body">
-              <div class="card-icon mb-3" aria-hidden="true">🕒</div>
-              <div>
-                <h5 class="card-title">Time Off</h5>
-                <p class="card-text">Request or view leave status.</p>
-              </div>
+.staff-hero-left {
+  display: flex;
+  flex-direction: column;
+  gap: .35rem;
+}
+
+.staff-kicker {
+  display: inline-flex;
+  align-items: center;
+  gap: .45rem;
+  width: fit-content;
+  padding: .35rem .7rem;
+  border-radius: 999px;
+  background: #dcfce7;
+  color: #15803d;
+  border: 1px solid var(--st-border2);
+  font-size: .72rem;
+  font-weight: 700;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+
+.staff-title {
+  margin: 0;
+  color: var(--st-text);
+  font-size: 1.8rem;
+  font-weight: 700;
+  line-height: 1.15;
+}
+
+.staff-subtitle {
+  margin: 0;
+  color: var(--st-muted);
+  font-size: .92rem;
+  max-width: 60ch;
+}
+
+.staff-meta {
+  display: inline-flex;
+  align-items: center;
+  gap: .45rem;
+  padding: .5rem .8rem;
+  border-radius: 999px;
+  border: 1px solid var(--st-border);
+  background: var(--st-surface);
+  color: var(--st-muted);
+  font-size: .8rem;
+  font-weight: 500;
+  box-shadow: var(--st-shadow-sm);
+}
+
+.dashboard-cards {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1rem;
+}
+
+.card-link {
+  display: block;
+  text-decoration: none;
+  height: 100%;
+}
+
+.card-link .card {
+  height: 100%;
+  border: 1px solid var(--st-border);
+  border-radius: var(--st-radius);
+  background: var(--st-surface);
+  box-shadow: var(--st-shadow-sm);
+  overflow: hidden;
+  transition: transform .16s ease, box-shadow .16s ease, border-color .16s ease, background .16s ease;
+}
+
+.card-link .card::before {
+  content: '';
+  display: block;
+  height: 3px;
+  background: linear-gradient(90deg, var(--st-accent), rgba(34,197,94,.2));
+}
+
+.card-link:hover .card {
+  transform: translateY(-3px);
+  box-shadow: var(--st-shadow-md);
+  border-color: var(--st-border2);
+  background: var(--st-surface2);
+}
+
+.card-body {
+  display: flex;
+  align-items: flex-start;
+  gap: .95rem;
+  padding: 1.2rem;
+  text-align: left;
+}
+
+.card-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.15rem;
+  background: #dcfce7;
+  color: #15803d;
+  flex-shrink: 0;
+  box-shadow: inset 0 0 0 1px rgba(21,128,61,.08);
+}
+
+.card-title {
+  margin: 0 0 .35rem;
+  color: var(--st-text);
+  font-size: .98rem;
+  font-weight: 700;
+}
+
+.card-text {
+  margin: 0;
+  color: var(--st-muted);
+  font-size: .82rem;
+  line-height: 1.45;
+}
+
+@media (max-width: 1100px) {
+  .dashboard-cards { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+@media (max-width: 640px) {
+  .staff-page { padding: 1.25rem 1rem 3rem; }
+  .dashboard-cards { grid-template-columns: 1fr; }
+  .staff-title { font-size: 1.45rem; }
+}
+</style>
+
+<section class="staff-page">
+  <div class="staff-hero">
+    <div class="staff-hero-left">
+      <span class="staff-kicker"><i class="fa-solid fa-briefcase"></i> Staff Workspace</span>
+      <h2 class="staff-title">Staff Dashboard</h2>
+      <p class="staff-subtitle">Your payslips, profile, and requests in one clean workspace.</p>
+    </div>
+    <div class="staff-meta"><i class="fa-solid fa-circle-check"></i> Personal access center</div>
+  </div>
+
+  <div class="dashboard-cards">
+    <div class="col">
+      <a href="/mypayslips" class="card-link">
+        <div class="card h-100 text-center shadow-sm">
+          <div class="card-body">
+            <div class="card-icon" aria-hidden="true"><i class="fa-solid fa-file-invoice-dollar"></i></div>
+            <div>
+              <h5 class="card-title">Payslips</h5>
+              <p class="card-text">View and download your payslips.</p>
             </div>
           </div>
-        </a>
-      </div>
+        </div>
+      </a>
+    </div>
+
+    <div class="col">
+      <a href="/profile" class="card-link">
+        <div class="card h-100 text-center shadow-sm">
+          <div class="card-body">
+            <div class="card-icon" aria-hidden="true"><i class="fa-solid fa-user"></i></div>
+            <div>
+              <h5 class="card-title">My Profile</h5>
+              <p class="card-text">Update contact and personal details.</p>
+            </div>
+          </div>
+        </div>
+      </a>
+    </div>
+
+    <div class="col">
+      <a href="/requests" class="card-link">
+        <div class="card h-100 text-center shadow-sm">
+          <div class="card-body">
+            <div class="card-icon" aria-hidden="true"><i class="fa-solid fa-envelope"></i></div>
+            <div>
+              <h5 class="card-title">Requests</h5>
+              <p class="card-text">Submit HR or finance requests.</p>
+            </div>
+          </div>
+        </div>
+      </a>
+    </div>
+
+    <div class="col">
+      <a href="/announcements" class="card-link">
+        <div class="card h-100 text-center shadow-sm">
+          <div class="card-body">
+            <div class="card-icon" aria-hidden="true"><i class="fa-solid fa-bell"></i></div>
+            <div>
+              <h5 class="card-title">Announcements</h5>
+              <p class="card-text">Company news and unread items.</p>
+            </div>
+          </div>
+        </div>
+      </a>
+    </div>
+
+    <div class="col">
+      <a href="/expenses" class="card-link">
+        <div class="card h-100 text-center shadow-sm">
+          <div class="card-body">
+            <div class="card-icon" aria-hidden="true"><i class="fa-solid fa-money-bill-wave"></i></div>
+            <div>
+              <h5 class="card-title">Expense Claims</h5>
+              <p class="card-text">Submit and track reimbursements.</p>
+            </div>
+          </div>
+        </div>
+      </a>
+    </div>
+
+    <div class="col">
+      <a href="/leave-request" class="card-link">
+        <div class="card h-100 text-center shadow-sm">
+          <div class="card-body">
+            <div class="card-icon" aria-hidden="true"><i class="fa-solid fa-clock"></i></div>
+            <div>
+              <h5 class="card-title">Time Off</h5>
+              <p class="card-text">Request or view leave status.</p>
+            </div>
+          </div>
+        </div>
+      </a>
     </div>
   </div>
-</div>
+</section>
 
 <%- include('../partials/footer') %>
