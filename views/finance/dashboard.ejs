@@ -1,7 +1,7 @@
 <%- include('../partials/header', { title: 'Finance Dashboard' }) %>
 <%- include('../partials/navbar') %>
 
-<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,300&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
 <script>
@@ -14,310 +14,132 @@ try {
 </script>
 
 <style>
-/* ── tokens ── */
 :root {
-  --fd-bg:        #0d0f14;
-  --fd-surface:   #13161e;
-  --fd-surface2:  #1a1e2a;
-  --fd-border:    rgba(255,255,255,0.07);
-  --fd-border2:   rgba(255,255,255,0.12);
-  --fd-text:      #e8eaf0;
-  --fd-muted:     #636b80;
-  --fd-accent:    #3dd68c;
-  --fd-accent2:   #2fb87a;
-  --fd-blue:      #4f8ef7;
-  --fd-amber:     #f59e0b;
-  --fd-red:       #f05252;
-  --fd-stripe:    #635bff;
-  --fd-paypal:    #0070ba;
-  --fd-radius:    14px;
-  --fd-radius-sm: 8px;
+  --g900: #052e16; --g800: #064e27; --g700: #065f32; --g600: #16a34a;
+  --g500: #22c55e; --g400: #4ade80; --g100: #dcfce7; --g50: #f0fdf4;
+  --white: #ffffff; --ink: #0f1c14; --ink2: #3a5040; --ink3: #6b8c78;
+  --border: #d1fae5; --border2: #bbf7d0;
+  --shadow-sm: 0 1px 3px rgba(6,78,39,.08),0 1px 2px rgba(6,78,39,.04);
+  --shadow-md: 0 4px 16px rgba(6,78,39,.1),0 2px 6px rgba(6,78,39,.06);
+  --radius: 16px; --radius-sm: 10px;
 }
-
-/* ── page shell ── */
-body { background: var(--fd-bg) !important; color: var(--fd-text); font-family: 'DM Sans', sans-serif; }
-
-.fd-page {
-  max-width: 1280px;
-  margin: 0 auto;
-  padding: 2rem 1.5rem 4rem;
-  animation: fd-in .45s cubic-bezier(.22,.8,.36,1) both;
-}
-@keyframes fd-in { from { opacity:0; transform:translateY(16px) } to { opacity:1; transform:none } }
-
-/* ── header strip ── */
-.fd-header {
-  display: flex;
-  align-items: flex-end;
-  justify-content: space-between;
-  flex-wrap: wrap;
-  gap: 1rem;
-  margin-bottom: 2rem;
-  padding-bottom: 1.5rem;
-  border-bottom: 1px solid var(--fd-border);
-}
-.fd-header-left { display: flex; align-items: center; gap: 1.25rem; }
-.fd-header-icon {
-  width: 48px; height: 48px;
-  border-radius: 12px;
-  background: linear-gradient(135deg, #1a2e20 0%, #1e3828 100%);
-  border: 1px solid rgba(61,214,140,.25);
-  display: flex; align-items: center; justify-content: center;
-  font-size: 1.2rem; color: var(--fd-accent);
-}
-.fd-page-title {
-  font-family: 'Syne', sans-serif;
-  font-size: 1.6rem;
-  font-weight: 700;
-  color: #fff;
-  margin: 0;
-  line-height: 1;
-}
-.fd-page-sub { font-size: .875rem; color: var(--fd-muted); margin: .3rem 0 0; }
-.fd-header-actions { display: flex; gap: .6rem; flex-wrap: wrap; }
-.fd-btn {
-  display: inline-flex; align-items: center; gap: .4rem;
-  padding: .5rem 1.1rem;
-  border-radius: var(--fd-radius-sm);
-  font-family: 'DM Sans', sans-serif;
-  font-size: .85rem; font-weight: 500;
-  cursor: pointer; text-decoration: none;
-  transition: all .15s;
-  border: 1.5px solid var(--fd-border2);
-  background: var(--fd-surface2);
-  color: var(--fd-text);
-}
-.fd-btn:hover { background: var(--fd-surface); border-color: var(--fd-accent); color: var(--fd-accent); }
-.fd-btn-primary {
-  background: var(--fd-accent);
-  border-color: var(--fd-accent);
-  color: #061a10;
-  font-weight: 600;
-}
-.fd-btn-primary:hover { background: var(--fd-accent2); border-color: var(--fd-accent2); color: #061a10; }
-
-/* ── stripe alert ── */
-#paymentSuccessAlert {
-  display: none;
-  padding: .85rem 1.25rem;
-  border-radius: var(--fd-radius-sm);
-  font-size: .9rem;
-  margin-bottom: 1.5rem;
-  border-left: 4px solid;
-}
-#paymentSuccessAlert.alert-success { background: rgba(61,214,140,.1); border-color: var(--fd-accent); color: #8df5be; }
-#paymentSuccessAlert.alert-warning { background: rgba(245,158,11,.1); border-color: var(--fd-amber); color: #fcd97a; }
-
-/* ── KPI row ── */
-.fd-kpis {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 1rem;
-  margin-bottom: 1.5rem;
-}
-@media (max-width: 900px)  { .fd-kpis { grid-template-columns: repeat(2,1fr); } }
-@media (max-width: 500px)  { .fd-kpis { grid-template-columns: 1fr; } }
-
-.fd-kpi {
-  background: var(--fd-surface);
-  border: 1px solid var(--fd-border);
-  border-radius: var(--fd-radius);
-  padding: 1.35rem 1.5rem;
-  position: relative;
-  overflow: hidden;
-  transition: border-color .2s, transform .15s;
-}
-.fd-kpi:hover { border-color: var(--fd-border2); transform: translateY(-2px); }
-.fd-kpi::before {
-  content: '';
-  position: absolute;
-  top: 0; left: 0; right: 0;
-  height: 2px;
-}
-.fd-kpi.kpi-revenue::before { background: linear-gradient(90deg, var(--fd-accent), transparent); }
-.fd-kpi.kpi-paid::before    { background: linear-gradient(90deg, var(--fd-blue), transparent); }
-.fd-kpi.kpi-pending::before { background: linear-gradient(90deg, var(--fd-amber), transparent); }
-.fd-kpi.kpi-overdue::before { background: linear-gradient(90deg, var(--fd-red), transparent); }
-
-.fd-kpi-icon {
-  width: 34px; height: 34px;
-  border-radius: 8px;
-  display: flex; align-items: center; justify-content: center;
-  font-size: .9rem;
-  margin-bottom: .9rem;
-}
-.kpi-revenue .fd-kpi-icon { background: rgba(61,214,140,.12); color: var(--fd-accent); }
-.kpi-paid    .fd-kpi-icon { background: rgba(79,142,247,.12); color: var(--fd-blue); }
-.kpi-pending .fd-kpi-icon { background: rgba(245,158,11,.12); color: var(--fd-amber); }
-.kpi-overdue .fd-kpi-icon { background: rgba(240,82,82,.12);  color: var(--fd-red); }
-
-.fd-kpi-label { font-size: .78rem; color: var(--fd-muted); text-transform: uppercase; letter-spacing: .08em; margin-bottom: .4rem; }
-.fd-kpi-value {
-  font-family: 'Syne', sans-serif;
-  font-size: 1.65rem; font-weight: 700; color: #fff;
-  line-height: 1;
-}
-.fd-kpi-sub { font-size: .78rem; color: var(--fd-muted); margin-top: .35rem; }
-
-/* ── panel / card ── */
-.fd-panel {
-  background: var(--fd-surface);
-  border: 1px solid var(--fd-border);
-  border-radius: var(--fd-radius);
-  padding: 1.5rem;
-}
-.fd-panel-title {
-  font-family: 'Syne', sans-serif;
-  font-size: 1rem; font-weight: 600; color: #fff;
-  margin: 0 0 1.25rem;
-  display: flex; align-items: center; justify-content: space-between; gap: .5rem;
-}
-.fd-panel-title a { font-family: 'DM Sans', sans-serif; font-size: .8rem; font-weight: 400; color: var(--fd-muted); text-decoration: none; }
-.fd-panel-title a:hover { color: var(--fd-accent); }
-
-/* ── 2-col grid ── */
-.fd-grid-2 { display: grid; grid-template-columns: 1fr 1.35fr; gap: 1rem; margin-bottom: 1rem; }
-@media (max-width: 860px) { .fd-grid-2 { grid-template-columns: 1fr; } }
-
-/* ── payment analytics ── */
-.fd-gateway-list { display: flex; flex-direction: column; gap: .75rem; }
-.fd-gateway-row {
-  display: flex; align-items: center; gap: .9rem;
-  padding: .85rem 1rem;
-  background: var(--fd-surface2);
-  border-radius: var(--fd-radius-sm);
-  border: 1px solid var(--fd-border);
-}
-.fd-gateway-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
-.fd-gateway-name { font-size: .875rem; color: var(--fd-muted); flex: 1; }
-.fd-gateway-amount { font-family: 'JetBrains Mono', monospace; font-size: .9rem; color: var(--fd-text); font-weight: 500; }
-
-/* ── chart containers ── */
-.fd-chart-wrap { position: relative; height: 220px; }
-.fd-chart-wrap-tall { position: relative; height: 260px; }
-
-/* ── table ── */
-.fd-table-wrap { overflow-x: auto; }
-table.fd-table { width: 100%; border-collapse: collapse; }
-.fd-table th {
-  font-size: .75rem; text-transform: uppercase; letter-spacing: .08em;
-  color: var(--fd-muted); font-weight: 500;
-  padding: .6rem 1rem;
-  border-bottom: 1px solid var(--fd-border);
-  white-space: nowrap;
-}
-.fd-table td { padding: .85rem 1rem; border-bottom: 1px solid var(--fd-border); font-size: .9rem; color: var(--fd-text); }
+body { font-family: 'Sora', sans-serif; background: var(--g50); color: var(--ink); }
+.fd-wrap { max-width: 1280px; margin: 0 auto; padding: 2rem 1.5rem 4rem; }
+#paymentSuccessAlert { border-radius: var(--radius-sm); font-size: .875rem; font-weight: 500; margin-bottom: 1.5rem; }
+.fd-header { display: flex; align-items: flex-end; justify-content: space-between; gap: 1rem; margin-bottom: 2rem; flex-wrap: wrap; }
+.fd-greeting { font-size: .78rem; font-weight: 600; letter-spacing: .1em; text-transform: uppercase; color: var(--g600); margin-bottom: .3rem; }
+.fd-title { font-size: 1.75rem; font-weight: 700; color: var(--ink); line-height: 1.2; margin: 0; }
+.fd-subtitle { font-size: .875rem; color: var(--ink3); margin: .3rem 0 0; font-weight: 400; }
+.fd-header-right { display: flex; align-items: center; gap: .75rem; }
+.fd-date { font-size: .8rem; color: var(--ink3); font-family: 'DM Mono', monospace; }
+.btn-payments { display: inline-flex; align-items: center; gap: .45rem; padding: .55rem 1.2rem; background: var(--g800); color: #fff; border-radius: 100px; font-size: .83rem; font-weight: 600; text-decoration: none; border: none; transition: background .18s,transform .15s,box-shadow .18s; box-shadow: 0 4px 14px rgba(6,78,39,.28); letter-spacing: .01em; }
+.btn-payments:hover { background: var(--g700); color: #fff; transform: translateY(-1px); box-shadow: 0 6px 20px rgba(6,78,39,.32); }
+.fd-kpis { display: grid; grid-template-columns: repeat(4,1fr); gap: 1rem; margin-bottom: 1.25rem; }
+.fd-kpi { background: var(--white); border: 1px solid var(--border); border-radius: var(--radius); padding: 1.4rem 1.5rem; display: flex; flex-direction: column; gap: .5rem; box-shadow: var(--shadow-sm); position: relative; overflow: hidden; transition: box-shadow .2s,transform .15s; }
+.fd-kpi:hover { box-shadow: var(--shadow-md); transform: translateY(-2px); }
+.fd-kpi::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px; border-radius: var(--radius) var(--radius) 0 0; }
+.fd-kpi.kpi-revenue::before { background: linear-gradient(90deg,var(--g600),var(--g400)); }
+.fd-kpi.kpi-paid::before { background: linear-gradient(90deg,#2563eb,#60a5fa); }
+.fd-kpi.kpi-pending::before { background: linear-gradient(90deg,#d97706,#fbbf24); }
+.fd-kpi.kpi-overdue::before { background: linear-gradient(90deg,#dc2626,#f87171); }
+.fd-kpi-icon { width: 36px; height: 36px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: .9rem; margin-bottom: .15rem; }
+.kpi-revenue .fd-kpi-icon { background: var(--g100); color: var(--g700); }
+.kpi-paid .fd-kpi-icon { background: #dbeafe; color: #1d4ed8; }
+.kpi-pending .fd-kpi-icon { background: #fef3c7; color: #b45309; }
+.kpi-overdue .fd-kpi-icon { background: #fee2e2; color: #b91c1c; }
+.fd-kpi-label { font-size: .75rem; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--ink3); }
+.fd-kpi-value { font-size: 1.5rem; font-weight: 700; color: var(--ink); font-family: 'DM Mono', monospace; line-height: 1.1; }
+.fd-kpi-sub { font-size: .72rem; color: var(--ink3); }
+.fd-panel { background: var(--white); border: 1px solid var(--border); border-radius: var(--radius); padding: 1.5rem; box-shadow: var(--shadow-sm); }
+.fd-panel-title { font-size: .95rem; font-weight: 700; color: var(--ink); margin: 0 0 1.25rem; display: flex; align-items: center; gap: .5rem; }
+.fd-panel-title i { width: 28px; height: 28px; background: var(--g100); color: var(--g700); border-radius: 8px; display: inline-flex; align-items: center; justify-content: center; font-size: .8rem; flex-shrink: 0; }
+.fd-row { display: grid; gap: 1rem; margin-bottom: 1.25rem; }
+.fd-row-2 { grid-template-columns: 1fr 1fr; }
+.fd-row-53 { grid-template-columns: 5fr 4fr; }
+.fd-spacer { margin-bottom: 1.25rem; }
+.payment-gateway-list { display: flex; flex-direction: column; gap: .75rem; }
+.payment-gateway-item { display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding: .85rem 1rem; background: var(--g50); border: 1px solid var(--border); border-radius: var(--radius-sm); }
+.gateway-left { display: flex; align-items: center; gap: .65rem; }
+.gateway-badge { width: 32px; height: 32px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: .78rem; font-weight: 700; flex-shrink: 0; font-family: 'DM Mono', monospace; }
+.gateway-stripe { background: #ede9fe; color: #5b21b6; }
+.gateway-paypal { background: #dbeafe; color: #1e40af; }
+.gateway-name { font-size: .85rem; font-weight: 600; color: var(--ink2); }
+.gateway-amount { font-family: 'DM Mono', monospace; font-size: .9rem; font-weight: 600; color: var(--ink); }
+.chart-wrap { position: relative; height: 200px; }
+.chart-wrap-tall { position: relative; height: 260px; }
+.fd-table-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 1rem; }
+.btn-view-all { font-size: .78rem; font-weight: 600; color: var(--g700); text-decoration: none; padding: .35rem .8rem; border: 1px solid var(--border2); border-radius: 100px; transition: background .15s; }
+.btn-view-all:hover { background: var(--g50); color: var(--g800); }
+.fd-table { width: 100%; border-collapse: collapse; }
+.fd-table thead tr { border-bottom: 2px solid var(--border); }
+.fd-table th { font-size: .72rem; font-weight: 700; letter-spacing: .07em; text-transform: uppercase; color: var(--ink3); padding: .5rem .75rem; text-align: left; }
+.fd-table th.text-end { text-align: right; }
+.fd-table td { padding: .75rem .75rem; font-size: .875rem; color: var(--ink); border-bottom: 1px solid #f0fdf4; }
+.fd-table td.text-end { text-align: right; font-family: 'DM Mono', monospace; }
+.fd-table tbody tr { transition: background .1s; }
+.fd-table tbody tr:hover { background: var(--g50); }
 .fd-table tbody tr:last-child td { border-bottom: none; }
-.fd-table tbody tr:hover td { background: var(--fd-surface2); }
-.fd-table .mono { font-family: 'JetBrains Mono', monospace; font-size: .85rem; }
-.fd-table .amount { text-align: right; font-family: 'JetBrains Mono', monospace; font-size: .88rem; }
-
-/* badges */
-.fd-badge {
-  display: inline-flex; align-items: center; gap: .35rem;
-  padding: .22rem .65rem;
-  border-radius: 100px; font-size: .75rem; font-weight: 500;
-}
-.fd-badge::before { content: ''; width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
-.fd-badge-paid    { background: rgba(61,214,140,.12); color: #6debb0; }
-.fd-badge-paid::before { background: var(--fd-accent); }
-.fd-badge-pending { background: rgba(245,158,11,.12); color: #fbd068; }
-.fd-badge-pending::before { background: var(--fd-amber); }
-.fd-badge-failed  { background: rgba(240,82,82,.12);  color: #f8908a; }
-.fd-badge-failed::before  { background: var(--fd-red); }
-
-/* ── alerts ── */
-.fd-alerts { display: flex; flex-direction: column; gap: .6rem; }
-.fd-alert-item {
-  display: flex; align-items: center; gap: .85rem;
-  padding: .8rem 1rem;
-  background: rgba(240,82,82,.08);
-  border: 1px solid rgba(240,82,82,.2);
-  border-radius: var(--fd-radius-sm);
-  font-size: .875rem; color: #f8908a;
-}
-.fd-alert-item i { font-size: .9rem; flex-shrink: 0; color: var(--fd-red); }
-.fd-no-alerts { font-size: .875rem; color: var(--fd-muted); }
-
-/* ── quick actions ── */
-.fd-actions-grid {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: .85rem;
-}
-@media (max-width: 700px) { .fd-actions-grid { grid-template-columns: repeat(2,1fr); } }
-@media (max-width: 420px) { .fd-actions-grid { grid-template-columns: 1fr; } }
-
-.fd-action-card {
-  display: flex; flex-direction: column; align-items: flex-start;
-  padding: 1.2rem;
-  background: var(--fd-surface2);
-  border: 1px solid var(--fd-border);
-  border-radius: var(--fd-radius);
-  text-decoration: none;
-  transition: border-color .2s, background .2s, transform .15s;
-  gap: .65rem;
-}
-.fd-action-card:hover {
-  border-color: var(--fd-accent);
-  background: rgba(61,214,140,.05);
-  transform: translateY(-2px);
-}
-.fd-action-icon {
-  width: 38px; height: 38px;
-  border-radius: 9px;
-  display: flex; align-items: center; justify-content: center;
-  font-size: .95rem;
-  background: var(--fd-surface);
-  border: 1px solid var(--fd-border);
-  color: var(--fd-accent);
-  transition: background .2s, color .2s;
-}
-.fd-action-card:hover .fd-action-icon { background: rgba(61,214,140,.15); }
-.fd-action-label { font-size: .9rem; font-weight: 600; color: var(--fd-text); line-height: 1; }
-.fd-action-desc  { font-size: .78rem; color: var(--fd-muted); line-height: 1.45; }
-
-/* ── section spacing ── */
-.fd-section { margin-bottom: 1rem; }
+.fd-table .inv-num { font-family: 'DM Mono', monospace; font-size: .82rem; color: var(--g700); }
+.method-badge { display: inline-flex; align-items: center; gap: .35rem; padding: .2rem .55rem; border-radius: 100px; font-size: .75rem; font-weight: 600; }
+.method-stripe { background: #ede9fe; color: #5b21b6; }
+.method-paypal { background: #dbeafe; color: #1e40af; }
+.method-other { background: var(--g100); color: var(--g700); }
+.status-pill { display: inline-flex; align-items: center; gap: .3rem; padding: .22rem .65rem; border-radius: 100px; font-size: .75rem; font-weight: 600; }
+.status-pill::before { content: ''; width: 6px; height: 6px; border-radius: 50%; display: inline-block; }
+.status-paid { background: var(--g100); color: var(--g700); }
+.status-paid::before { background: var(--g600); }
+.status-pending { background: #fef3c7; color: #b45309; }
+.status-pending::before { background: #f59e0b; }
+.status-failed { background: #fee2e2; color: #b91c1c; }
+.status-failed::before { background: #ef4444; }
+.fd-alerts-list { display: flex; flex-direction: column; gap: .6rem; }
+.fd-alert-item { display: flex; align-items: center; gap: .75rem; padding: .75rem 1rem; background: #fff7ed; border: 1px solid #fed7aa; border-radius: var(--radius-sm); font-size: .875rem; color: #92400e; }
+.fd-alert-item i { color: #f97316; font-size: .9rem; flex-shrink: 0; }
+.fd-alerts-empty { font-size: .875rem; color: var(--ink3); display: flex; align-items: center; gap: .5rem; }
+.fd-alerts-empty i { color: var(--g500); }
+.fd-actions-grid { display: grid; grid-template-columns: repeat(6,1fr); gap: .85rem; }
+.fd-action-card { text-decoration: none; display: flex; flex-direction: column; align-items: center; gap: .65rem; padding: 1.25rem .75rem 1rem; background: var(--white); border: 1.5px solid var(--border); border-radius: var(--radius); text-align: center; transition: border-color .18s,box-shadow .18s,transform .15s,background .18s; box-shadow: var(--shadow-sm); }
+.fd-action-card:hover { border-color: var(--g400); box-shadow: var(--shadow-md); transform: translateY(-3px); background: var(--g50); }
+.fd-action-icon { width: 44px; height: 44px; background: var(--g100); border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 1.1rem; color: var(--g700); transition: background .18s,color .18s; flex-shrink: 0; }
+.fd-action-card:hover .fd-action-icon { background: var(--g700); color: #fff; }
+.fd-action-name { font-size: .8rem; font-weight: 700; color: var(--ink); line-height: 1.3; }
+.fd-action-desc { font-size: .72rem; color: var(--ink3); font-weight: 400; line-height: 1.4; }
+@media (max-width:1024px) { .fd-kpis{grid-template-columns:repeat(2,1fr)} .fd-row-53{grid-template-columns:1fr} .fd-actions-grid{grid-template-columns:repeat(3,1fr)} }
+@media (max-width:640px) { .fd-kpis{grid-template-columns:1fr 1fr} .fd-row-2{grid-template-columns:1fr} .fd-actions-grid{grid-template-columns:repeat(2,1fr)} .fd-title{font-size:1.4rem} }
 </style>
 
-<!-- ═══════════ PAGE ═══════════ -->
-<div class="fd-page">
+<div class="fd-wrap">
+  <div id="paymentSuccessAlert" class="alert d-none" role="alert"></div>
 
-  <!-- Alert -->
-  <div id="paymentSuccessAlert" role="alert"></div>
-
-  <!-- Header -->
-  <div class="fd-header">
+  <header class="fd-header">
     <div class="fd-header-left">
-      <div class="fd-header-icon"><i class="fa-solid fa-chart-line"></i></div>
-      <div>
-        <h1 class="fd-page-title">Finance Dashboard</h1>
-        <p class="fd-page-sub">Payment performance, invoice status &amp; finance alerts</p>
-      </div>
+      <p class="fd-greeting">Finance Overview</p>
+      <h1 class="fd-title">Finance Dashboard</h1>
+      <p class="fd-subtitle">Payment performance, invoice status &amp; finance alerts.</p>
     </div>
-    <div class="fd-header-actions">
-      <a href="/reports" class="fd-btn"><i class="fa-solid fa-download"></i> Export</a>
-      <a href="/finance/payments" class="fd-btn fd-btn-primary"><i class="fa-solid fa-credit-card"></i> Payments</a>
+    <div class="fd-header-right">
+      <span class="fd-date" id="fd-today"></span>
+      <a href="/finance/payments" class="btn-payments">
+        <i class="fa-solid fa-arrow-right-arrow-left"></i> Payments
+      </a>
     </div>
-  </div>
+  </header>
 
-  <!-- KPIs -->
-  <div class="fd-kpis fd-section">
+  <div class="fd-kpis fd-spacer">
     <div class="fd-kpi kpi-revenue">
-      <div class="fd-kpi-icon"><i class="fa-solid fa-circle-dollar-to-slot"></i></div>
+      <div class="fd-kpi-icon"><i class="fa-solid fa-coins"></i></div>
       <div class="fd-kpi-label">Total Revenue</div>
       <div class="fd-kpi-value" id="financeTotalRevenue">SGD 0.00</div>
-      <div class="fd-kpi-sub">Paid invoices</div>
+      <div class="fd-kpi-sub">Paid invoices only</div>
     </div>
     <div class="fd-kpi kpi-paid">
-      <div class="fd-kpi-icon"><i class="fa-solid fa-file-circle-check"></i></div>
+      <div class="fd-kpi-icon"><i class="fa-solid fa-check-circle"></i></div>
       <div class="fd-kpi-label">Paid Invoices</div>
       <div class="fd-kpi-value" id="financePaidInvoices">0</div>
-      <div class="fd-kpi-sub">Fully settled</div>
+      <div class="fd-kpi-sub">Successfully settled</div>
     </div>
     <div class="fd-kpi kpi-pending">
-      <div class="fd-kpi-icon"><i class="fa-solid fa-hourglass-half"></i></div>
+      <div class="fd-kpi-icon"><i class="fa-solid fa-clock"></i></div>
       <div class="fd-kpi-label">Pending Payments</div>
       <div class="fd-kpi-value" id="financePendingPayments">0</div>
       <div class="fd-kpi-sub">Awaiting settlement</div>
@@ -326,298 +148,198 @@ table.fd-table { width: 100%; border-collapse: collapse; }
       <div class="fd-kpi-icon"><i class="fa-solid fa-triangle-exclamation"></i></div>
       <div class="fd-kpi-label">Overdue Invoices</div>
       <div class="fd-kpi-value" id="financeOverdueInvoices">0</div>
-      <div class="fd-kpi-sub">Requires action</div>
+      <div class="fd-kpi-sub">Requires follow-up</div>
     </div>
   </div>
 
-  <!-- Analytics row -->
-  <div class="fd-grid-2 fd-section">
-    <!-- Payment breakdown -->
+  <div class="fd-row fd-row-53 fd-spacer">
     <div class="fd-panel">
-      <div class="fd-panel-title">Payment Analytics</div>
-      <div class="fd-gateway-list">
-        <div class="fd-gateway-row">
-          <span class="fd-gateway-dot" style="background:var(--fd-stripe)"></span>
-          <span class="fd-gateway-name"><i class="fa-brands fa-stripe" style="margin-right:.4rem"></i>Stripe Revenue</span>
-          <span class="fd-gateway-amount" id="stripeRevenue">SGD 0.00</span>
+      <h2 class="fd-panel-title"><i class="fa-solid fa-chart-pie"></i> Payment Analytics</h2>
+      <div class="payment-gateway-list">
+        <div class="payment-gateway-item">
+          <div class="gateway-left">
+            <div class="gateway-badge gateway-stripe">S</div>
+            <span class="gateway-name">Stripe Revenue</span>
+          </div>
+          <span class="gateway-amount" id="stripeRevenue">SGD 0.00</span>
         </div>
-        <div class="fd-gateway-row">
-          <span class="fd-gateway-dot" style="background:var(--fd-paypal)"></span>
-          <span class="fd-gateway-name"><i class="fa-brands fa-paypal" style="margin-right:.4rem"></i>PayPal Revenue</span>
-          <span class="fd-gateway-amount" id="paypalRevenue">SGD 0.00</span>
+        <div class="payment-gateway-item">
+          <div class="gateway-left">
+            <div class="gateway-badge gateway-paypal">P</div>
+            <span class="gateway-name">PayPal Revenue</span>
+          </div>
+          <span class="gateway-amount" id="paypalRevenue">SGD 0.00</span>
         </div>
       </div>
     </div>
-    <!-- Pie chart -->
     <div class="fd-panel">
-      <div class="fd-panel-title">Gateway Share</div>
-      <div class="fd-chart-wrap">
-        <canvas id="paymentPieChart"></canvas>
-      </div>
+      <h2 class="fd-panel-title"><i class="fa-solid fa-chart-donut"></i> Gateway Share</h2>
+      <div class="chart-wrap"><canvas id="paymentPieChart"></canvas></div>
     </div>
   </div>
 
-  <!-- Recent payments -->
-  <div class="fd-panel fd-section">
-    <div class="fd-panel-title">
-      Recent Payments
-      <a href="/finance/payments">View all <i class="fa-solid fa-arrow-right" style="font-size:.7rem"></i></a>
+  <div class="fd-panel fd-spacer">
+    <div class="fd-table-header">
+      <h2 class="fd-panel-title" style="margin:0"><i class="fa-solid fa-list-check"></i> Recent Payments</h2>
+      <a href="/finance/payments" class="btn-view-all">View all →</a>
     </div>
-    <div class="fd-table-wrap">
+    <div style="overflow-x:auto">
       <table class="fd-table">
         <thead>
           <tr>
-            <th>Invoice</th>
-            <th>Method</th>
-            <th class="amount">Amount</th>
-            <th>Status</th>
+            <th>Invoice</th><th>Method</th>
+            <th class="text-end">Amount</th><th>Status</th>
           </tr>
         </thead>
         <tbody id="recentPaymentsBody">
-          <tr><td colspan="4" style="text-align:center;color:var(--fd-muted);padding:2rem">Loading payments…</td></tr>
+          <tr><td colspan="4" style="text-align:center;color:var(--ink3);padding:1.5rem">Loading payments…</td></tr>
         </tbody>
       </table>
     </div>
   </div>
 
-  <!-- Alerts -->
-  <div class="fd-panel fd-section">
-    <div class="fd-panel-title">Finance Alerts</div>
-    <div id="financeAlerts" class="fd-alerts">
-      <div class="fd-no-alerts">Loading alerts…</div>
+  <div class="fd-row fd-row-2 fd-spacer">
+    <div class="fd-panel">
+      <h2 class="fd-panel-title"><i class="fa-solid fa-bell"></i> Alerts</h2>
+      <div id="financeAlerts">
+        <div class="fd-alerts-empty"><i class="fa-solid fa-circle-check"></i> Loading alerts…</div>
+      </div>
+    </div>
+    <div class="fd-panel">
+      <h2 class="fd-panel-title"><i class="fa-solid fa-chart-column"></i> Monthly Revenue</h2>
+      <div class="chart-wrap-tall"><canvas id="monthlyRevenueChart"></canvas></div>
     </div>
   </div>
 
-  <!-- Monthly revenue -->
-  <div class="fd-panel fd-section">
-    <div class="fd-panel-title">Monthly Revenue</div>
-    <div class="fd-chart-wrap-tall">
-      <canvas id="monthlyRevenueChart"></canvas>
-    </div>
-  </div>
-
-  <!-- Quick actions -->
-  <div class="fd-panel fd-section">
-    <div class="fd-panel-title">Quick Actions</div>
+  <div class="fd-panel">
+    <h2 class="fd-panel-title"><i class="fa-solid fa-bolt"></i> Quick Actions</h2>
     <div class="fd-actions-grid">
       <a href="/invoices" class="fd-action-card">
         <div class="fd-action-icon"><i class="fa-solid fa-file-invoice"></i></div>
-        <div class="fd-action-label">Invoices</div>
-        <div class="fd-action-desc">Create, view and manage invoices.</div>
+        <div><div class="fd-action-name">Invoices</div><div class="fd-action-desc">Create &amp; manage invoices</div></div>
       </a>
       <a href="/reports" class="fd-action-card">
         <div class="fd-action-icon"><i class="fa-solid fa-chart-column"></i></div>
-        <div class="fd-action-label">Reports</div>
-        <div class="fd-action-desc">Financial summaries and exports.</div>
+        <div><div class="fd-action-name">Reports</div><div class="fd-action-desc">Summaries &amp; exports</div></div>
       </a>
       <a href="/finance/payments" class="fd-action-card">
         <div class="fd-action-icon"><i class="fa-solid fa-credit-card"></i></div>
-        <div class="fd-action-label">Payments</div>
-        <div class="fd-action-desc">Record and reconcile payments.</div>
+        <div><div class="fd-action-name">Payments</div><div class="fd-action-desc">Record &amp; reconcile</div></div>
       </a>
       <a href="/finance/bank-reconcile" class="fd-action-card">
         <div class="fd-action-icon"><i class="fa-solid fa-building-columns"></i></div>
-        <div class="fd-action-label">Bank Reconciliation</div>
-        <div class="fd-action-desc">Import statements and reconcile accounts.</div>
+        <div><div class="fd-action-name">Bank Reconciliation</div><div class="fd-action-desc">Import &amp; reconcile</div></div>
       </a>
       <a href="/payroll" class="fd-action-card">
         <div class="fd-action-icon"><i class="fa-solid fa-briefcase"></i></div>
-        <div class="fd-action-label">Payroll</div>
-        <div class="fd-action-desc">Manage payroll runs and settings.</div>
+        <div><div class="fd-action-name">Payroll</div><div class="fd-action-desc">Runs &amp; settings</div></div>
       </a>
       <a href="/finance/requests" class="fd-action-card">
         <div class="fd-action-icon"><i class="fa-solid fa-envelope"></i></div>
-        <div class="fd-action-label">Requests</div>
-        <div class="fd-action-desc">Submit HR or finance requests.</div>
+        <div><div class="fd-action-name">Requests</div><div class="fd-action-desc">HR or finance requests</div></div>
       </a>
     </div>
   </div>
-
-</div><!-- /fd-page -->
+</div>
 
 <script>
+document.getElementById('fd-today').textContent = new Date().toLocaleDateString(undefined,{weekday:'short',year:'numeric',month:'short',day:'numeric'});
+
+const dashboardParams = new URLSearchParams(window.location.search);
+if (dashboardParams.get('payment') === 'stripe') {
+  const alertEl = document.getElementById('paymentSuccessAlert');
+  const status = dashboardParams.get('status');
+  const isPaid = !status || status === 'paid' || status === 'complete';
+  alertEl.classList.remove('d-none');
+  alertEl.classList.add(isPaid ? 'alert-success' : 'alert-warning');
+  alertEl.textContent = isPaid ? 'Stripe payment completed successfully and the invoice was marked Paid.' : 'Stripe returned but the payment could not be confirmed automatically. Check the invoice and payment history.';
+}
+
 let paymentPieChart, monthlyRevenueChart;
 
-/* ── stripe callback alert ── */
-const dashParams = new URLSearchParams(window.location.search);
-if (dashParams.get('payment') === 'stripe') {
-  const el = document.getElementById('paymentSuccessAlert');
-  const status = dashParams.get('status');
-  const ok = !status || status === 'paid' || status === 'complete';
-  el.style.display = 'block';
-  el.classList.add(ok ? 'alert-success' : 'alert-warning');
-  el.innerHTML = ok
-    ? '<i class="fa-solid fa-circle-check" style="margin-right:.5rem"></i>Stripe payment completed successfully — invoice marked Paid.'
-    : '<i class="fa-solid fa-triangle-exclamation" style="margin-right:.5rem"></i>Stripe returned but the payment could not be auto-confirmed. Check invoice and payment history.';
+function financeMoney(value, currency) {
+  return `${currency||'SGD'} ${Number(value||0).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2})}`;
+}
+function statusClass(s) {
+  if (s==='Paid') return 'status-paid';
+  if (s==='Failed') return 'status-failed';
+  return 'status-pending';
+}
+function methodClass(m) {
+  if (!m) return 'method-other';
+  const ml = m.toLowerCase();
+  if (ml.includes('stripe')) return 'method-stripe';
+  if (ml.includes('paypal')) return 'method-paypal';
+  return 'method-other';
 }
 
-/* ── helpers ── */
-function money(v, cur) {
-  return `${cur || 'SGD'} ${Number(v||0).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2})}`;
-}
-function badgeClass(s) {
-  if (s === 'Paid')    return 'fd-badge-paid';
-  if (s === 'Failed')  return 'fd-badge-failed';
-  if (s === 'Pending') return 'fd-badge-pending';
-  return 'fd-badge-pending';
-}
-
-/* ── charts ── */
-const chartDefaults = {
-  color: '#636b80',
-  font: { family: "'DM Sans', sans-serif" }
-};
-Chart.defaults.color = chartDefaults.color;
-Chart.defaults.font.family = chartDefaults.font.family;
-
-function renderPie(stripe, paypal) {
+function renderPaymentPie(sr, pr) {
+  const canvas = document.getElementById('paymentPieChart');
   if (paymentPieChart) paymentPieChart.destroy();
-  paymentPieChart = new Chart(document.getElementById('paymentPieChart'), {
+  paymentPieChart = new Chart(canvas, {
     type: 'doughnut',
-    data: {
-      labels: ['Stripe', 'PayPal'],
-      datasets: [{
-        data: [stripe, paypal],
-        backgroundColor: ['#635bff', '#0070ba'],
-        borderColor: '#13161e',
-        borderWidth: 3,
-        hoverOffset: 6
-      }]
-    },
-    options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      cutout: '65%',
-      plugins: {
-        legend: {
-          position: 'bottom',
-          labels: { padding: 20, usePointStyle: true, pointStyleWidth: 8 }
-        },
-        tooltip: {
-          callbacks: {
-            label: ctx => {
-              const total = stripe + paypal;
-              const pct   = total ? Math.round((ctx.raw/total)*100) : 0;
-              return `${ctx.label}: ${pct}% (${money(ctx.raw)})`;
-            }
-          }
-        }
-      }
-    }
+    data: { labels: ['Stripe','PayPal'], datasets: [{ data: [sr,pr], backgroundColor: ['#8b5cf6','#3b82f6'], borderColor: '#fff', borderWidth: 3, hoverOffset: 6 }] },
+    options: { responsive:true, maintainAspectRatio:false, cutout:'62%',
+      plugins: { legend: { position:'bottom', labels:{font:{family:'Sora',size:12},padding:16,boxWidth:12} },
+        tooltip: { callbacks: { label: ctx => { const t=sr+pr; const p=t?Math.round((ctx.raw/t)*100):0; return ` ${ctx.label}: ${p}% (${financeMoney(ctx.raw)})`; } } } } }
   });
 }
 
-function renderMonthly(monthlyRevenue) {
-  const labels = Object.keys(monthlyRevenue || {});
-  const values = Object.values(monthlyRevenue || {}).map(Number);
+function renderMonthlyRevenue(mr) {
+  const labels = Object.keys(mr||{});
+  const values = Object.values(mr||{}).map(Number);
+  const canvas = document.getElementById('monthlyRevenueChart');
   if (monthlyRevenueChart) monthlyRevenueChart.destroy();
-  monthlyRevenueChart = new Chart(document.getElementById('monthlyRevenueChart'), {
+  monthlyRevenueChart = new Chart(canvas, {
     type: 'bar',
-    data: {
-      labels: labels.map(lbl => {
-        const p = String(lbl).split('-');
-        if (p.length !== 2) return lbl;
-        return new Date(+p[0], +p[1]-1, 1).toLocaleString(undefined, { month: 'short', year: '2-digit' });
-      }),
-      datasets: [{
-        label: 'Revenue',
-        data: values,
-        backgroundColor: ctx => {
-          const g = ctx.chart.ctx.createLinearGradient(0, 0, 0, 260);
-          g.addColorStop(0, 'rgba(61,214,140,.85)');
-          g.addColorStop(1, 'rgba(61,214,140,.15)');
-          return g;
-        },
-        borderColor: '#3dd68c',
-        borderWidth: 1,
-        borderRadius: 6,
-        borderSkipped: false
-      }]
-    },
-    options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      scales: {
-        x: { grid: { color: 'rgba(255,255,255,0.04)' }, ticks: { font: { size: 12 } } },
-        y: {
-          beginAtZero: true,
-          grid: { color: 'rgba(255,255,255,0.06)' },
-          ticks: { callback: v => money(v), font: { size: 11 } }
-        }
-      },
-      plugins: {
-        legend: { display: false },
-        tooltip: { callbacks: { label: ctx => money(ctx.raw) } }
-      }
-    }
+    data: { labels: labels.map(l => { const p=String(l).split('-'); if(p.length!==2) return l; return new Date(Number(p[0]),Number(p[1])-1,1).toLocaleString(undefined,{month:'short'}); }),
+      datasets: [{ label:'Revenue', data:values, backgroundColor:'rgba(22,163,74,0.18)', borderColor:'#16a34a', borderWidth:2, borderRadius:8, borderSkipped:false, hoverBackgroundColor:'rgba(22,163,74,0.35)' }] },
+    options: { responsive:true, maintainAspectRatio:false,
+      scales: { x:{grid:{display:false},ticks:{font:{family:'Sora',size:11}}}, y:{beginAtZero:true, grid:{color:'rgba(0,0,0,.05)'}, ticks:{callback:v=>'SGD '+v.toLocaleString(),font:{family:'DM Mono',size:10}}} },
+      plugins: { legend:{display:false}, tooltip:{callbacks:{label:ctx=>' '+financeMoney(ctx.raw)}} } }
   });
 }
 
-function renderPayments(payments) {
+function renderRecentPayments(payments) {
   const tbody = document.getElementById('recentPaymentsBody');
-  if (!payments || !payments.length) {
-    tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;color:var(--fd-muted);padding:2rem">No payments recorded yet</td></tr>';
-    return;
-  }
-  tbody.innerHTML = payments.map(p => `
-    <tr>
-      <td class="mono">${p.invoiceNumber || '—'}</td>
-      <td>
-        <span style="display:inline-flex;align-items:center;gap:.4rem">
-          ${p.method === 'Stripe'  ? '<i class="fa-brands fa-stripe"  style="color:var(--fd-stripe)"></i>' : ''}
-          ${p.method === 'PayPal'  ? '<i class="fa-brands fa-paypal"  style="color:var(--fd-paypal)"></i>' : ''}
-          ${p.method || ''}
-        </span>
-      </td>
-      <td class="amount">${money(p.amount, p.currency)}</td>
-      <td><span class="fd-badge ${badgeClass(p.status)}">${p.status || ''}</span></td>
-    </tr>
-  `).join('');
+  if (!payments||!payments.length) { tbody.innerHTML='<tr><td colspan="4" style="text-align:center;color:var(--ink3);padding:1.5rem">No payments recorded yet</td></tr>'; return; }
+  tbody.innerHTML = payments.map(p => `<tr>
+    <td><span class="inv-num">${p.invoiceNumber||'—'}</span></td>
+    <td><span class="method-badge ${methodClass(p.method)}">${p.method||'—'}</span></td>
+    <td class="text-end">${financeMoney(p.amount,p.currency)}</td>
+    <td><span class="status-pill ${statusClass(p.status)}">${p.status||'—'}</span></td>
+  </tr>`).join('');
 }
 
 function renderAlerts(totals) {
   const items = [];
-  if ((totals.overdueInvoiceCount  || 0) > 0) items.push(`${totals.overdueInvoiceCount} overdue invoice${totals.overdueInvoiceCount===1?'':'s'}`);
-  if ((totals.failedPayPalCount    || 0) > 0) items.push(`${totals.failedPayPalCount} failed PayPal transaction${totals.failedPayPalCount===1?'':'s'}`);
-  if ((totals.payrollDueSoonCount  || 0) > 0) items.push(`${totals.payrollDueSoonCount} payroll run${totals.payrollDueSoonCount===1?'':'s'} due in 2 days`);
-  const c = document.getElementById('financeAlerts');
-  if (!items.length) {
-    c.innerHTML = '<div class="fd-no-alerts"><i class="fa-solid fa-circle-check" style="color:var(--fd-accent);margin-right:.5rem"></i>No active finance alerts.</div>';
-    return;
-  }
-  c.innerHTML = items.map(msg => `
-    <div class="fd-alert-item">
-      <i class="fa-solid fa-triangle-exclamation"></i>
-      <span>${msg}</span>
-    </div>
-  `).join('');
+  if ((totals.overdueInvoiceCount||0)>0) items.push(`${totals.overdueInvoiceCount} overdue invoice${totals.overdueInvoiceCount===1?'':'s'}`);
+  if ((totals.failedPayPalCount||0)>0) items.push(`${totals.failedPayPalCount} failed PayPal transaction${totals.failedPayPalCount===1?'':'s'}`);
+  if ((totals.payrollDueSoonCount||0)>0) items.push(`${totals.payrollDueSoonCount} payroll run${totals.payrollDueSoonCount===1?'':'s'} due in 2 days`);
+  const container = document.getElementById('financeAlerts');
+  if (!items.length) { container.innerHTML='<div class="fd-alerts-empty"><i class="fa-solid fa-circle-check"></i> No active finance alerts.</div>'; return; }
+  container.innerHTML = '<div class="fd-alerts-list">'+items.map(msg=>`<div class="fd-alert-item"><i class="fa-solid fa-triangle-exclamation"></i><span>${msg}</span></div>`).join('')+'</div>';
 }
 
-/* ── data load ── */
 async function loadFinanceDashboard() {
   try {
     const res = await fetch('/api/reports/summary', { headers: { authorization: 'Bearer ' + token } });
     if (!res.ok) return;
     const summary = await res.json();
-    const totals  = summary.totals || {};
-    const pr      = (summary.charts && summary.charts.paymentMethodRevenue) || {};
-    const stripe  = Number(pr.Stripe  || 0);
-    const paypal  = Number(pr.PayPal  || 0);
-
-    document.getElementById('financeTotalRevenue').textContent   = money(totals.paidRevenue);
-    document.getElementById('financePaidInvoices').textContent   = totals.paidInvoiceCount    || 0;
-    document.getElementById('financePendingPayments').textContent= totals.pendingPaymentCount  || 0;
-    document.getElementById('financeOverdueInvoices').textContent= totals.overdueInvoiceCount  || 0;
-    document.getElementById('stripeRevenue').textContent         = money(stripe);
-    document.getElementById('paypalRevenue').textContent         = money(paypal);
-
-    renderPie(stripe, paypal);
-    renderPayments(summary.recentTransactions || []);
+    const totals = summary.totals||{};
+    const pr = (summary.charts&&summary.charts.paymentMethodRevenue)||{};
+    const sr = Number(pr.Stripe||0), paypalR = Number(pr.PayPal||0);
+    document.getElementById('financeTotalRevenue').textContent = financeMoney(totals.paidRevenue);
+    document.getElementById('financePaidInvoices').textContent = totals.paidInvoiceCount||0;
+    document.getElementById('financePendingPayments').textContent = totals.pendingPaymentCount||0;
+    document.getElementById('financeOverdueInvoices').textContent = totals.overdueInvoiceCount||0;
+    document.getElementById('stripeRevenue').textContent = financeMoney(sr);
+    document.getElementById('paypalRevenue').textContent = financeMoney(paypalR);
+    renderPaymentPie(sr, paypalR);
+    renderRecentPayments(summary.recentTransactions||[]);
     renderAlerts(totals);
-    renderMonthly((summary.charts && summary.charts.monthlyRevenue) || {});
-  } catch (e) {
-    console.error('Finance dashboard error:', e);
-  }
+    renderMonthlyRevenue((summary.charts&&summary.charts.monthlyRevenue)||{});
+  } catch(e) { console.error('Finance dashboard load error:',e); }
 }
 
 loadFinanceDashboard();
