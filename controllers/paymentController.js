@@ -14,7 +14,7 @@ const PAYPAL_API_BASE = process.env.PAYPAL_API_BASE || (
     : 'https://api-m.sandbox.paypal.com'
 );
 const PAYPAL_CURRENCY = process.env.PAYPAL_CURRENCY || 'SGD';
-const PAYNOW_CURRENCY = 'SGD';
+const NETS_CURRENCY = 'SGD';
 
 function normalizePaymentStatus(status) {
   if (!status) return 'Paid';
@@ -41,24 +41,24 @@ function crc16Ccitt(payload) {
   return crc.toString(16).toUpperCase().padStart(4, '0');
 }
 
-function payNowProxyType() {
-  const raw = String(process.env.PAYNOW_PROXY_TYPE || '').trim().toUpperCase();
+function NETSProxyType() {
+  const raw = String(process.env.NETS_PROXY_TYPE || '').trim().toUpperCase();
   if (raw === 'MOBILE' || raw === 'MSISDN' || raw === '0') return '0';
   return '2';
 }
 
-function createPayNowPayload(invoice) {
-  const proxyValue = process.env.PAYNOW_PROXY_VALUE || process.env.PAYNOW_UEN || process.env.PAYNOW_MOBILE;
+function createNETSPayload(invoice) {
+  const proxyValue = process.env.NETS_PROXY_VALUE || process.env.NETS_UEN || process.env.NETS_MOBILE;
   if (!proxyValue) {
-    throw new Error('PayNow is not configured. Set PAYNOW_PROXY_VALUE, PAYNOW_UEN, or PAYNOW_MOBILE.');
+    throw new Error('NETS is not configured. Set NETS_PROXY_VALUE, NETS_UEN, or NETS_MOBILE.');
   }
 
-  const merchantName = (process.env.PAYNOW_MERCHANT_NAME || process.env.BANK_ACCOUNT_NAME || 'FYP PROJECT').slice(0, 25);
+  const merchantName = (process.env.NETS_MERCHANT_NAME || process.env.BANK_ACCOUNT_NAME || 'FYP PROJECT').slice(0, 25);
   const reference = (invoice.number || `INV-${invoice.id}`).slice(0, 25);
   const amount = Number(invoice.amount).toFixed(2);
   const merchantAccount = [
-    emvField('00', 'SG.PAYNOW'),
-    emvField('01', payNowProxyType()),
+    emvField('00', 'SG.NETS'),
+    emvField('01', NETSProxyType()),
     emvField('02', String(proxyValue).trim()),
     emvField('03', '1')
   ].join('');
@@ -269,7 +269,7 @@ exports.capturePayPalOrder = async (req, res) => {
     console.error(err);
     if (err.name === 'SequelizeDatabaseError' && /Data truncated|PayPal|enum/i.test(err.message)) {
       return res.status(500).json({
-        error: "Database needs PayPal/PayNow enabled in Payments.method. Run: ALTER TABLE Payments MODIFY COLUMN method ENUM('Stripe','PayPal','PayNow','BankTransfer','Manual') NOT NULL;"
+        error: "Database needs PayPal/NETS enabled in Payments.method. Run: ALTER TABLE Payments MODIFY COLUMN method ENUM('Stripe','PayPal','NETS','BankTransfer','Manual') NOT NULL;"
       });
     }
     res.status(500).json({ error: err.message });
@@ -444,7 +444,7 @@ exports.bankTransferInstructions = async (req, res) => {
   });
 };
 
-exports.payNowQr = async (req, res) => {
+exports.netsQr = async (req, res) => {
   try {
     const invoice = await Invoice.findByPk(req.params.id);
     if (!invoice) return res.status(404).json({ error: 'Invoice not found' });
@@ -453,8 +453,8 @@ exports.payNowQr = async (req, res) => {
       return res.status(400).json({ error: 'Invoice amount must be greater than zero' });
     }
 
-    const payNow = createPayNowPayload(invoice);
-    const qrDataUrl = await QRCode.toDataURL(payNow.payload, {
+    const NETS = createNETSPayload(invoice);
+    const qrDataUrl = await QRCode.toDataURL(NETS.payload, {
       errorCorrectionLevel: 'M',
       margin: 2,
       width: 280
@@ -462,9 +462,9 @@ exports.payNowQr = async (req, res) => {
 
     const data = Object.assign({}, invoice.data || {}, {
       payment: Object.assign({}, (invoice.data && invoice.data.payment) || {}, {
-        provider: 'paynow',
-        method: 'PayNow',
-        reference: payNow.reference,
+        provider: 'nets',
+        method: 'NETS',
+        reference: NETS.reference,
         qrCreatedAt: new Date().toISOString()
       })
     });
@@ -473,11 +473,11 @@ exports.payNowQr = async (req, res) => {
     res.json({
       invoice: invoice.number,
       amount: Number(invoice.amount),
-      currency: PAYNOW_CURRENCY,
-      reference: payNow.reference,
-      merchantName: payNow.merchantName,
+      currency: NETS_CURRENCY,
+      reference: NETS.reference,
+      merchantName: NETS.merchantName,
       qrDataUrl,
-      payload: payNow.payload
+      payload: NETS.payload
     });
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -502,8 +502,8 @@ exports.confirmBankTransfer = async (req, res) => {
       return res.status(400).json({ error: 'Paid date cannot be future date' });
     }
 
-    const method = req.body && req.body.method === 'PayNow' ? 'PayNow' : 'BankTransfer';
-    const provider = method === 'PayNow' ? 'paynow' : 'bank_transfer';
+    const method = req.body && req.body.method === 'NETS' ? 'NETS' : 'BankTransfer';
+    const provider = method === 'NETS' ? 'nets' : 'bank_transfer';
     const data = Object.assign({}, invoice.data || {}, {
       payment: Object.assign({}, (invoice.data && invoice.data.payment) || {}, {
         provider,
@@ -529,7 +529,7 @@ exports.confirmBankTransfer = async (req, res) => {
       }
     });
     const { ip, userAgent } = getRequestMetadata(req);
-    await logAudit({ userId: req.user ? req.user.id : null, action: method === 'PayNow' ? 'payment_paynow_confirmed' : 'payment_bank_transfer_confirmed', entity: 'Payment', entityId: payment.id, meta: { invoiceNumber: invoice.number, amount: invoice.amount, reference, note: req.body && req.body.note }, ip, userAgent });
+    await logAudit({ userId: req.user ? req.user.id : null, action: method === 'NETS' ? 'payment_nets_confirmed' : 'payment_bank_transfer_confirmed', entity: 'Payment', entityId: payment.id, meta: { invoiceNumber: invoice.number, amount: invoice.amount, reference, note: req.body && req.body.note }, ip, userAgent });
 
     res.json({ ok: true, invoice, payment });
   } catch (err) {

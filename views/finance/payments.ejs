@@ -52,7 +52,7 @@ try{
         <button class="nav-link" id="paypal-tab" data-bs-toggle="tab" data-bs-target="#paypalPanel" type="button" role="tab">PayPal</button>
       </li>
       <li class="nav-item" role="presentation">
-        <button class="nav-link" id="paynow-tab" data-bs-toggle="tab" data-bs-target="#paynowPanel" type="button" role="tab">PayNow QR</button>
+        <button class="nav-link" id="nets-tab" data-bs-toggle="tab" data-bs-target="#netsPanel" type="button" role="tab">NETS QR</button>
       </li>
     </ul>
 
@@ -125,20 +125,20 @@ try{
         </div>
       </div>
 
-      <div class="tab-pane fade" id="paynowPanel" role="tabpanel">
+      <div class="tab-pane fade" id="netsPanel" role="tabpanel">
         <div class="payment-method-card">
-          <h5>PayNow QR</h5>
-          <p class="text-muted">Generate a PayNow QR for an unpaid invoice, then confirm after receipt is verified.</p>
+          <h5>NETS QR</h5>
+          <p class="text-muted">Generate a NETS QR for an unpaid invoice, then confirm after receipt is verified.</p>
           <div class="row g-2 align-items-end">
             <div class="col-md-8">
-              <label class="form-label" for="paynowInvoiceId">Invoice</label>
-              <select id="paynowInvoiceId" class="form-select"></select>
+              <label class="form-label" for="netsInvoiceId">Invoice</label>
+              <select id="netsInvoiceId" class="form-select"></select>
             </div>
             <div class="col-md-4">
-              <button class="btn btn-outline-dark w-100" type="button" onclick="loadPayNowQr()">Generate QR</button>
+              <button class="btn btn-outline-dark w-100" type="button" onclick="loadNETSQr()">Generate QR</button>
             </div>
           </div>
-          <div id="paynowQrBox" class="mt-3"></div>
+          <div id="netsQrBox" class="mt-3"></div>
         </div>
       </div>
     </div>
@@ -155,7 +155,7 @@ try{
           <option value="">All methods</option>
           <option value="Stripe">Stripe</option>
           <option value="PayPal">PayPal</option>
-          <option value="PayNow">PayNow</option>
+          <option value="NETS">NETS</option>
           <option value="BankTransfer">Bank</option>
           <option value="Manual">Manual</option>
         </select>
@@ -307,7 +307,7 @@ async function loadInvoices(){
   populateInvoiceSelect('invoiceId', allInvoices);
   populateInvoiceSelect('stripeInvoiceId', allInvoices);
   populateInvoiceSelect('paypalInvoiceId', allInvoices);
-  populateInvoiceSelect('paynowInvoiceId', allInvoices);
+  populateInvoiceSelect('netsInvoiceId', allInvoices);
   updateBankInstructions();
 }
 
@@ -416,8 +416,8 @@ function renderRecentActivity(){
       ? `${payment.method} payment failed for ${payment.invoiceNumber}`
       : payment.method === 'BankTransfer'
         ? `${payment.invoiceNumber} marked paid by bank transfer`
-        : payment.method === 'PayNow'
-          ? `${payment.invoiceNumber} marked paid by PayNow`
+        : payment.method === 'NETS'
+          ? `${payment.invoiceNumber} marked paid by NETS`
         : `${payment.invoiceNumber} paid via ${payment.method}`;
     return `<div class="activity-item">${statusBadge(status, payment.method)} <span>${action}</span></div>`;
   }).join('');
@@ -446,7 +446,7 @@ async function startStripePayment(){
   }
 }
 
-function renderPayPalButtons(){
+async function renderPayPalButtons(){
   const invoiceId = document.getElementById('paypalInvoiceId').value;
   const container = document.getElementById('paypalButtons');
   container.innerHTML = '';
@@ -471,48 +471,48 @@ function renderPayPalButtons(){
   }
 }
 
-async function loadPayNowQr(){
-  const invoiceId = document.getElementById('paynowInvoiceId').value;
-  const box = document.getElementById('paynowQrBox');
+async function loadNETSQr(){
+  const invoiceId = document.getElementById('netsInvoiceId').value;
+  const box = document.getElementById('netsQrBox');
   box.innerHTML = '';
   if (!invoiceId) return showAlert('Select an unpaid invoice first');
 
   try {
-    const data = await fetchJson(`/payment/paynow/${invoiceId}`);
+    const data = await fetchJson(`/payment/nets/${invoiceId}`);
     box.innerHTML = `
-      <div class="paynow-box">
-        <img src="${data.qrDataUrl}" alt="PayNow QR for ${data.invoice}" width="220" height="220">
+      <div class="nets-box">
+        <img src="${data.qrDataUrl}" alt="NETS QR for ${data.invoice}" width="220" height="220">
         <div>
           <p class="mb-1"><strong>Merchant:</strong> ${data.merchantName}</p>
           <p class="mb-1"><strong>Invoice:</strong> ${data.invoice}</p>
           <p class="mb-1"><strong>Amount:</strong> ${data.currency} ${Number(data.amount).toFixed(2)}</p>
           <p class="mb-2"><strong>Reference:</strong> ${data.reference}</p>
-          <button class="btn btn-primary btn-sm" type="button" onclick="confirmPayNowPayment('${invoiceId}', '${data.reference}')">Mark PayNow Paid</button>
+          <button class="btn btn-primary btn-sm" type="button" onclick="confirmNETSPayment('${invoiceId}', '${data.reference}')">Mark NETS Paid</button>
         </div>
       </div>
     `;
   } catch (err) {
-    showAlert(err.message || 'Unable to generate PayNow QR');
+    showAlert(err.message || 'Unable to generate NETS QR');
   }
 }
 
-async function confirmPayNowPayment(invoiceId, reference){
-  const confirmedReference = prompt('PayNow transaction/reference', reference || '');
-  if (!confirmedReference) return showAlert('PayNow reference is required');
+async function confirmNETSPayment(invoiceId, reference){
+  const confirmedReference = prompt('NETS transaction/reference', reference || '');
+  if (!confirmedReference) return showAlert('NETS reference is required');
 
   try {
     await fetchJson(`/payment/bank-transfer/${invoiceId}/confirm`, {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({
-        method: 'PayNow',
+        method: 'NETS',
         reference: confirmedReference,
         paidAt: new Date().toISOString(),
-        note: 'Confirmed PayNow QR payment'
+        note: 'Confirmed NETS QR payment'
       })
     });
-    showAlert('PayNow payment recorded successfully', 'success');
-    document.getElementById('paynowQrBox').innerHTML = '';
+    showAlert('NETS payment recorded successfully', 'success');
+    document.getElementById('netsQrBox').innerHTML = '';
     await refreshPayments();
   } catch (err) {
     showAlert(err.message);

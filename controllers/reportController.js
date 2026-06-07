@@ -40,7 +40,7 @@ exports.summary = async (req, res) => {
 
     const invoiceStatus = {};
     const monthlyRevenue = {};
-    const paymentMethodRevenue = { Stripe: 0, PayPal: 0, PayNow: 0 };
+    const paymentMethodRevenue = { Stripe: 0, PayPal: 0, NETS: 0 };
     const recentTransactions = payments.slice(0, 5).map((payment) => ({
       invoiceNumber: payment.invoiceNumber,
       method: payment.method,
@@ -83,7 +83,7 @@ exports.summary = async (req, res) => {
     payments.forEach((payment) => {
       const method = payment.method || 'Manual';
       const amount = money(payment.amount);
-      if ((method === 'Stripe' || method === 'PayPal' || method === 'PayNow') && payment.status === 'Paid') {
+      if ((method === 'Stripe' || method === 'PayPal' || method === 'NETS') && payment.status === 'Paid') {
         paymentMethodRevenue[method] = (paymentMethodRevenue[method] || 0) + amount;
       }
       if (method === 'PayPal' && payment.status === 'Failed') {
