@@ -74,7 +74,8 @@ async function start() {
   try {
     await sequelize.authenticate();
     console.log('DB connected');
-    await sequelize.sync({ alter: true });
+    const shouldAlterSchema = process.env.DB_SYNC_ALTER === 'true';
+    await sequelize.sync({ alter: shouldAlterSchema });
     app.listen(PORT, () => {
       console.log(`Server running at http://localhost:${PORT}`);
     });
