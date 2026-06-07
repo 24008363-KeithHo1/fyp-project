@@ -5,7 +5,7 @@ const Payment = sequelize.define('Payment', {
   id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
   invoiceId: { type: DataTypes.INTEGER, allowNull: false },
   invoiceNumber: { type: DataTypes.STRING, allowNull: false },
-  method: { type: DataTypes.ENUM('Stripe', 'PayPal', 'BankTransfer', 'Manual'), allowNull: false },
+  method: { type: DataTypes.ENUM('Stripe', 'PayPal', 'PayNow', 'BankTransfer', 'Manual'), allowNull: false },
   amount: { type: DataTypes.DECIMAL(10, 2), allowNull: false },
   currency: { type: DataTypes.STRING, defaultValue: 'SGD' },
   status: { type: DataTypes.ENUM('Paid', 'Failed', 'Pending'), defaultValue: 'Paid' },

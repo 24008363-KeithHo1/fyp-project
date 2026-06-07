@@ -1,4 +1,5 @@
 const Stripe = require('stripe');
+const QRCode = require('qrcode');
 const stripeSecretKey = process.env.STRIPE_SECRET_KEY || process.env.STRIPE_SECRET;
 const stripe = stripeSecretKey ? Stripe(stripeSecretKey) : null;
 
@@ -13,6 +14,7 @@ const PAYPAL_API_BASE = process.env.PAYPAL_API_BASE || (
     : 'https://api-m.sandbox.paypal.com'
 );
 const PAYPAL_CURRENCY = process.env.PAYPAL_CURRENCY || 'SGD';
+const PAYNOW_CURRENCY = 'SGD';
 
 function normalizePaymentStatus(status) {
   if (!status) return 'Paid';
@@ -20,6 +22,67 @@ function normalizePaymentStatus(status) {
   if (value === 'paid' || value === 'complete' || value === 'completed' || value === 'succeeded') return 'Paid';
   if (value === 'failed' || value === 'declined') return 'Failed';
   return 'Pending';
+}
+
+function emvField(id, value) {
+  const text = String(value || '');
+  return `${id}${String(text.length).padStart(2, '0')}${text}`;
+}
+
+function crc16Ccitt(payload) {
+  let crc = 0xffff;
+  for (let i = 0; i < payload.length; i += 1) {
+    crc ^= payload.charCodeAt(i) << 8;
+    for (let bit = 0; bit < 8; bit += 1) {
+      crc = (crc & 0x8000) ? ((crc << 1) ^ 0x1021) : (crc << 1);
+      crc &= 0xffff;
+    }
+  }
+  return crc.toString(16).toUpperCase().padStart(4, '0');
+}
+
+function payNowProxyType() {
+  const raw = String(process.env.PAYNOW_PROXY_TYPE || '').trim().toUpperCase();
+  if (raw === 'MOBILE' || raw === 'MSISDN' || raw === '0') return '0';
+  return '2';
+}
+
+function createPayNowPayload(invoice) {
+  const proxyValue = process.env.PAYNOW_PROXY_VALUE || process.env.PAYNOW_UEN || process.env.PAYNOW_MOBILE;
+  if (!proxyValue) {
+    throw new Error('PayNow is not configured. Set PAYNOW_PROXY_VALUE, PAYNOW_UEN, or PAYNOW_MOBILE.');
+  }
+
+  const merchantName = (process.env.PAYNOW_MERCHANT_NAME || process.env.BANK_ACCOUNT_NAME || 'FYP PROJECT').slice(0, 25);
+  const reference = (invoice.number || `INV-${invoice.id}`).slice(0, 25);
+  const amount = Number(invoice.amount).toFixed(2);
+  const merchantAccount = [
+    emvField('00', 'SG.PAYNOW'),
+    emvField('01', payNowProxyType()),
+    emvField('02', String(proxyValue).trim()),
+    emvField('03', '1')
+  ].join('');
+  const additionalData = emvField('01', reference);
+  const withoutCrc = [
+    emvField('00', '01'),
+    emvField('01', '12'),
+    emvField('26', merchantAccount),
+    emvField('52', '0000'),
+    emvField('53', '702'),
+    emvField('54', amount),
+    emvField('58', 'SG'),
+    emvField('59', merchantName),
+    emvField('60', 'Singapore'),
+    emvField('62', additionalData),
+    '6304'
+  ].join('');
+
+  return {
+    payload: `${withoutCrc}${crc16Ccitt(withoutCrc)}`,
+    reference,
+    amount,
+    merchantName
+  };
 }
 
 async function recordPayment(invoice, paymentData) {
@@ -206,7 +269,7 @@ exports.capturePayPalOrder = async (req, res) => {
     console.error(err);
     if (err.name === 'SequelizeDatabaseError' && /Data truncated|PayPal|enum/i.test(err.message)) {
       return res.status(500).json({
-        error: "Database needs PayPal enabled in Payments.method. Run: ALTER TABLE Payments MODIFY COLUMN method ENUM('Stripe','PayPal','BankTransfer','Manual') NOT NULL;"
+        error: "Database needs PayPal/PayNow enabled in Payments.method. Run: ALTER TABLE Payments MODIFY COLUMN method ENUM('Stripe','PayPal','PayNow','BankTransfer','Manual') NOT NULL;"
       });
     }
     res.status(500).json({ error: err.message });
@@ -381,6 +444,46 @@ exports.bankTransferInstructions = async (req, res) => {
   });
 };
 
+exports.payNowQr = async (req, res) => {
+  try {
+    const invoice = await Invoice.findByPk(req.params.id);
+    if (!invoice) return res.status(404).json({ error: 'Invoice not found' });
+    if (invoice.status === 'Paid') return res.status(400).json({ error: 'Invoice is already paid' });
+    if (!Number.isFinite(Number(invoice.amount)) || Number(invoice.amount) <= 0) {
+      return res.status(400).json({ error: 'Invoice amount must be greater than zero' });
+    }
+
+    const payNow = createPayNowPayload(invoice);
+    const qrDataUrl = await QRCode.toDataURL(payNow.payload, {
+      errorCorrectionLevel: 'M',
+      margin: 2,
+      width: 280
+    });
+
+    const data = Object.assign({}, invoice.data || {}, {
+      payment: Object.assign({}, (invoice.data && invoice.data.payment) || {}, {
+        provider: 'paynow',
+        method: 'PayNow',
+        reference: payNow.reference,
+        qrCreatedAt: new Date().toISOString()
+      })
+    });
+    await invoice.update({ data });
+
+    res.json({
+      invoice: invoice.number,
+      amount: Number(invoice.amount),
+      currency: PAYNOW_CURRENCY,
+      reference: payNow.reference,
+      merchantName: payNow.merchantName,
+      qrDataUrl,
+      payload: payNow.payload
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+
 exports.confirmBankTransfer = async (req, res) => {
   try {
     const invoice = await Invoice.findByPk(req.params.id);
@@ -399,10 +502,12 @@ exports.confirmBankTransfer = async (req, res) => {
       return res.status(400).json({ error: 'Paid date cannot be future date' });
     }
 
+    const method = req.body && req.body.method === 'PayNow' ? 'PayNow' : 'BankTransfer';
+    const provider = method === 'PayNow' ? 'paynow' : 'bank_transfer';
     const data = Object.assign({}, invoice.data || {}, {
       payment: Object.assign({}, (invoice.data && invoice.data.payment) || {}, {
-        provider: 'bank_transfer',
-        method: 'BankTransfer',
+        provider,
+        method,
         bankReference: reference,
         status: 'paid',
         paidAt: paidAt.toISOString(),
@@ -412,7 +517,7 @@ exports.confirmBankTransfer = async (req, res) => {
 
     await invoice.update({ status: 'Paid', data });
     const payment = await recordPayment(invoice, {
-      method: 'BankTransfer',
+      method,
       amount: Number(invoice.amount),
       currency: 'SGD',
       providerReference: reference,
@@ -424,7 +529,7 @@ exports.confirmBankTransfer = async (req, res) => {
       }
     });
     const { ip, userAgent } = getRequestMetadata(req);
-    await logAudit({ userId: req.user ? req.user.id : null, action: 'payment_bank_transfer_confirmed', entity: 'Payment', entityId: payment.id, meta: { invoiceNumber: invoice.number, amount: invoice.amount, reference, note: req.body && req.body.note }, ip, userAgent });
+    await logAudit({ userId: req.user ? req.user.id : null, action: method === 'PayNow' ? 'payment_paynow_confirmed' : 'payment_bank_transfer_confirmed', entity: 'Payment', entityId: payment.id, meta: { invoiceNumber: invoice.number, amount: invoice.amount, reference, note: req.body && req.body.note }, ip, userAgent });
 
     res.json({ ok: true, invoice, payment });
   } catch (err) {

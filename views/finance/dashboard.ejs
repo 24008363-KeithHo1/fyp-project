@@ -63,6 +63,7 @@ body { font-family: 'Sora', sans-serif; background: var(--g50); color: var(--ink
 .gateway-badge { width: 32px; height: 32px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: .78rem; font-weight: 700; flex-shrink: 0; font-family: 'DM Mono', monospace; }
 .gateway-stripe { background: #ede9fe; color: #5b21b6; }
 .gateway-paypal { background: #dbeafe; color: #1e40af; }
+.gateway-paynow { background: #fef3c7; color: #b45309; }
 .gateway-name { font-size: .85rem; font-weight: 600; color: var(--ink2); }
 .gateway-amount { font-family: 'DM Mono', monospace; font-size: .9rem; font-weight: 600; color: var(--ink); }
 .chart-wrap { position: relative; height: 200px; }
@@ -83,6 +84,7 @@ body { font-family: 'Sora', sans-serif; background: var(--g50); color: var(--ink
 .method-badge { display: inline-flex; align-items: center; gap: .35rem; padding: .2rem .55rem; border-radius: 100px; font-size: .75rem; font-weight: 600; }
 .method-stripe { background: #ede9fe; color: #5b21b6; }
 .method-paypal { background: #dbeafe; color: #1e40af; }
+.method-paynow { background: #fef3c7; color: #b45309; }
 .method-other { background: var(--g100); color: var(--g700); }
 .status-pill { display: inline-flex; align-items: center; gap: .3rem; padding: .22rem .65rem; border-radius: 100px; font-size: .75rem; font-weight: 600; }
 .status-pill::before { content: ''; width: 6px; height: 6px; border-radius: 50%; display: inline-block; }
@@ -169,6 +171,13 @@ body { font-family: 'Sora', sans-serif; background: var(--g50); color: var(--ink
             <span class="gateway-name">PayPal Revenue</span>
           </div>
           <span class="gateway-amount" id="paypalRevenue">SGD 0.00</span>
+        </div>
+        <div class="payment-gateway-item">
+          <div class="gateway-left">
+            <div class="gateway-badge gateway-paynow">N</div>
+            <span class="gateway-name">PayNow Revenue</span>
+          </div>
+          <span class="gateway-amount" id="paynowRevenue">SGD 0.00</span>
         </div>
       </div>
     </div>
@@ -270,18 +279,20 @@ function methodClass(m) {
   const ml = m.toLowerCase();
   if (ml.includes('stripe')) return 'method-stripe';
   if (ml.includes('paypal')) return 'method-paypal';
+  if (ml.includes('paynow')) return 'method-paynow';
   return 'method-other';
 }
 
-function renderPaymentPie(sr, pr) {
+function renderPaymentPie(stripeRevenue, paypalRevenue, paynowRevenue) {
   const canvas = document.getElementById('paymentPieChart');
+  const values = [stripeRevenue, paypalRevenue, paynowRevenue];
   if (paymentPieChart) paymentPieChart.destroy();
   paymentPieChart = new Chart(canvas, {
     type: 'doughnut',
-    data: { labels: ['Stripe','PayPal'], datasets: [{ data: [sr,pr], backgroundColor: ['#8b5cf6','#3b82f6'], borderColor: '#fff', borderWidth: 3, hoverOffset: 6 }] },
+    data: { labels: ['Stripe','PayPal','PayNow'], datasets: [{ data: values, backgroundColor: ['#8b5cf6','#3b82f6','#f59e0b'], borderColor: '#fff', borderWidth: 3, hoverOffset: 6 }] },
     options: { responsive:true, maintainAspectRatio:false, cutout:'62%',
       plugins: { legend: { position:'bottom', labels:{font:{family:'Sora',size:12},padding:16,boxWidth:12} },
-        tooltip: { callbacks: { label: ctx => { const t=sr+pr; const p=t?Math.round((ctx.raw/t)*100):0; return ` ${ctx.label}: ${p}% (${financeMoney(ctx.raw)})`; } } } } }
+        tooltip: { callbacks: { label: ctx => { const t=values.reduce((sum,value)=>sum+value,0); const p=t?Math.round((ctx.raw/t)*100):0; return ` ${ctx.label}: ${p}% (${financeMoney(ctx.raw)})`; } } } } }
   });
 }
 
@@ -328,14 +339,15 @@ async function loadFinanceDashboard() {
     const summary = await res.json();
     const totals = summary.totals||{};
     const pr = (summary.charts&&summary.charts.paymentMethodRevenue)||{};
-    const sr = Number(pr.Stripe||0), paypalR = Number(pr.PayPal||0);
+    const sr = Number(pr.Stripe||0), paypalR = Number(pr.PayPal||0), paynowR = Number(pr.PayNow||0);
     document.getElementById('financeTotalRevenue').textContent = financeMoney(totals.paidRevenue);
     document.getElementById('financePaidInvoices').textContent = totals.paidInvoiceCount||0;
     document.getElementById('financePendingPayments').textContent = totals.pendingPaymentCount||0;
     document.getElementById('financeOverdueInvoices').textContent = totals.overdueInvoiceCount||0;
     document.getElementById('stripeRevenue').textContent = financeMoney(sr);
     document.getElementById('paypalRevenue').textContent = financeMoney(paypalR);
-    renderPaymentPie(sr, paypalR);
+    document.getElementById('paynowRevenue').textContent = financeMoney(paynowR);
+    renderPaymentPie(sr, paypalR, paynowR);
     renderRecentPayments(summary.recentTransactions||[]);
     renderAlerts(totals);
     renderMonthlyRevenue((summary.charts&&summary.charts.monthlyRevenue)||{});

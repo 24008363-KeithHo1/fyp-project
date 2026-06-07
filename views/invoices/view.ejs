@@ -44,9 +44,11 @@
         <div class="payment-actions mt-3">
           <button class="btn btn-success" type="button" onclick="payByCard(<%= invoice.id %>)">Pay by Card</button>
           <button class="btn btn-outline-warning" type="button" onclick="payByPayPal(<%= invoice.id %>)">PayPal</button>
+          <button class="btn btn-outline-dark" type="button" onclick="showPayNow(<%= invoice.id %>)">PayNow QR</button>
           <button class="btn btn-outline-primary" type="button" onclick="showBankTransfer(<%= invoice.id %>)">Bank Transfer</button>
         </div>
         <div id="paypalButtons" class="mt-3" style="max-width:320px"></div>
+        <div id="payNowBox" class="bank-transfer-box mt-3 d-none"></div>
         <div id="bankTransfer" class="bank-transfer-box mt-3 d-none"></div>
       <% } %>
       <div class="mt-3">
@@ -111,6 +113,21 @@
     } catch (err) {
       alert(err.message || 'Unable to start PayPal payment');
     }
+  }
+
+  async function showPayNow(id){
+    const res = await fetch(`/payment/paynow/${id}`);
+    const data = await res.json();
+    if (!res.ok) return alert(data.error || 'Unable to generate PayNow QR');
+    const box = document.getElementById('payNowBox');
+    box.classList.remove('d-none');
+    box.innerHTML = `
+      <h5>PayNow QR</h5>
+      <img src="${data.qrDataUrl}" alt="PayNow QR for ${data.invoice}" width="220" height="220">
+      <p class="mb-1"><strong>Merchant:</strong> ${data.merchantName}</p>
+      <p class="mb-1"><strong>Amount:</strong> ${data.currency} ${Number(data.amount).toFixed(2)}</p>
+      <p class="mb-0"><strong>Reference:</strong> ${data.reference}</p>
+    `;
   }
 
   async function showBankTransfer(id){
