@@ -1,0 +1,202 @@
+<%- include('../partials/header', { title: 'Employees by Role' }) %>
+<%- include('../partials/navbar') %>
+
+<style>
+  .hr-employees-page {
+    max-width: 1080px;
+    margin: 2.5rem auto;
+    padding: 0 1rem;
+  }
+
+  .hr-employees-card {
+    background: #ffffff;
+    border: 1px solid #d9e8df;
+    border-radius: 24px;
+    box-shadow: 0 18px 45px rgba(18, 78, 46, 0.06);
+    padding: 2rem;
+  }
+
+  .hr-employees-header {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    margin-bottom: 1.75rem;
+  }
+
+  .hr-employees-title {
+    margin: 0;
+    font-size: 2rem;
+    font-weight: 700;
+    color: #124e2e;
+  }
+
+  .hr-employees-subtitle {
+    margin: 0.35rem 0 0;
+    color: #4f6f5c;
+    line-height: 1.6;
+  }
+
+  .hr-employees-back {
+    color: #166534;
+    font-weight: 600;
+    text-decoration: none;
+  }
+
+  .hr-employees-back:hover {
+    text-decoration: underline;
+  }
+
+  .hr-category-section {
+    margin-bottom: 2.25rem;
+  }
+
+  .hr-category-heading {
+    display: flex;
+    align-items: center;
+    gap: 0.85rem;
+    margin-bottom: 1rem;
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: #0f3d2c;
+  }
+
+  .hr-category-pill {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 2.5rem;
+    padding: 0.35rem 0.75rem;
+    border-radius: 999px;
+    background: #d1fae5;
+    color: #166534;
+    font-size: 0.9rem;
+    font-weight: 700;
+  }
+
+  .hr-table-wrapper {
+    overflow: hidden;
+    border-radius: 18px;
+    border: 1px solid #e2f2e8;
+  }
+
+  .hr-table {
+    width: 100%;
+    border-collapse: collapse;
+    min-width: 720px;
+  }
+
+  .hr-table th,
+  .hr-table td {
+    padding: 0.95rem 1rem;
+    text-align: left;
+    vertical-align: middle;
+    border-bottom: 1px solid #edf5f0;
+  }
+
+  .hr-table thead {
+    background: #f3fbf5;
+  }
+
+  .hr-table th {
+    color: #165c37;
+    font-size: 0.92rem;
+    letter-spacing: 0.01em;
+    font-weight: 700;
+  }
+
+  .hr-table tbody tr {
+    transition: background 0.2s ease;
+  }
+
+  .hr-table tbody tr:hover {
+    background: #f7fcf7;
+  }
+
+  .hr-table td:last-child {
+    white-space: nowrap;
+  }
+
+  .hr-status-active {
+    color: #166534;
+    font-weight: 700;
+  }
+
+  .hr-status-inactive {
+    color: #9ca79d;
+  }
+
+  .hr-empty-state {
+    padding: 1.5rem;
+    border-radius: 18px;
+    background: #f0f9f4;
+    color: #344a3f;
+    border: 1px dashed #9cccb6;
+    font-size: 0.98rem;
+  }
+
+  @media (max-width: 860px) {
+    .hr-employees-card {
+      padding: 1.5rem;
+    }
+
+    .hr-table {
+      min-width: 0;
+    }
+  }
+</style>
+
+<div class="hr-employees-page">
+  <div class="hr-employees-card">
+    <div class="hr-employees-header">
+      <div>
+        <h1 class="hr-employees-title">Employees by Role</h1>
+        <p class="hr-employees-subtitle">HR can view all employee accounts grouped by role, with each team shown in its own section.</p>
+      </div>
+      <a href="/hr/dashboard" class="hr-employees-back">← Back to HR Dashboard</a>
+    </div>
+
+    <% if (!categories || !categories.length) { %>
+      <div class="hr-empty-state">No employee records found.</div>
+    <% } else { %>
+      <% categories.forEach((category) => { %>
+        <section class="hr-category-section">
+          <div class="hr-category-heading">
+            <span><%= category %></span>
+            <span class="hr-category-pill"><%= grouped[category].length %></span>
+          </div>
+
+          <div class="hr-table-wrapper">
+            <table class="hr-table">
+              <thead>
+                <tr>
+                  <th>ID</th>
+                  <th>Name</th>
+                  <th>Email</th>
+                  <th>Department</th>
+                  <th>Title</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                <% grouped[category].forEach((user) => { %>
+                  <tr>
+                    <td><%= user.id %></td>
+                    <td><%= user.name %></td>
+                    <td><%= user.email %></td>
+                    <td><%= user.department || 'General Office' %></td>
+                    <td><%= user.title || '—' %></td>
+                    <td class="<%= user.isActive ? 'hr-status-active' : 'hr-status-inactive' %>"><%= user.isActive ? 'Active' : 'Inactive' %></td>
+                  </tr>
+                <% }) %>
+              </tbody>
+            </table>
+          </div>
+        </section>
+      <% }) %>
+    <% } %>
+  </div>
+</div>
+
+<%- include('../partials/footer') %>

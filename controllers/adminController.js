@@ -16,6 +16,25 @@ exports.listUsers = async (req, res) => {
   }
 };
 
+exports.listUsersByDepartment = async (req, res) => {
+  try {
+    const users = await User.findAll({ order: [['role', 'ASC'], ['department', 'ASC'], ['name', 'ASC']] });
+    const grouped = {};
+
+    users.forEach((user) => {
+      const role = user.role && user.role.trim().length ? user.role.trim() : 'Staff';
+      if (!grouped[role]) grouped[role] = [];
+      grouped[role].push(user);
+    });
+
+    const categories = Object.keys(grouped).sort((a, b) => a.localeCompare(b));
+    res.render('hr/employees', { title: 'Employees by Role', categories, grouped });
+  } catch (err) {
+    console.error(err);
+    res.status(500).send('Server error');
+  }
+};
+
 exports.editUserView = async (req, res) => {
   try {
     const user = await User.findByPk(req.params.id);
