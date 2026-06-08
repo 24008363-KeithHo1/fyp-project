@@ -1,0 +1,47 @@
+<%- include('partials/header', { title: 'Create Announcement' }) %>
+<%- include('partials/navbar') %>
+
+<style>
+.create-ann-page { max-width:980px; margin: 2rem auto; }
+.create-card { border-radius:12px; border:1px solid rgba(0,0,0,.04); box-shadow:0 8px 30px rgba(2,6,23,0.06); }
+.create-card .card-body { padding:1.25rem; }
+.btn-cancel { margin-right:.5rem; }
+</style>
+
+<script>const token = localStorage.getItem('token'); if (!token) location = '/login';</script>
+
+<div class="create-ann-page">
+  <div class="d-flex align-items-center justify-content-between mb-3">
+    <div>
+      <h2 class="mb-0">Send Announcement</h2>
+      <div class="text-muted small">Create a company-wide announcement visible to all staff.</div><br>
+    </div>
+ 
+  </div>
+
+  <div class="card create-card">
+    <div class="card-body">
+      <form action="/announcements" method="POST" enctype="multipart/form-data">
+        <div class="mb-3">
+          <label class="form-label">Title</label>
+          <input name="title" maxlength="255" class="form-control" placeholder="Short headline" required />
+        </div>
+        <div class="mb-3">
+          <label class="form-label">Message</label>
+          <input name="body" rows="8" class="form-control" style="resize:none;" placeholder="Write your announcement here" required></input>
+        </div>
+        <div class="mb-3">
+          <label class="form-label">Attachments</label>
+          <input type="file" name="attachments" multiple class="form-control" accept=".png,.jpg,.jpeg,.webp,.gif,.pdf,.doc,.docx,.xls,.xlsx,.csv,.txt,.ppt,.pptx">
+          <div class="form-text">Up to 5 files, max 5MB each. Common image and document formats supported.</div>
+        </div>
+        <div class="d-flex justify-content-end">
+          <a href="/announcements" class="btn btn-secondary btn-cancel">Cancel</a>
+          <button class="btn btn-success">Send Announcement</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<%- include('partials/footer') %>
