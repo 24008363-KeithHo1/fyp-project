@@ -6,6 +6,8 @@ const path = require('path');
 const requireRole = require('./middlewares/roles');
 
 const { sequelize } = require('./config/db');
+// Ensure models are registered before sync
+require('./models/Announcement');
 
 const app = express();
 // view engine
@@ -57,6 +59,8 @@ app.use('/admin', require('./routes/admin'));
 app.use('/finance', require('./routes/finance'));
 app.use('/hr', require('./routes/hr'));
 app.use('/staff', require('./routes/staff'));
+// Announcement pages (list for all roles; posting restricted to HR/Admin)
+app.use('/announcements', require('./routes/announcements'));
 
 // Requests UI (staff)
 app.get('/requests', require('./middlewares/auth'), requireRole(['Admin','Staff']), require('./controllers/requestsController').staffListPage);
@@ -76,7 +80,23 @@ async function start() {
     console.log('DB connected');
     const shouldAlterSchema = process.env.DB_SYNC_ALTER === 'true';
     await sequelize.sync({ alter: shouldAlterSchema });
-    app.listen(PORT, () => {
+
+    // Ensure Announcements.attachments column exists; add it if missing.
+    try {
+      const [cols] = await sequelize.query("SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'Announcements' AND COLUMN_NAME = 'attachments'");
+      if (!cols || cols.length === 0) {
+        try {
+          await sequelize.query("ALTER TABLE `Announcements` ADD COLUMN `attachments` JSON NULL DEFAULT '[]'");
+          console.log('Added attachments column to Announcements table');
+        } catch (err) {
+          // Fallback to TEXT if JSON type isn't supported by the server
+          await sequelize.query("ALTER TABLE `Announcements` ADD COLUMN `attachments` TEXT NULL");
+          console.log('Added attachments TEXT column to Announcements table (fallback)');
+        }
+      }
+    } catch (err) {
+      console.warn('Announcement attachments check failed:', err && err.message ? err.message : err);
+    }    app.listen(PORT, () => {
       console.log(`Server running at http://localhost:${PORT}`);
     });
   } catch (err) {
