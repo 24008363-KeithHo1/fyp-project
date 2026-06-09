@@ -148,7 +148,7 @@ exports.requestPasswordReset = async (req, res) => {
     const token = crypto.randomBytes(24).toString('hex');
     const expiresAt = new Date(Date.now() + 1000 * 60 * 60); // 1 hour
     await PasswordResetToken.create({ token, userId: user.id, expiresAt });
-    const link = `${APP_URL}/reset.html?token=${token}`;
+    const link = `${APP_URL}/reset?token=${token}`;
     await sendEmail(email, 'Password reset', resetEmailHtml(link));
     res.json({ ok: true });
   } catch (err) { res.status(400).json({ error: err.message }); }

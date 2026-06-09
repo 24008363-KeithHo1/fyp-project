@@ -97,16 +97,6 @@ CREATE TABLE IF NOT EXISTS AuditLogs (
   createdAt DATETIME DEFAULT CURRENT_TIMESTAMP,
   CONSTRAINT fk_audit_user FOREIGN KEY (userId) REFERENCES Users(id) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
--- Password reset tokens
-CREATE TABLE IF NOT EXISTS PasswordResetTokens (
-  id INT AUTO_INCREMENT PRIMARY KEY,
-  token VARCHAR(255) NOT NULL UNIQUE,
-  userId INT NOT NULL,
-  expiresAt DATETIME,
-  used BOOLEAN DEFAULT FALSE,
-  createdAt DATETIME DEFAULT CURRENT_TIMESTAMP,
-  CONSTRAINT fk_pr_user FOREIGN KEY (userId) REFERENCES Users(id) ON DELETE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- Idempotent ALTERs: add/drop columns if supported (MySQL 8+)
 -- If your MySQL version doesn't support "IF NOT EXISTS" here, ignore these or run fallback ALTERs.

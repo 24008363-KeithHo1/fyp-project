@@ -72,24 +72,6 @@ exports.dashboardView = (req, res) => {
   res.render('admin/dashboard', { title: 'Admin Dashboard' });
 };
 
-exports.listPasswordResets = async (req, res) => {
-  try {
-    const PasswordResetToken = require('../models/PasswordResetToken');
-    const tokens = await PasswordResetToken.findAll({ order: [['createdAt','DESC']], limit: 200 });
-    const UserModel = require('../models/User');
-    const plain = tokens.map(t => t.get ? t.get({ plain: true }) : t);
-    for (const t of plain) {
-      if (t.userId) {
-        try { const u = await UserModel.findByPk(t.userId); t.user = u ? { id: u.id, name: u.name } : null; } catch(e){ t.user = null; }
-      }
-    }
-    res.render('admin/password_resets', { tokens: plain, title: 'Password Resets' });
-  } catch (err) {
-    console.error(err);
-    res.status(500).send('Server error');
-  }
-};
-
 exports.listAuditLogs = async (req, res) => {
   try {
     const { action, entity, userId, startDate, endDate, limit = 200, offset = 0 } = req.query;

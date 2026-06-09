@@ -4,7 +4,7 @@
   <div class="auth-card">
     <h2>Reset Password</h2>
     <div id="request">
-      <p class="text-muted">Enter your email to request a password reset.</p>
+      <p class="text-muted">Enter your email to receive a reset link.</p>
       <form id="requestForm">
         <label>Email <input type="email" id="emailReq" required></label>
         <button>Request reset</button>
@@ -12,9 +12,8 @@
     </div>
 
     <div id="perform" style="display:none;">
-      <p class="text-muted">Set a new password</p>
+      <p class="text-muted">Use the link from your email to set a new password.</p>
       <form id="resetForm">
-        <input type="hidden" id="token" value="<%= token %>">
         <label>New password <input type="password" id="newPass" required></label>
         <button>Reset password</button>
       </form>
@@ -23,20 +22,22 @@
  
 
 <script>
+const token = new URLSearchParams(window.location.search).get('token') || '<%= token || "" %>';
+
 document.getElementById('requestForm').addEventListener('submit', async e=>{
   e.preventDefault();
   await fetch('/api/auth/request-reset',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({email:document.getElementById('emailReq').value})});
   alert('If email exists, a reset link was sent.');
 });
 
-if (document.getElementById('token').value) {
+if (token) {
   document.getElementById('request').style.display='none';
   document.getElementById('perform').style.display='block';
 }
 
 document.getElementById('resetForm').addEventListener('submit', async e=>{
   e.preventDefault();
-  const res = await fetch('/api/auth/reset',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({token:document.getElementById('token').value,password:document.getElementById('newPass').value})});
+  const res = await fetch('/api/auth/reset',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({token,password:document.getElementById('newPass').value})});
   const j = await res.json();
   if (j.ok) { alert('Password reset. Please login.'); location='/login'; } else alert(j.error || 'Failed');
 });

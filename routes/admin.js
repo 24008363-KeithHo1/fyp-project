@@ -9,7 +9,6 @@ router.use(auth);
 router.use(requireRole(['Admin']));
 
 router.get('/users', admin.listUsers);
-router.get('/password-resets', admin.listPasswordResets);
 router.get('/audit-logs', admin.listAuditLogs);
 router.get('/audit-logs-json', admin.listAuditLogsJson);
 router.get('/users/:id/edit', admin.editUserView);
