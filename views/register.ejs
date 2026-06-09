@@ -18,11 +18,32 @@
 document.getElementById('register').addEventListener('submit', async e=>{
   e.preventDefault();
   const body = { name: document.getElementById('name').value, email: document.getElementById('email').value, password: document.getElementById('password').value, role: document.getElementById('role').value };
-  
+
   const res = await fetch('/api/auth/register',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(body)});
   const j = await res.json();
-  if (j.id) { alert('Registered. Please login.'); location='/login'; }
-  else alert(j.error || 'Registration failed');
+  if (j.id) {
+    const token = localStorage.getItem('token');
+    let isAdmin = false;
+
+    if (token) {
+      try {
+        isAdmin = JSON.parse(atob(token.split('.')[1])).role === 'Admin';
+      } catch (err) {
+        isAdmin = false;
+      }
+    }
+
+    if (isAdmin) {
+      alert('User registered successfully.');
+      location = '/admin/dashboard';
+      return;
+    }
+
+    alert('Registered. Please login.');
+    location='/login';
+    return;
+  }
+  alert(j.error || 'Registration failed');
 });
 </script>
 
