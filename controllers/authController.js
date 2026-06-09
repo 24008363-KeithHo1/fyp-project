@@ -35,7 +35,6 @@ const profileUpload = multer({
 });
 
 exports.profileUploadMiddleware = profileUpload.single('profileImage');
-const InviteToken = require('../models/InviteToken');
 const PasswordResetToken = require('../models/PasswordResetToken');
 const { sendEmail, inviteEmailHtml, resetEmailHtml } = require('../utils/email');
 const { logAudit, getRequestMetadata } = require('../utils/audit');
@@ -44,22 +43,16 @@ const APP_URL = process.env.APP_URL || `http://localhost:${process.env.PORT||300
 
 exports.register = async (req, res) => {
   try {
-    const { name, email, password, role, inviteToken } = req.body;
-    // if inviteToken provided, validate
-    if (inviteToken) {
-      const it = await InviteToken.findOne({ where: { token: inviteToken, email } });
-      if (!it || it.used || (it.expiresAt && new Date() > it.expiresAt)) return res.status(400).json({ error: 'Invalid or expired invite token' });
-      it.used = true; await it.save();
-    }
+    const { name, email, password, role } = req.body;
     const hash = await bcrypt.hash(password, 10);
-    const user = await User.create({ name, email, password: hash, role: role || 'Staff', isVerified: !!inviteToken });
+    const user = await User.create({ name, email, password: hash, role: role || 'Staff', isVerified: false });
     const { ip, userAgent } = getRequestMetadata(req);
     await logAudit({
       userId: null,
       action: 'register',
       entity: 'User',
       entityId: user.id,
-      meta: { email, role: user.role, inviteTokenUsed: !!inviteToken },
+      meta: { email, role: user.role },
       ip,
       userAgent
     });
@@ -145,28 +138,7 @@ exports.mfaEnable = async (req, res) => {
   } catch (err) { res.status(400).json({ error: err.message }); }
 };
 
-exports.invite = async (req, res) => {
-  try {
-    const { email } = req.body;
-    const { ip, userAgent } = getRequestMetadata(req);
-    const token = crypto.randomBytes(24).toString('hex');
-    const expiresAt = new Date(Date.now() + 1000 * 60 * 60 * 24 * 7); // 7 days
-    const inv = await InviteToken.create({ token, email, expiresAt, inviterId: req.user && req.user.id });
-    await logAudit({ userId: req.user && req.user.id, action: 'invite_sent', entity: 'InviteToken', entityId: inv.id, meta: { invitedEmail: email }, ip, userAgent });
-    const link = `${APP_URL}/register?token=${token}&email=${encodeURIComponent(email)}`;
-    await sendEmail(email, 'You are invited', inviteEmailHtml(link));
-    res.json({ ok: true });
-  } catch (err) { res.status(400).json({ error: err.message }); }
-};
-
-exports.verifyInvite = async (req, res) => {
-  try {
-    const { token } = req.query;
-    const it = await InviteToken.findOne({ where: { token } });
-    if (!it || it.used || (it.expiresAt && new Date() > it.expiresAt)) return res.status(400).send('Invalid or expired invite');
-    res.redirect(`/register?token=${token}&email=${encodeURIComponent(it.email)}`);
-  } catch (err) { res.status(400).send(err.message); }
-};
+// Invite token functionality removed — registration is open without invites.
 
 exports.requestPasswordReset = async (req, res) => {
   try {

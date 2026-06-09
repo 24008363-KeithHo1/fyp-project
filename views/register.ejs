@@ -5,7 +5,6 @@
     <h2>Create account</h2>
     <p class="text-muted">Create a user profile for the invoicing and payroll workspace.</p>
     <form id="register">
-      <input type="hidden" id="inviteToken" value="<%= token %>">
       <label>Email <input type="email" id="email" value="<%= email %>" required></label>
       <label>Name <input id="name"></label>
       <label>Password <input type="password" id="password" required></label>
@@ -19,7 +18,7 @@
 document.getElementById('register').addEventListener('submit', async e=>{
   e.preventDefault();
   const body = { name: document.getElementById('name').value, email: document.getElementById('email').value, password: document.getElementById('password').value, role: document.getElementById('role').value };
-  const token = document.getElementById('inviteToken').value; if (token) body.inviteToken = token;
+  
   const res = await fetch('/api/auth/register',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(body)});
   const j = await res.json();
   if (j.id) { alert('Registered. Please login.'); location='/login'; }
