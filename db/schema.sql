@@ -162,15 +162,3 @@ WHERE email = @admin_email;
 
 -- Final verification queries (run to inspect)
 SELECT id, name, email, role, isActive, isVerified FROM Users WHERE email = 'paul@paul.com';
-
--- Announcements: company-wide messages posted by HR/Admin
-CREATE TABLE IF NOT EXISTS Announcements (
-  id INT AUTO_INCREMENT PRIMARY KEY,
-  title VARCHAR(255) NOT NULL,
-  body TEXT NOT NULL,
-  createdBy INT,
-  isActive BOOLEAN DEFAULT TRUE,
-  createdAt DATETIME DEFAULT CURRENT_TIMESTAMP,
-  updatedAt DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-  CONSTRAINT fk_announcement_user FOREIGN KEY (createdBy) REFERENCES Users(id) ON DELETE SET NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
