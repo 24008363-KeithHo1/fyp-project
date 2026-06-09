@@ -72,24 +72,6 @@ exports.dashboardView = (req, res) => {
   res.render('admin/dashboard', { title: 'Admin Dashboard' });
 };
 
-exports.listInviteTokens = async (req, res) => {
-  try {
-    const InviteToken = require('../models/InviteToken');
-    const tokens = await InviteToken.findAll({ order: [['createdAt','DESC']], limit: 200 });
-    const UserModel = require('../models/User');
-    const plain = tokens.map(t => t.get ? t.get({ plain: true }) : t);
-    for (const t of plain) {
-      if (t.inviterId) {
-        try { const u = await UserModel.findByPk(t.inviterId); t.inviter = u ? { id: u.id, name: u.name } : null; } catch(e){ t.inviter = null; }
-      }
-    }
-    res.render('admin/invite_tokens', { tokens: plain, title: 'Invite Tokens' });
-  } catch (err) {
-    console.error(err);
-    res.status(500).send('Server error');
-  }
-};
-
 exports.listPasswordResets = async (req, res) => {
   try {
     const PasswordResetToken = require('../models/PasswordResetToken');
