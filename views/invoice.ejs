@@ -722,7 +722,7 @@
         <td class="text-end">
           <div class="invoice-actions">
             <a class="invoice-action-btn" href="/api/invoices/${i.id}/pdf" target="_blank"><i class="fa-solid fa-file-pdf"></i> PDF</a>
-            <a class="invoice-action-btn" href="/api/invoices/${i.id}/excel" target="_blank"><i class="fa-solid fa-file-csv"></i> CSV</a>
+            <a class="invoice-action-btn" href="/api/invoices/${i.id}/excel" target="_blank"><i class="fa-solid fa-file-excel"></i> Excel</a>
             ${i.status !== 'Paid' ? `<button class="invoice-action-btn invoice-action-btn-success" onclick="payByCard(${i.id})"><i class="fa-solid fa-credit-card"></i> Card</button>` : ''}
             ${i.status !== 'Paid' ? `<button class="invoice-action-btn invoice-action-btn-warning" onclick="payByPayPal(${i.id})"><i class="fa-brands fa-paypal"></i> PayPal</button>` : ''}
             ${i.status !== 'Paid' ? `<button class="invoice-action-btn invoice-action-btn-dark" onclick="showNETS(${i.id})"><i class="fa-solid fa-qrcode"></i> NETS</button>` : ''}

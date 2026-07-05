@@ -5,6 +5,7 @@ const { generateInvoicePDF } = require('../utils/pdf');
 const { sendEmail } = require('../utils/email');
 const { logAction } = require('../utils/audit');
 const crypto = require('crypto');
+const ExcelJS = require('exceljs');
 
 function round2(value) {
   return Math.round((Number(value) + Number.EPSILON) * 100) / 100;
@@ -214,30 +215,79 @@ exports.exportPdf = async (req, res) => {
 };
 
 exports.exportExcel = async (req, res) => {
-  const inv = await Invoice.findByPk(req.params.id);
-  if (!inv) return res.status(404).json({ error: 'Not found' });
-  const rows = [];
-  rows.push('Number,Customer,Currency,Amount,Status,Due');
-  const dueStr = inv.due_date ? (inv.due_date instanceof Date ? inv.due_date.toISOString().split('T')[0] : new Date(inv.due_date).toISOString().split('T')[0]) : '';
-  rows.push(`"${inv.number}","${inv.customer_name}","${inv.currency || 'SGD'}",${inv.amount},"${inv.status}","${dueStr}"`);
+  try {
+    const inv = await Invoice.findByPk(req.params.id);
+    if (!inv) return res.status(404).json({ error: 'Not found' });
 
-  let lineItems = inv.data && Array.isArray(inv.data.line_items) ? inv.data.line_items : [];
-  if (!lineItems.length) {
-    const dbItems = await InvoiceItem.findAll({ where: { invoiceId: inv.id }, order: [['line_no', 'ASC'], ['id', 'ASC']] });
-    lineItems = dbItems.map((row) => row.toJSON());
-  }
-  if (lineItems.length) {
-    rows.push('');
-    rows.push('Description,Qty,Unit Price,Discount %,Tax %,Line Total');
-    lineItems.forEach((item) => {
-      rows.push(`"${item.description}",${item.qty},${item.unit_price},${item.discount_rate},${item.tax_rate},${item.line_total}`);
+    const dueStr = inv.due_date
+      ? (inv.due_date instanceof Date ? inv.due_date.toISOString().split('T')[0] : new Date(inv.due_date).toISOString().split('T')[0])
+      : '';
+
+    let lineItems = inv.data && Array.isArray(inv.data.line_items) ? inv.data.line_items : [];
+    if (!lineItems.length) {
+      const dbItems = await InvoiceItem.findAll({ where: { invoiceId: inv.id }, order: [['line_no', 'ASC'], ['id', 'ASC']] });
+      lineItems = dbItems.map((row) => row.toJSON());
+    }
+
+    const workbook = new ExcelJS.Workbook();
+    workbook.creator = 'Automated Invoicing & Payroll System';
+    workbook.created = new Date();
+
+    const sheet = workbook.addWorksheet('Invoice');
+
+    // --- Invoice summary block ---
+    sheet.columns = [
+      { width: 28 }, { width: 22 }, { width: 12 }, { width: 14 }, { width: 12 }, { width: 14 }
+    ];
+
+    const headerRow = sheet.addRow(['Number', 'Customer', 'Currency', 'Amount', 'Status', 'Due']);
+    headerRow.font = { bold: true };
+    headerRow.eachCell((cell) => {
+      cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFDCFCE7' } };
     });
-  }
 
-  const csv = `${rows.join('\n')}\n`;
-  res.setHeader('Content-Type', 'text/csv');
-  res.setHeader('Content-Disposition', `attachment; filename="${inv.number}.csv"`);
-  res.send(csv);
+    sheet.addRow([
+      inv.number,
+      inv.customer_name,
+      inv.currency || 'SGD',
+      Number(inv.amount),
+      inv.status,
+      dueStr
+    ]);
+
+    // --- Line items block (if any) ---
+    if (lineItems.length) {
+      sheet.addRow([]); // blank spacer row
+
+      const itemHeaderRow = sheet.addRow(['Description', 'Qty', 'Unit Price', 'Discount %', 'Tax %', 'Line Total']);
+      itemHeaderRow.font = { bold: true };
+      itemHeaderRow.eachCell((cell) => {
+        cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF0FDF4' } };
+      });
+
+      lineItems.forEach((item) => {
+        sheet.addRow([
+          item.description,
+          Number(item.qty),
+          Number(item.unit_price),
+          Number(item.discount_rate),
+          Number(item.tax_rate),
+          Number(item.line_total)
+        ]);
+      });
+    }
+
+    // Format numeric columns (Amount, and the line-item numeric columns) as 2dp
+    sheet.getColumn(4).numFmt = '0.00';
+    sheet.getColumn(6).numFmt = '0.00';
+
+    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    res.setHeader('Content-Disposition', `attachment; filename="${inv.number}.xlsx"`);
+    await workbook.xlsx.write(res);
+    res.end();
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 };
 
 exports.send = async (req, res) => {
