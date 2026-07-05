@@ -78,6 +78,21 @@ function normalizeLineItems(rawItems) {
   };
 }
 
+/**
+ * If an invoice is past its due date and not yet Paid, flip its status to
+ * Overdue. Returns the (possibly updated) invoice. Safe to call on every
+ * read — it's a no-op unless the invoice actually needs updating.
+ */
+async function applyOverdueStatus(invoice) {
+  if (!invoice || !invoice.due_date) return invoice;
+  const isPastDue = new Date(invoice.due_date) < new Date();
+  const isEligible = invoice.status !== 'Paid' && invoice.status !== 'Overdue';
+  if (isPastDue && isEligible) {
+    await invoice.update({ status: 'Overdue' });
+  }
+  return invoice;
+}
+
 exports.create = async (req, res) => {
   try {
     const { customer_name, amount, due_date, items } = req.body;
@@ -110,11 +125,6 @@ exports.create = async (req, res) => {
       return res.status(400).json({ error: 'Validation failed', details: errors });
     }
 
-    const count = await Invoice.count();
-    const seq = count + 1;
-    const now = new Date();
-    const prefix = `${now.getFullYear()}${String(now.getMonth()+1).padStart(2,'0')}`;
-    const number = `INV-${prefix}-${String(seq).padStart(4,'0')}`;
     const currency = String((req.body && req.body.currency) || 'SGD').toUpperCase();
     const data = Object.assign({}, req.body && req.body.data ? req.body.data : {}, {
       line_items: normalizedItems || null,
@@ -122,33 +132,58 @@ exports.create = async (req, res) => {
       currency
     });
 
-    const tx = await sequelize.transaction();
+    const now = new Date();
+    const prefix = `${now.getFullYear()}${String(now.getMonth()+1).padStart(2,'0')}`;
+
+    // Retry loop: guards against a race where two concurrent requests both
+    // read the same count() and try to create the same invoice number.
+    // The DB's unique constraint on `number` is the actual source of truth;
+    // count() is only ever used as a starting guess.
+    const MAX_ATTEMPTS = 3;
     let inv;
-    try {
-      inv = await Invoice.create({ number, customer_name: customer_name.trim(), amount: round2(parsedAmount), currency, due_date, data }, { transaction: tx });
-      if (normalizedItems && normalizedItems.length) {
-        await InvoiceItem.bulkCreate(
-          normalizedItems.map((item, index) => ({
-            invoiceId: inv.id,
-            line_no: index + 1,
-            description: item.description,
-            qty: item.qty,
-            unit_price: item.unit_price,
-            discount_rate: item.discount_rate,
-            tax_rate: item.tax_rate,
-            line_subtotal: item.line_subtotal,
-            line_discount: item.line_discount,
-            line_tax: item.line_tax,
-            line_total: item.line_total
-          })),
-          { transaction: tx }
-        );
+    let lastError;
+    for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
+      const count = await Invoice.count();
+      const seq = count + 1 + attempt; // nudge forward on each retry
+      const number = `INV-${prefix}-${String(seq).padStart(4,'0')}`;
+
+      const tx = await sequelize.transaction();
+      try {
+        inv = await Invoice.create({ number, customer_name: customer_name.trim(), amount: round2(parsedAmount), currency, due_date, data }, { transaction: tx });
+        if (normalizedItems && normalizedItems.length) {
+          await InvoiceItem.bulkCreate(
+            normalizedItems.map((item, index) => ({
+              invoiceId: inv.id,
+              line_no: index + 1,
+              description: item.description,
+              qty: item.qty,
+              unit_price: item.unit_price,
+              discount_rate: item.discount_rate,
+              tax_rate: item.tax_rate,
+              line_subtotal: item.line_subtotal,
+              line_discount: item.line_discount,
+              line_tax: item.line_tax,
+              line_total: item.line_total
+            })),
+            { transaction: tx }
+          );
+        }
+        await tx.commit();
+        await logAction(req, 'create', 'Invoice', inv.id, { number: inv.number, customer_name, amount: parsedAmount, currency, itemCount: normalizedItems ? normalizedItems.length : 0 });
+        lastError = null;
+        break; // success
+      } catch (e) {
+        await tx.rollback();
+        lastError = e;
+        const isUniqueViolation = e.name === 'SequelizeUniqueConstraintError';
+        if (!isUniqueViolation) throw e; // any other error: fail immediately
+        // otherwise loop and try again with a fresh number
       }
-      await tx.commit();
-      await logAction(req, 'create', 'Invoice', inv.id, { number: inv.number, customer_name, amount: parsedAmount, currency, itemCount: normalizedItems ? normalizedItems.length : 0 });
-    } catch (e) {
-      await tx.rollback();
-      throw e;
+    }
+
+    if (lastError) {
+      // Exhausted retries — surface a clear error rather than a raw DB exception
+      return res.status(409).json({ error: 'Could not generate a unique invoice number, please try again.' });
     }
 
     res.json(inv);
@@ -159,12 +194,14 @@ exports.create = async (req, res) => {
 
 exports.list = async (req, res) => {
   const invoices = await Invoice.findAll({ order: [['id','DESC']] });
+  await Promise.all(invoices.map(applyOverdueStatus));
   res.json(invoices);
 };
 
 exports.get = async (req, res) => {
   const inv = await Invoice.findByPk(req.params.id);
   if (!inv) return res.status(404).json({ error: 'Not found' });
+  await applyOverdueStatus(inv);
   res.json(inv);
 };
 
@@ -235,6 +272,7 @@ exports.viewPage = async (req, res) => {
   if (!expectedToken || !token || token !== expectedToken) {
     return res.status(403).send('Invalid or missing view token');
   }
+  await applyOverdueStatus(inv);
   if (inv.status !== 'Viewed') {
     try { 
       await inv.update({ status: 'Viewed' });

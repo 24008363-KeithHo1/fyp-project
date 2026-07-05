@@ -8,8 +8,13 @@ async function seed() {
     console.log('DB connected');
     await sequelize.sync();
 
-    const adminEmail = process.env.SEED_ADMIN_EMAIL || 'paul@paul.com';
-    const adminPass = process.env.SEED_ADMIN_PASS || '123456';
+    const adminEmail = process.env.SEED_ADMIN_EMAIL;
+    const adminPass = process.env.SEED_ADMIN_PASS;
+
+    if (!adminEmail || !adminPass) {
+      console.error('SEED_ADMIN_EMAIL and SEED_ADMIN_PASS must be set in your environment (see .env.example). Refusing to seed with a default password.');
+      process.exit(1);
+    }
 
     const existing = await User.findOne({ where: { email: adminEmail } });
     if (existing) {

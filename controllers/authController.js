@@ -43,9 +43,14 @@ const APP_URL = process.env.APP_URL || `http://localhost:${process.env.PORT||300
 
 exports.register = async (req, res) => {
   try {
-    const { name, email, password, role } = req.body;
+    const { name, email, password } = req.body;
+    // SECURITY: role is intentionally NOT read from req.body here.
+    // Public self-registration must never be able to set an elevated role
+    // (e.g. "Admin" or "Finance"). All new self-registered accounts are
+    // forced to 'Staff'; role changes can only be made afterwards by an
+    // authenticated Admin via adminController.updateUser.
     const hash = await bcrypt.hash(password, 10);
-    const user = await User.create({ name, email, password: hash, role: role || 'Staff', isVerified: false });
+    const user = await User.create({ name, email, password: hash, role: 'Staff', isVerified: false });
     const { ip, userAgent } = getRequestMetadata(req);
     await logAudit({
       userId: null,

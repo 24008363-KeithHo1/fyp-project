@@ -577,6 +577,20 @@
     return toNum(value).toFixed(2);
   }
 
+  // SECURITY: shared escaping helper used whenever database-sourced text
+  // (customer_name, invoice number, line item description, etc.) is
+  // interpolated into innerHTML. Declared once at top-level scope so it's
+  // available to every function below (addItemRow, load, etc.) regardless
+  // of call order — do not redeclare this inside individual functions.
+  function escapeHtml(str){
+    return String(str)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+  }
+
   function statusClass(status, dueDate){
     if (status === 'Paid') return 'invoice-badge-paid';
     if (status === 'Failed') return 'invoice-badge-overdue';
@@ -618,7 +632,7 @@
   function addItemRow(item){
     const row = document.createElement('tr');
     row.innerHTML = `
-      <td><input class="form-control form-control-sm item-description" placeholder="Service or product" value="${item && item.description ? item.description : ''}" required></td>
+      <td><input class="form-control form-control-sm item-description" placeholder="Service or product" value="${escapeHtml(item && item.description ? item.description : '')}" required></td>
       <td><input class="form-control form-control-sm item-qty" type="number" min="0.01" step="0.01" value="${item && item.qty ? item.qty : 1}" required></td>
       <td><input class="form-control form-control-sm item-unit" type="number" min="0" step="0.01" value="${item && item.unit_price ? item.unit_price : 0}" required></td>
       <td><input class="form-control form-control-sm item-discount" type="number" min="0" max="100" step="0.01" value="${item && item.discount_rate ? item.discount_rate : 0}"></td>
@@ -700,8 +714,8 @@
     items.forEach(i=>{
       const tr = document.createElement('tr');
       tr.innerHTML = `
-        <td class="mono">${i.number || ''}</td>
-        <td>${i.customer_name || ''}</td>
+        <td class="mono">${escapeHtml(i.number || '')}</td>
+        <td>${escapeHtml(i.customer_name || '')}</td>
         <td class="text-end">${i.currency || (i.data && i.data.currency) || 'SGD'} ${parseFloat(i.amount||0).toFixed(2)}</td>
         <td>${i.due_date ? new Date(i.due_date).toLocaleDateString() : ''}</td>
         <td><span class="invoice-badge ${statusClass(i.status, i.due_date)}">${statusLabel(i.status, i.due_date)}</span></td>

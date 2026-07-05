@@ -117,25 +117,7 @@ ALTER TABLE Payments
 -- Roles are stored directly on Users.role. The old Roles table is no longer used.
 DROP TABLE IF EXISTS Roles;
 
--- Seed admin user (email: paul@paul.com, password: 123456)
--- The password below is bcrypt('123456')
-SET @admin_email  = 'paul@paul.com';
-SET @admin_name   = 'Seed Admin';
-SET @admin_pass   = '$2a$10$2XKQBAhc.iZv4BIHDuRqauaXN8Ir.fryZ9VnUOjOvwyDiZoC3I9AS';
-
-INSERT INTO Users (name, email, password, role, isActive, isVerified, createdAt, updatedAt)
-SELECT @admin_name, @admin_email, @admin_pass, 'Admin', 1, 1, NOW(), NOW()
-FROM DUAL
-WHERE NOT EXISTS (SELECT 1 FROM Users WHERE email = @admin_email);
-
--- If admin exists but is not verified / role not set / password plaintext, fix them:
-UPDATE Users
-SET
-  password = @admin_pass,
-  role = 'Admin',
-  isVerified = 1,
-  updatedAt = NOW()
-WHERE email = @admin_email;
-
--- Final verification queries (run to inspect)
-SELECT id, name, email, role, isActive, isVerified FROM Users WHERE email = 'paul@paul.com';
+-- Admin seeding is handled by scripts/seedAdmin.js, which reads
+-- SEED_ADMIN_EMAIL and SEED_ADMIN_PASS from environment variables
+-- (see .env.example) and hashes the password at runtime.
+-- Do NOT hardcode admin credentials or password hashes in this file.
