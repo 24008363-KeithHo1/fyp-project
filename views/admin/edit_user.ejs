@@ -13,18 +13,26 @@
       <label class="form-label">Email</label>
       <input class="form-control" value="<%= user.email %>" disabled />
     </div>
+    <% const isSelf = user.id === currentUserId; %>
+    <% if (isSelf) { %>
+      <div class="alert alert-warning" role="alert">
+        You are editing your own account. To prevent accidental lockout, you cannot change your own role away from Admin or deactivate yourself here.
+      </div>
+    <% } %>
     <div class="mb-3">
       <label class="form-label">Role</label>
-      <select name="role" class="form-select">
+      <select name="role" class="form-select" <%= isSelf ? 'disabled' : '' %>>
         <option value="Admin" <%= user.role === 'Admin' ? 'selected' : '' %>>Admin</option>
         <option value="Finance" <%= user.role === 'Finance' ? 'selected' : '' %>>Finance</option>
         <option value="HR" <%= user.role === 'HR' ? 'selected' : '' %>>HR</option>
         <option value="Staff" <%= user.role === 'Staff' ? 'selected' : '' %>>Staff</option>
       </select>
+      <% if (isSelf) { %><input type="hidden" name="role" value="<%= user.role %>" /><% } %>
     </div>
     <div class="form-check mb-3">
-      <input class="form-check-input" type="checkbox" name="isActive" id="isActive" <%= user.isActive ? 'checked' : '' %> />
+      <input class="form-check-input" type="checkbox" name="isActive" id="isActive" <%= user.isActive ? 'checked' : '' %> <%= isSelf ? 'disabled' : '' %> />
       <label class="form-check-label" for="isActive">Active</label>
+      <% if (isSelf) { %><input type="hidden" name="isActive" value="on" /><% } %>
     </div>
     <button class="btn btn-primary" type="submit">Save</button>
     <a class="btn btn-secondary" href="/admin/users">Cancel</a>

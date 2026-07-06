@@ -11,9 +11,9 @@
       </thead>
       <tbody>
         <% users.forEach(function(u){ %>
-          <tr>
+          <tr class="<%= u.id === currentUserId ? 'admin-users-self-row' : '' %>">
             <td><%= u.id %></td>
-            <td><%= u.name %></td>
+            <td><%= u.name %> <% if (u.id === currentUserId) { %><span class="badge bg-secondary">You</span><% } %></td>
             <td><%= u.email %></td>
             <td><%= u.role %></td>
             <td><%= u.isActive ? 'Yes' : 'No' %></td>

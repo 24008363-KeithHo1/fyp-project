@@ -4,7 +4,7 @@ const AuditLog = require('../models/AuditLog');
 exports.listUsers = async (req, res) => {
   try {
     const users = await User.findAll({ order: [['id', 'ASC']] });
-    res.render('admin/users', { users, title: 'Manage Users' });
+    res.render('admin/users', { users, title: 'Manage Users', currentUserId: req.user.id });
   } catch (err) {
     console.error(err);
     res.status(500).send('Server error');
@@ -34,7 +34,7 @@ exports.editUserView = async (req, res) => {
   try {
     const user = await User.findByPk(req.params.id);
     if (!user) return res.redirect('/admin/users');
-    res.render('admin/edit_user', { user, title: 'Edit User' });
+    res.render('admin/edit_user', { user, title: 'Edit User', currentUserId: req.user.id });
   } catch (err) {
     console.error(err);
     res.status(500).send('Server error');
