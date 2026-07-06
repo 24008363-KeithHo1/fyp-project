@@ -86,8 +86,53 @@ exports.updateUser = async (req, res) => {
   }
 };
 
-exports.dashboardView = (req, res) => {
-  res.render('admin/dashboard', { title: 'Admin Dashboard' });
+exports.dashboardView = async (req, res) => {
+  try {
+    const Invoice = require('../models/Invoice');
+
+    const [totalUsers, adminCount, financeCount, hrCount, staffCount] = await Promise.all([
+      User.count(),
+      User.count({ where: { role: 'Admin' } }),
+      User.count({ where: { role: 'Finance' } }),
+      User.count({ where: { role: 'HR' } }),
+      User.count({ where: { role: 'Staff' } })
+    ]);
+
+    // Ensure Overdue status is up to date before counting (same lazy
+    // transition used by invoiceController on every read).
+    const invoices = await Invoice.findAll();
+    const now = new Date();
+    await Promise.all(invoices.map(async (inv) => {
+      if (inv.due_date && new Date(inv.due_date) < now && inv.status !== 'Paid' && inv.status !== 'Overdue') {
+        await inv.update({ status: 'Overdue' });
+      }
+    }));
+
+    const totalInvoices = invoices.length;
+    const paidInvoices = invoices.filter((i) => i.status === 'Paid').length;
+    const overdueInvoices = invoices.filter((i) => i.status === 'Overdue').length;
+    const outstandingAmount = invoices
+      .filter((i) => i.status !== 'Paid')
+      .reduce((sum, i) => sum + Number(i.amount || 0), 0);
+
+    res.render('admin/dashboard', {
+      title: 'Admin Dashboard',
+      stats: {
+        totalUsers,
+        adminCount,
+        financeCount,
+        hrCount,
+        staffCount,
+        totalInvoices,
+        paidInvoices,
+        overdueInvoices,
+        outstandingAmount
+      }
+    });
+  } catch (err) {
+    console.error(err);
+    res.render('admin/dashboard', { title: 'Admin Dashboard', stats: null });
+  }
 };
 
 exports.listAuditLogs = async (req, res) => {

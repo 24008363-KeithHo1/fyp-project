@@ -109,6 +109,66 @@ body {
   box-shadow: var(--ad-shadow-sm);
 }
 
+.admin-kpis {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.admin-kpi {
+  background: var(--ad-surface);
+  border: 1px solid var(--ad-border);
+  border-radius: var(--ad-radius);
+  padding: 1.15rem 1.25rem;
+  box-shadow: var(--ad-shadow-sm);
+  transition: transform .15s, box-shadow .2s;
+}
+
+.admin-kpi:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--ad-shadow-md);
+}
+
+.admin-kpi-icon {
+  width: 34px;
+  height: 34px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: .9rem;
+  margin-bottom: .85rem;
+  background: rgba(61,214,140,.12);
+  color: var(--ad-accent);
+}
+
+.admin-kpi.kpi-overdue .admin-kpi-icon {
+  background: rgba(240,82,82,.12);
+  color: #dc2626;
+}
+
+.admin-kpi-label {
+  font-size: .78rem;
+  color: var(--ad-muted);
+  text-transform: uppercase;
+  letter-spacing: .08em;
+  margin-bottom: .35rem;
+}
+
+.admin-kpi-value {
+  font-size: 1.55rem;
+  font-weight: 700;
+  color: var(--ad-text);
+  line-height: 1;
+}
+
+.admin-kpi-sub {
+  font-size: .78rem;
+  color: var(--ad-muted);
+  margin-top: .35rem;
+}
+
 .dashboard-cards {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -183,11 +243,13 @@ body {
 
 @media (max-width: 1100px) {
   .dashboard-cards { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .admin-kpis { grid-template-columns: repeat(2, 1fr); }
 }
 
 @media (max-width: 640px) {
   .admin-page { padding: 1.25rem 1rem 3rem; }
   .dashboard-cards { grid-template-columns: 1fr; }
+  .admin-kpis { grid-template-columns: 1fr; }
   .admin-title { font-size: 1.45rem; }
 }
 </style>
@@ -201,6 +263,35 @@ body {
     </div>
     <div class="admin-meta"><i class="fa-solid fa-circle-check"></i> System control center</div>
   </div>
+
+<% if (stats) { %>
+  <div class="admin-kpis">
+    <div class="admin-kpi kpi-users">
+      <div class="admin-kpi-icon"><i class="fa-solid fa-users"></i></div>
+      <div class="admin-kpi-label">Total Users</div>
+      <div class="admin-kpi-value"><%= stats.totalUsers %></div>
+      <div class="admin-kpi-sub"><%= stats.adminCount %> Admin · <%= stats.financeCount %> Finance · <%= stats.hrCount %> HR · <%= stats.staffCount %> Staff</div>
+    </div>
+    <div class="admin-kpi kpi-invoices">
+      <div class="admin-kpi-icon"><i class="fa-solid fa-file-invoice"></i></div>
+      <div class="admin-kpi-label">Total Invoices</div>
+      <div class="admin-kpi-value"><%= stats.totalInvoices %></div>
+      <div class="admin-kpi-sub">All records</div>
+    </div>
+    <div class="admin-kpi kpi-paid">
+      <div class="admin-kpi-icon"><i class="fa-solid fa-file-circle-check"></i></div>
+      <div class="admin-kpi-label">Paid</div>
+      <div class="admin-kpi-value"><%= stats.paidInvoices %></div>
+      <div class="admin-kpi-sub">Settled invoices</div>
+    </div>
+    <div class="admin-kpi kpi-overdue">
+      <div class="admin-kpi-icon"><i class="fa-solid fa-triangle-exclamation"></i></div>
+      <div class="admin-kpi-label">Overdue</div>
+      <div class="admin-kpi-value"><%= stats.overdueInvoices %></div>
+      <div class="admin-kpi-sub">SGD <%= stats.outstandingAmount.toFixed(2) %> outstanding</div>
+    </div>
+  </div>
+  <% } %>
 
   <div class="dashboard-cards">
     <div class="col">
@@ -231,16 +322,14 @@ body {
       </a>
     </div>
 
-    
-
     <div class="col">
       <a href="/register" class="card-link">
         <div class="card h-100 text-center shadow-sm">
           <div class="card-body">
             <div class="card-icon" aria-hidden="true"><i class="fa-solid fa-user-plus"></i></div>
             <div>
-              <h5 class="card-title">Register User</h5>
-              <p class="card-text">Create a new user account or send an invite.</p>
+              <h5 class="card-title">Open Registration Page</h5>
+              <p class="card-text">New accounts are created as Staff by default. Assign Finance, HR, or Admin roles afterward from Manage Users.</p>
             </div>
           </div>
         </div>
