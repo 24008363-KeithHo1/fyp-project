@@ -1,6 +1,18 @@
 const AuditLog = require('../models/AuditLog');
 
 /**
+ * AUDIT LOGGING POLICY:
+ * This system logs mutating actions (create, update, send, login, register,
+ * password reset, MFA changes) and first-view events (e.g. an invoice's
+ * first tokenized view). It intentionally does NOT log every read/list/GET
+ * request (e.g. viewing the invoice list, exporting a PDF/Excel copy),
+ * since those are high-frequency, low-risk operations and logging every
+ * one would add noise without a corresponding security or compliance
+ * benefit. If this project were extended for a real deployment, read-access
+ * logging could be added selectively (e.g. only for sensitive entities).
+ */
+
+/**
  * Log an audit event
  * @param {Object} options - Audit log options
  * @param {number} options.userId - User ID performing the action

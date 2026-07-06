@@ -185,8 +185,7 @@ exports.create = async (req, res) => {
           );
         }
         await tx.commit();
-        await logAction(req, 'create', 'Invoice', inv.id, { number: inv.number, customer_name, amount: parsedAmount, currency, itemCount: normalizedItems ? normalizedItems.length : 0 });
-        lastError = null;
+        await logAction(req, 'create', 'Invoice', inv.id, { number: inv.number, customer_name, amount: round2(parsedAmount), currency, itemCount: normalizedItems ? normalizedItems.length : 0 });
         break; // success
       } catch (e) {
         await tx.rollback();

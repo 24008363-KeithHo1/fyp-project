@@ -132,6 +132,11 @@ exports.mfaSetup = async (req, res) => {
     if (!user) return res.status(401).json({ error: 'Unauthenticated' });
     const { ip, userAgent } = getRequestMetadata(req);
     const secret = speakeasy.generateSecret({ name: `FYP (${user.email})` });
+    // KNOWN LIMITATION: calling this endpoint again before mfaEnable
+    // silently overwrites the previous secret, invalidating any
+    // already-scanned QR code. Acceptable for current scope since the
+    // user simply re-scans the new QR; a production version should
+    // either warn on overwrite or store pending/active secrets separately.
     // store secret temporarily on user record (not enabling until verify)
     user.mfaSecret = secret.base32;
     await user.save();
