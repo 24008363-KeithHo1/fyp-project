@@ -46,17 +46,40 @@ exports.editUserView = async (req, res) => {
   }
 };
 
+const VALID_ROLES = ['Admin', 'Finance', 'HR', 'Staff'];
+
 exports.updateUser = async (req, res) => {
   try {
     const { role, isActive } = req.body;
-    await User.update({ role, isActive: isActive === 'on' }, { where: { id: req.params.id } });
+    const targetId = parseInt(req.params.id, 10);
+    const newIsActive = isActive === 'on';
+
+    // Validate role against a whitelist instead of letting an invalid
+    // ENUM value fail at the DB layer with a generic 500.
+    if (role && !VALID_ROLES.includes(role)) {
+      return res.status(400).send(`Invalid role: ${role}`);
+    }
+
+    // SECURITY: prevent an Admin from demoting or deactivating their own
+    // account, which would otherwise lock them out with no recovery path.
+    const isSelf = req.user && req.user.id === targetId;
+    if (isSelf) {
+      if (role && role !== 'Admin') {
+        return res.status(400).send('You cannot change your own role away from Admin.');
+      }
+      if (!newIsActive) {
+        return res.status(400).send('You cannot deactivate your own account.');
+      }
+    }
+
+    await User.update({ role, isActive: newIsActive }, { where: { id: targetId } });
     try {
       await AuditLog.create({
         userId: req.user && req.user.id ? req.user.id : null,
         action: 'update_user',
         entity: 'User',
-        entityId: parseInt(req.params.id, 10),
-        meta: { role, isActive: isActive === 'on' }
+        entityId: targetId,
+        meta: { role, isActive: newIsActive }
       });
     } catch (logErr) {
       console.error('Audit log failed:', logErr);

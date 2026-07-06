@@ -7,6 +7,21 @@ const { logAction } = require('../utils/audit');
 const crypto = require('crypto');
 const ExcelJS = require('exceljs');
 
+/**
+ * Constant-time string comparison to avoid leaking timing information
+ * about how many leading characters of a secret token match. Falls back
+ * to false on any length mismatch (timingSafeEqual throws if buffer
+ * lengths differ, so we check that first rather than letting it throw).
+ */
+function safeEqual(a, b) {
+  if (typeof a !== 'string' || typeof b !== 'string') return false;
+  const bufA = Buffer.from(a);
+  const bufB = Buffer.from(b);
+  if (bufA.length !== bufB.length) return false;
+  return crypto.timingSafeEqual(bufA, bufB);
+}
+
+
 function round2(value) {
   return Math.round((Number(value) + Number.EPSILON) * 100) / 100;
 }
@@ -319,7 +334,7 @@ exports.viewPage = async (req, res) => {
   if (!inv) return res.status(404).send('Invoice not found');
   const token = req.query.token;
   const expectedToken = inv.data && inv.data.view_token;
-  if (!expectedToken || !token || token !== expectedToken) {
+  if (!expectedToken || !token || !safeEqual(token, expectedToken)) {
     return res.status(403).send('Invalid or missing view token');
   }
   await applyOverdueStatus(inv);
