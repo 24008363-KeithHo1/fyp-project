@@ -6,7 +6,7 @@ router.post('/register', auth.register);
 router.post('/login', auth.login);
 router.get('/me', require('../middlewares/auth'), auth.me);
 router.post('/profile', require('../middlewares/auth'), auth.profileUploadMiddleware, auth.updateProfile);
-router.post('/request-reset', auth.requestPasswordReset);
+router.post('/request-reset', auth.passwordResetLimiter, auth.requestPasswordReset);
 router.post('/reset', auth.resetPassword);
 router.post('/mfa/verify', auth.mfaVerify);
 router.post('/mfa/setup', require('../middlewares/auth'), auth.mfaSetup);

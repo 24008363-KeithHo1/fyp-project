@@ -9,6 +9,18 @@ const fs = require('fs');
 const { Op } = require('sequelize');
 const { jwtSecret, jwtExpiry } = require('../config/config');
 const User = require('../models/User');
+const rateLimit = require('express-rate-limit');
+
+// Throttle password reset requests to prevent someone from spamming a
+// victim's inbox, or brute-force probing which emails are registered.
+// 3 requests per 15 minutes per IP.
+exports.passwordResetLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 3,
+  message: { error: 'Too many password reset requests. Please try again later.' },
+  standardHeaders: true,
+  legacyHeaders: false
+});
 
 const PROFILE_UPLOAD_DIR = path.join(__dirname, '..', 'public', 'uploads', 'profiles');
 if (!fs.existsSync(PROFILE_UPLOAD_DIR)) fs.mkdirSync(PROFILE_UPLOAD_DIR, { recursive: true });

@@ -1,11 +1,6 @@
 const User = require('../models/User');
 const AuditLog = require('../models/AuditLog');
 
-exports.ensureAdmin = (req, res, next) => {
-  if (!req.user || req.user.role !== 'Admin') return res.status(403).send('Forbidden');
-  next();
-};
-
 exports.listUsers = async (req, res) => {
   try {
     const users = await User.findAll({ order: [['id', 'ASC']] });
