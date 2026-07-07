@@ -14,7 +14,8 @@
     <div id="perform" style="display:none;">
       <p class="text-muted">Use the link from your email to set a new password.</p>
       <form id="resetForm">
-        <label>New password <input type="password" id="newPass" required></label>
+        <label>New password <input type="password" id="newPass" minlength="8" required></label>
+        <p class="text-muted" style="font-size: .85rem;">Must be at least 8 characters.</p>
         <button>Reset password</button>
       </form>
     </div>

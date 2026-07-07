@@ -7,8 +7,8 @@
     <form id="register">
       <label>Email <input type="email" id="email" value="<%= email %>" required></label>
       <label>Name <input id="name"></label>
-      <label>Password <input type="password" id="password" required></label>
-      <label>Role <select id="role"><option>Staff</option><option>Finance</option><option>HR</option><option>Admin</option></select></label>
+      <label>Password <input type="password" id="password" minlength="8" required></label>
+      <p class="text-muted" style="font-size: .85rem;">Must be at least 8 characters.</p>
       <button>Create account</button>
     </form>
   </div>
@@ -17,8 +17,7 @@
 <script>
 document.getElementById('register').addEventListener('submit', async e=>{
   e.preventDefault();
-  const body = { name: document.getElementById('name').value, email: document.getElementById('email').value, password: document.getElementById('password').value, role: document.getElementById('role').value };
-
+  const body = { name: document.getElementById('name').value, email: document.getElementById('email').value, password: document.getElementById('password').value };
   const res = await fetch('/api/auth/register',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(body)});
   const j = await res.json();
   if (j.id) {

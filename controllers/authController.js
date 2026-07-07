@@ -22,6 +22,20 @@ exports.passwordResetLimiter = rateLimit({
   legacyHeaders: false
 });
 
+const MIN_PASSWORD_LENGTH = 8;
+
+/**
+ * Shared minimum password check used by both register() and
+ * resetPassword(), since neither previously validated password strength
+ * at all — bcrypt.hash() will happily hash an empty string just as
+ * readily as a strong password. Kept intentionally simple (length only)
+ * rather than adding complex composition rules that tend to encourage
+ * predictable substitutions (e.g. "Password1!") without much real gain.
+ */
+function isPasswordTooWeak(password) {
+  return typeof password !== 'string' || password.length < MIN_PASSWORD_LENGTH;
+}
+
 const PROFILE_UPLOAD_DIR = path.join(__dirname, '..', 'public', 'uploads', 'profiles');
 if (!fs.existsSync(PROFILE_UPLOAD_DIR)) fs.mkdirSync(PROFILE_UPLOAD_DIR, { recursive: true });
 
@@ -56,6 +70,9 @@ const APP_URL = process.env.APP_URL || `http://localhost:${process.env.PORT||300
 exports.register = async (req, res) => {
   try {
     const { name, email, password } = req.body;
+    if (isPasswordTooWeak(password)) {
+      return res.status(400).json({ error: `Password must be at least ${MIN_PASSWORD_LENGTH} characters.` });
+    }
     // SECURITY: role is intentionally NOT read from req.body here.
     // Public self-registration must never be able to set an elevated role
     // (e.g. "Admin" or "Finance"). All new self-registered accounts are
@@ -227,6 +244,9 @@ exports.updateProfile = async (req, res) => {
 exports.resetPassword = async (req, res) => {
   try {
     const { token, password } = req.body;
+    if (isPasswordTooWeak(password)) {
+      return res.status(400).json({ error: `Password must be at least ${MIN_PASSWORD_LENGTH} characters.` });
+    }
     const { ip, userAgent } = getRequestMetadata(req);
     const pr = await PasswordResetToken.findOne({ where: { token } });
     if (!pr || pr.used || (pr.expiresAt && new Date() > pr.expiresAt)) return res.status(400).json({ error: 'Invalid or expired token' });
