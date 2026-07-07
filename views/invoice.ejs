@@ -741,7 +741,7 @@
             ${i.status !== 'Paid' ? `<button class="invoice-action-btn invoice-action-btn-warning" onclick="payByPayPal(${i.id})"><i class="fa-brands fa-paypal"></i> PayPal</button>` : ''}
             ${i.status !== 'Paid' ? `<button class="invoice-action-btn invoice-action-btn-dark" onclick="showNETS(${i.id})"><i class="fa-solid fa-qrcode"></i> NETS</button>` : ''}
             ${i.status !== 'Paid' ? `<button class="invoice-action-btn invoice-action-btn-info" onclick="showBankTransfer(${i.id})"><i class="fa-solid fa-building-columns"></i> Bank</button>` : ''}
-            <button class="invoice-action-btn invoice-action-btn-primary" onclick="sendInvoice(${i.id}, '${(i.data && i.data.email) || ''}')"><i class="fa-solid fa-paper-plane"></i> Send</button>
+            <button class="invoice-action-btn invoice-action-btn-primary" onclick="sendInvoice(${i.id}, '${escapeHtml((i.data && i.data.email) || '').replace(/'/g, "\\'")}')"><i class="fa-solid fa-paper-plane"></i> Send</button>
           </div>
           <div id="paypal-buttons-${i.id}" class="mt-2"></div>
           <div id="nets-qr-${i.id}" class="mt-2"></div>

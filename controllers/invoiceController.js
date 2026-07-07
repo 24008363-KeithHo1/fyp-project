@@ -49,6 +49,21 @@ function round2(value) {
   return Math.round((Number(value) + Number.EPSILON) * 100) / 100;
 }
 
+/**
+ * Escapes HTML special characters before interpolating user-supplied text
+ * (e.g. customer_name, which can originate from bulk upload) into an
+ * outgoing HTML email body, preventing stored HTML/script injection into
+ * whatever client renders the email.
+ */
+function escapeHtmlForEmail(str) {
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
 function normalizeLineItems(rawItems) {
   if (!Array.isArray(rawItems) || !rawItems.length) {
     return { errors: [{ field: 'items', message: 'At least one line item is required.' }] };
@@ -427,6 +442,10 @@ exports.send = async (req, res) => {
     if (!inv) return res.status(404).json({ error: 'Not found' });
     const to = (req.body && req.body.email) || (inv.data && inv.data.email);
     if (!to) return res.status(400).json({ error: 'No recipient email provided' });
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(String(to).trim())) {
+      return res.status(400).json({ error: 'Recipient email address is invalid.' });
+    }
     let token = inv.data && inv.data.view_token;
     if (!token) {
       token = crypto.randomBytes(16).toString('hex');
@@ -435,7 +454,12 @@ exports.send = async (req, res) => {
     }
     const appUrl = process.env.APP_URL || `${req.protocol}://${req.get('host')}`;
     const link = `${appUrl}/invoices/${inv.id}/view?token=${token}`;
-    const html = `<p>Invoice <strong>${inv.number}</strong> for ${inv.customer_name} — Amount: ${inv.currency || 'SGD'} ${inv.amount}</p><p>View online: <a href="${link}">${link}</a></p>`;
+    // customer_name is escaped before going into this HTML email body since
+    // it can originate from user-supplied input (e.g. bulk upload), and an
+    // unescaped value here would let stored HTML/script run in whatever
+    // mail client renders it.
+    const safeCustomerName = escapeHtmlForEmail(inv.customer_name || '');
+    const html = `<p>Invoice <strong>${inv.number}</strong> for ${safeCustomerName} — Amount: ${inv.currency || 'SGD'} ${inv.amount}</p><p>View online: <a href="${link}">${link}</a></p>`;
     await sendEmail(to, `Invoice ${inv.number}`, html);
     if (inv.status !== 'Sent') await inv.update({ status: 'Sent' });
     await logAction(req, 'send', 'Invoice', inv.id, { number: inv.number, recipient: to, amount: inv.amount });
