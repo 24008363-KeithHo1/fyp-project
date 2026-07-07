@@ -174,8 +174,8 @@ exports.listAuditLogs = async (req, res) => {
     res.render('admin/audit_logs', { 
       logs: plain, 
       title: 'Audit Logs',
-      filters: { action, entity, userId, startDate, endDate }
-    });
+      filters: { action, entity, userId, startDate, endDate, limit: Math.min(parseInt(limit, 10) || 200, 1000), offset: parseInt(offset, 10) || 0 }
+    });    
   } catch (err) {
     console.error(err);
     res.status(500).send('Server error');
