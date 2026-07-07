@@ -52,8 +52,8 @@
         <div id="bankTransfer" class="bank-transfer-box mt-3 d-none"></div>
       <% } %>
       <div class="mt-3">
-        <a class="btn btn-primary" href="/api/invoices/<%= invoice.id %>/pdf" target="_blank">Download PDF</a>
-        <a class="btn btn-outline-secondary" href="/api/invoices/<%= invoice.id %>/excel" target="_blank">Download CSV</a>
+        <a class="btn btn-primary" href="/api/invoices/<%= invoice.id %>/pdf?token=<%= encodeURIComponent((invoice.data && invoice.data.view_token) || '') %>" target="_blank">Download PDF</a>
+        <a class="btn btn-outline-secondary" href="/api/invoices/<%= invoice.id %>/excel?token=<%= encodeURIComponent((invoice.data && invoice.data.view_token) || '') %>" target="_blank">Download CSV</a>
       </div>
     </div>
   </div>

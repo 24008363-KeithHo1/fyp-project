@@ -508,6 +508,18 @@
             <input id="customer" class="form-control" placeholder="Customer name" required>
           </div>
           <div class="mb-3 invoice-field">
+            <label for="currency" class="form-label">Currency</label>
+            <select id="currency" class="form-control">
+              <option value="SGD" selected>SGD — Singapore Dollar</option>
+              <option value="USD">USD — US Dollar</option>
+              <option value="MYR">MYR — Malaysian Ringgit</option>
+              <option value="EUR">EUR — Euro</option>
+              <option value="GBP">GBP — British Pound</option>
+              <option value="AUD">AUD — Australian Dollar</option>
+            </select>
+            <small class="text-muted">Card, PayPal, and NETS payment methods currently assume SGD regardless of this setting.</small>
+          </div>
+          <div class="mb-3 invoice-field">
             <label class="form-label">Line items</label>
             <div class="invoice-table-wrap">
               <table class="invoice-table" id="itemTable">
@@ -530,6 +542,7 @@
           <div class="mb-3 invoice-field">
             <label for="due" class="form-label">Due date</label>
             <input type="date" id="due" class="form-control">
+            <small class="text-muted" id="dueDateHint">A due date in the past will mark the invoice Overdue immediately.</small>
           </div>
           <div class="invoice-summary">
             <div class="invoice-summary-row"><span>Subtotal</span><strong id="subtotal">0.00</strong></div>
@@ -758,11 +771,20 @@
       alert('Add at least one line item');
       return;
     }
+    const dueValue = document.getElementById('due').value;
+    if (dueValue) {
+      const dueDate = new Date(dueValue);
+      const today = new Date(); today.setHours(0, 0, 0, 0);
+      if (dueDate < today) {
+        const proceed = confirm('This due date is in the past — the invoice will show as Overdue immediately. Continue anyway?');
+        if (!proceed) return;
+      }
+    }
     const payload = {
       customer_name: document.getElementById('customer').value,
       amount: totals.total,
       due_date: document.getElementById('due').value,
-      currency: 'SGD',
+      currency: document.getElementById('currency').value,
       items: totals.items.map((item) => ({
         description: item.description,
         qty: item.qty,
