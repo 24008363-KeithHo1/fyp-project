@@ -487,9 +487,26 @@
           <a href="/reset" class="forgot-link">Forgot password?</a>
         </div>
 
+        <!-- MFA code step (hidden until required) -->
+        <div class="field-group" id="mfa-group" style="display:none;">
+          <label class="field-label" for="mfa-code">Authentication code</label>
+          <div class="field-wrap">
+            <i class="fa fa-shield-halved field-icon"></i>
+            <input
+              type="text"
+              id="mfa-code"
+              class="field-input"
+              placeholder="6-digit code from your authenticator app"
+              inputmode="numeric"
+              autocomplete="one-time-code"
+              maxlength="6"
+            >
+          </div>
+        </div>
+
         <!-- Submit -->
         <button type="submit" class="btn-login" id="login-btn">
-          <span class="btn-text">Sign In &nbsp;<i class="fa fa-arrow-right"></i></span>
+          <span class="btn-text" id="login-btn-text">Sign In &nbsp;<i class="fa fa-arrow-right"></i></span>
           <span class="btn-spinner"></span>
         </button>
 
@@ -518,19 +535,72 @@
   });
 
   /* ── login form ── */
+  let pendingMfaToken = null; // set once the server tells us MFA is required
+
+  function showError(message) {
+    const alert = document.getElementById('login-alert');
+    alert.textContent = message;
+    alert.style.display = 'block';
+    alert.style.animation = 'none';
+    alert.offsetHeight; // reflow to restart the shake animation
+    alert.style.animation = '';
+  }
+
+  async function completeLogin(token) {
+    localStorage.setItem('token', token);
+    document.cookie = 'token=' + encodeURIComponent(token) + '; path=/';
+
+    // The MFA-verify response only returns { token }, so fetch the user's
+    // role from /me rather than trying to decode it a second way here.
+    let role = 'Staff';
+    try {
+      const meRes = await fetch('/api/auth/me', { headers: { authorization: 'Bearer ' + token } });
+      const me = await meRes.json();
+      role = (me.user && me.user.role) || role;
+    } catch (e) {
+      // fall back to Staff dashboard if /me fails for any reason
+    }
+
+    if (role === 'Admin')   return (location = '/admin/dashboard');
+    if (role === 'Finance') return (location = '/finance/dashboard');
+    if (role === 'HR')      return (location = '/hr/dashboard');
+    return (location = '/staff/dashboard');
+  }
+
   document.getElementById('login').addEventListener('submit', async function (e) {
     e.preventDefault();
-    const btn   = document.getElementById('login-btn');
+    const btn = document.getElementById('login-btn');
+    const btnText = document.getElementById('login-btn-text');
     const alert = document.getElementById('login-alert');
 
-    // Reset alert
     alert.style.display = 'none';
-
-    // Loading state
     btn.classList.add('loading');
     btn.disabled = true;
 
     try {
+      if (pendingMfaToken) {
+        // Step 2: we already have a valid mfaToken, so this submission is
+        // the 6-digit authenticator code.
+        const code = document.getElementById('mfa-code').value.trim();
+        if (!code) {
+          showError('Please enter your 6-digit authentication code.');
+          return;
+        }
+        const res = await fetch('/api/auth/mfa/verify', {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({ mfaToken: pendingMfaToken, code })
+        });
+        const j = await res.json();
+        if (j.token) {
+          await completeLogin(j.token);
+        } else {
+          showError(j.error || 'Invalid authentication code. Please try again.');
+        }
+        return;
+      }
+
+      // Step 1: normal email/password submission
       const res = await fetch('/api/auth/login', {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
@@ -542,28 +612,24 @@
 
       const j = await res.json();
 
+      if (j.mfaRequired && j.mfaToken) {
+        // Switch the form into "enter your code" mode.
+        pendingMfaToken = j.mfaToken;
+        document.getElementById('mfa-group').style.display = 'block';
+        document.getElementById('email').disabled = true;
+        document.getElementById('password').disabled = true;
+        btnText.innerHTML = 'Verify code &nbsp;<i class="fa fa-arrow-right"></i>';
+        document.getElementById('mfa-code').focus();
+        return;
+      }
+
       if (j.token) {
-        localStorage.setItem('token', j.token);
-        document.cookie = 'token=' + encodeURIComponent(j.token) + '; path=/';
-        const role = (j.user && j.user.role)
-          || (JSON.parse(atob(j.token.split('.')[1])).role)
-          || 'Staff';
-        if (role === 'Admin')   return (location = '/admin/dashboard');
-        if (role === 'Finance') return (location = '/finance/dashboard');
-        if (role === 'HR')      return (location = '/hr/dashboard');
-        return (location = '/staff/dashboard');
+        await completeLogin(j.token);
       } else {
-        // Show error
-        alert.textContent = j.error || 'Login failed. Please check your credentials.';
-        alert.style.display = 'block';
-        // Re-trigger animation
-        alert.style.animation = 'none';
-        alert.offsetHeight; // reflow
-        alert.style.animation = '';
+        showError(j.error || 'Login failed. Please check your credentials.');
       }
     } catch (err) {
-      document.getElementById('login-alert').textContent = 'Network error. Please try again.';
-      document.getElementById('login-alert').style.display = 'block';
+      showError('Network error. Please try again.');
     } finally {
       btn.classList.remove('loading');
       btn.disabled = false;
