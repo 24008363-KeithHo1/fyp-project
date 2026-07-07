@@ -541,6 +541,20 @@
             <button class="invoice-btn invoice-btn-primary" type="submit"><i class="fa-solid fa-circle-plus"></i> Create Invoice</button>
           </div>
         </form>
+
+        <hr class="my-4">
+
+        <div class="invoice-panel-title" style="font-size: .95rem;">
+          Bulk Upload
+          <span class="invoice-panel-subtitle">Import multiple invoices from an Excel/CSV file</span>
+        </div>
+        <p class="text-muted small mb-3">
+          <strong>Format:</strong> Column B: customer_name | Column C: email (optional) | Column D: amount | Column E: currency (optional) | Column F: due_date (optional)
+        </p>
+        <form id="bulkUpload" enctype="multipart/form-data" class="d-flex gap-2 align-items-center">
+          <input type="file" id="bulkFile" accept=".xlsx,.xls,.csv" required class="form-control form-control-sm">
+          <button type="submit" class="invoice-btn invoice-btn-primary"><i class="fa-solid fa-upload"></i> Upload</button>
+        </form>
       </div>
 
       <div class="invoice-panel">
@@ -776,6 +790,36 @@
     }
   });
   load();
+
+  document.getElementById('bulkUpload').addEventListener('submit', async e => {
+    e.preventDefault();
+    const file = document.getElementById('bulkFile').files[0];
+    if (!file) {
+      alert('Please select a file');
+      return;
+    }
+    const fd = new FormData();
+    fd.append('file', file);
+    try {
+      const res = await fetch('/api/invoices/bulk-upload', { method: 'POST', headers: { authorization: 'Bearer ' + token }, body: fd });
+      const data = await res.json();
+
+      if (!res.ok) {
+        alert(`Error: ${data.error}\n${data.details ? data.details.join('\n') : ''}`);
+        return;
+      }
+
+      let msg = `✓ Imported ${data.imported || 0} invoice(s)`;
+      if (data.failed) msg += `, ${data.failed} failed`;
+      if (data.warnings) msg += `\n⚠ ${data.warnings}`;
+      if (data.errorDetails && data.errorDetails.length) msg += `\n${data.errorDetails.join('\n')}`;
+      alert(msg);
+      document.getElementById('bulkFile').value = '';
+      load();
+    } catch (err) {
+      alert('Upload failed: ' + err.message);
+    }
+  });
 
   async function sendInvoice(id, defaultEmail){
     const email = prompt('Recipient email', defaultEmail || '');

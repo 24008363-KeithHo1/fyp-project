@@ -6,6 +6,29 @@ const { sendEmail } = require('../utils/email');
 const { logAction } = require('../utils/audit');
 const crypto = require('crypto');
 const ExcelJS = require('exceljs');
+const multer = require('multer');
+const path = require('path');
+const { parseInvoiceExcel } = require('../utils/excel');
+
+// Reuses the same uploads/ folder as payroll bulk upload for consistency.
+const bulkUploadStorage = multer.diskStorage({
+  destination: (req, file, cb) => cb(null, 'uploads/'),
+  filename: (req, file, cb) => cb(null, `${Date.now()}${path.extname(file.originalname)}`)
+});
+
+const bulkUpload = multer({
+  storage: bulkUploadStorage,
+  fileFilter: (req, file, cb) => {
+    const ext = path.extname(file.originalname).toLowerCase();
+    if (ext === '.xlsx' || ext === '.xls' || ext === '.csv') {
+      cb(null, true);
+    } else {
+      cb(new Error('Only Excel files (.xlsx, .xls, .csv) are allowed'));
+    }
+  }
+});
+
+exports.bulkUploadMiddleware = bulkUpload.single('file');
 
 /**
  * Constant-time string comparison to avoid leaking timing information
@@ -109,6 +132,43 @@ async function applyOverdueStatus(invoice) {
   return invoice;
 }
 
+/**
+ * Creates one invoice, retrying on invoice-number collisions. Shared by
+ * both the single-invoice create() endpoint and bulkUpload(), so the
+ * numbering/race-safety logic only lives in one place.
+ */
+async function createInvoiceWithRetry({ customer_name, amount, currency, due_date, data }) {
+  const now = new Date();
+  const prefix = `${now.getFullYear()}${String(now.getMonth()+1).padStart(2,'0')}`;
+  const MAX_ATTEMPTS = 3;
+  let inv;
+  let lastError;
+
+  for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
+    const count = await Invoice.count();
+    const seq = count + 1 + attempt;
+    const number = `INV-${prefix}-${String(seq).padStart(4,'0')}`;
+
+    try {
+      inv = await Invoice.create({ number, customer_name, amount: round2(amount), currency, due_date, data });
+      lastError = null;
+      break;
+    } catch (e) {
+      lastError = e;
+      const isUniqueViolation = e.name === 'SequelizeUniqueConstraintError';
+      if (!isUniqueViolation) throw e;
+      // otherwise loop and try again with a fresh number
+    }
+  }
+
+  if (lastError) {
+    const err = new Error('Could not generate a unique invoice number, please try again.');
+    err.code = 'INVOICE_NUMBER_EXHAUSTED';
+    throw err;
+  }
+  return inv;
+}
+
 exports.create = async (req, res) => {
   try {
     const { customer_name, amount, due_date, items } = req.body;
@@ -203,6 +263,63 @@ exports.create = async (req, res) => {
 
     res.json(inv);
   } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+};
+
+exports.bulkUpload = async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ error: 'No file uploaded' });
+    }
+
+    const { rows, errors } = await parseInvoiceExcel(req.file.path);
+
+    if (errors.length > 0 && rows.length === 0) {
+      return res.status(400).json({ error: 'Validation errors - no valid rows to import', details: errors });
+    }
+
+    const created = [];
+    const failed = [];
+
+    // Sequential, not Promise.all: each row calls createInvoiceWithRetry,
+    // which reads Invoice.count() to pick the next invoice number. Running
+    // these concurrently would let two rows read the same count and race
+    // for the same number far more often than the retry logic is built to
+    // absorb, so we trade some speed for correctness here.
+    for (const r of rows) {
+      try {
+        const inv = await createInvoiceWithRetry({
+          customer_name: r.customer_name,
+          amount: r.amount,
+          currency: r.currency,
+          due_date: r.due_date,
+          data: { line_items: null, summary: null, currency: r.currency, email: r.email || undefined }
+        });
+        created.push(inv);
+      } catch (e) {
+        failed.push({ customer_name: r.customer_name, error: e.message });
+      }
+    }
+
+    const response = {
+      imported: created.length,
+      failed: failed.length,
+      total: rows.length
+    };
+    if (errors.length > 0) {
+      response.warnings = `${errors.length} rows had validation issues and were skipped`;
+      response.errorDetails = errors;
+    }
+    if (failed.length > 0) {
+      response.failedDetails = failed;
+    }
+
+    await logAction(req, 'bulk_upload', 'Invoice', null, { imported: created.length, failed: failed.length, filename: req.file.originalname, errors: errors.length });
+
+    res.json(response);
+  } catch (err) {
+    console.error('Invoice bulk upload error:', err);
     res.status(400).json({ error: err.message });
   }
 };

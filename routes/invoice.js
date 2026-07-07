@@ -5,6 +5,7 @@ const checkRole = require('../middlewares/roles');
 const ctrl = require('../controllers/invoiceController');
 
 router.post('/', auth, checkRole(['Admin','Finance']), ctrl.create);
+router.post('/bulk-upload', auth, checkRole(['Admin','Finance']), ctrl.bulkUploadMiddleware, ctrl.bulkUpload);
 router.get('/', auth, checkRole(['Admin','Finance','HR']), ctrl.list);
 // Same roles as the list endpoint: any role that can browse invoices can
 // also open, PDF-export, or Excel-export an individual one. Staff have no
