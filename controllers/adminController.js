@@ -206,19 +206,18 @@ exports.listAuditLogs = async (req, res) => {
     
     const plain = logs.map(l => l.get ? l.get({ plain: true }) : l);
     
-    // Enrich with user details
+    // Enrich with user details. Batched into a single query instead of one
+    // findByPk per log row — with up to 1000 rows per page, doing this in
+    // a loop meant up to 1000 sequential DB round-trips just to render one
+    // page of the audit log.
+    const userIds = [...new Set(plain.map(l => l.userId).filter(Boolean))];
+    const users = userIds.length ? await User.findAll({ where: { id: userIds } }) : [];
+    const userMap = new Map(users.map(u => [u.id, { id: u.id, name: u.name, email: u.email }]));
     for (const log of plain) {
-      if (log.userId) {
-        try {
-          const user = await User.findByPk(log.userId);
-          log.user = user ? { id: user.id, name: user.name, email: user.email } : null;
-        } catch(e) {
-          log.user = null;
-        }
-      }
+      log.user = log.userId ? (userMap.get(log.userId) || null) : null;
     }
     
-    res.render('admin/audit_logs', { 
+    res.render('admin/audit_logs', {
       logs: plain, 
       title: 'Audit Logs',
       filters: { action, entity, userId, startDate, endDate, limit: Math.min(parseInt(limit, 10) || 200, 1000), offset: parseInt(offset, 10) || 0 }
@@ -253,16 +252,12 @@ exports.listAuditLogsJson = async (req, res) => {
     
     const plain = rows.map(l => l.get ? l.get({ plain: true }) : l);
     
-    // Enrich with user details
+    // Enrich with user details (batched — see listAuditLogs for why).
+    const userIds = [...new Set(plain.map(l => l.userId).filter(Boolean))];
+    const users = userIds.length ? await User.findAll({ where: { id: userIds } }) : [];
+    const userMap = new Map(users.map(u => [u.id, { id: u.id, name: u.name, email: u.email }]));
     for (const log of plain) {
-      if (log.userId) {
-        try {
-          const user = await User.findByPk(log.userId);
-          log.user = user ? { id: user.id, name: user.name, email: user.email } : null;
-        } catch(e) {
-          log.user = null;
-        }
-      }
+      log.user = log.userId ? (userMap.get(log.userId) || null) : null;
     }
     
     res.json({ total: count, logs: plain, limit, offset });
