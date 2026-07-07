@@ -93,6 +93,10 @@ exports.login = async (req, res) => {
       await logAudit({ userId: user.id, action: 'login_failed', entity: 'User', entityId: user.id, meta: { reason: 'invalid_password' }, ip, userAgent });
       return res.status(401).json({ error: 'Invalid credentials' });
     }
+    if (!user.isActive) {
+      await logAudit({ userId: user.id, action: 'login_failed', entity: 'User', entityId: user.id, meta: { reason: 'account_deactivated' }, ip, userAgent });
+      return res.status(403).json({ error: 'This account has been deactivated. Please contact an administrator.' });
+    }
     // if MFA enabled, return short-lived mfa token
     if (user.mfaEnabled) {
       await logAudit({ userId: user.id, action: 'login_mfa_required', entity: 'User', entityId: user.id, meta: { email }, ip, userAgent });
@@ -115,6 +119,10 @@ exports.mfaVerify = async (req, res) => {
     if (!payload || !payload.id || !payload.mfa) return res.status(400).json({ error: 'Invalid MFA token' });
     const user = await User.findByPk(payload.id);
     if (!user) return res.status(404).json({ error: 'User not found' });
+    if (!user.isActive) {
+      await logAudit({ userId: user.id, action: 'mfa_verify_failed', entity: 'User', entityId: user.id, meta: { reason: 'account_deactivated' }, ip, userAgent });
+      return res.status(403).json({ error: 'This account has been deactivated. Please contact an administrator.' });
+    }
     const verified = speakeasy.totp.verify({ secret: user.mfaSecret, encoding: 'base32', token: code, window: 1 });
     if (!verified) {
       await logAudit({ userId: user.id, action: 'mfa_verify_failed', entity: 'User', entityId: user.id, meta: { reason: 'invalid_code' }, ip, userAgent });

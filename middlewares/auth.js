@@ -16,6 +16,10 @@ module.exports = async function (req, res, next) {
     const payload = jwt.verify(token, jwtSecret);
     const user = await User.findByPk(payload.id);  // Remove include: ['role'] since role is now direct field
     if (!user) return res.status(401).json({ error: 'Invalid token user' });
+    // Re-checked on every request (not just at login) so that an admin
+    // deactivating a user takes effect immediately, instead of waiting
+    // for that user's existing JWT to expire.
+    if (!user.isActive) return res.status(403).json({ error: 'This account has been deactivated. Please contact an administrator.' });
     req.user = user;
     next();
   } catch (err) {
