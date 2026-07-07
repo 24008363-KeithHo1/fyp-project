@@ -39,7 +39,17 @@
           else logoutBtn.classList.add('d-none');
         }
         updateAuthUI();
-        logoutBtn?.addEventListener('click', ()=>{ localStorage.removeItem('token'); updateAuthUI(); location = '/login'; });
+        logoutBtn?.addEventListener('click', ()=>{
+          localStorage.removeItem('token');
+          // Also clear the cookie copy — middlewares/auth.js falls back to
+          // reading the token from the cookie when no Authorization header
+          // is present (e.g. plain page navigation), so clearing only
+          // localStorage left the old session usable via that cookie
+          // until it naturally expired.
+          document.cookie = 'token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT';
+          updateAuthUI();
+          location = '/login';
+        });
         window.addEventListener('storage', (e)=>{ if (e.key === 'token') updateAuthUI(); });
       })();
     </script>

@@ -11,6 +11,7 @@
     </div>
   </div>
 </nav>
-<script>
-  document.getElementById('logout')?.addEventListener('click', ()=>{ localStorage.removeItem('token'); location = '/login'; });
-</script>
+<!-- Logout button and its click handler live in partials/header.ejs,
+     which is the file that actually renders the #logout button element.
+     This file previously had a second, redundant listener attached to the
+     same id — removed to avoid maintaining the same logic in two places. -->
