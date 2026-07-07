@@ -6,6 +6,7 @@ const path = require('path');
 const requireRole = require('./middlewares/roles');
 
 const { sequelize } = require('./config/db');
+const { startPayrollAutomationScheduler } = require('./services/payrollAutomation');
 
 const app = express();
 // view engine
@@ -76,6 +77,7 @@ async function start() {
     console.log('DB connected');
     const shouldAlterSchema = process.env.DB_SYNC_ALTER === 'true';
     await sequelize.sync({ alter: shouldAlterSchema });
+    startPayrollAutomationScheduler();
     app.listen(PORT, () => {
       console.log(`Server running at http://localhost:${PORT}`);
     });

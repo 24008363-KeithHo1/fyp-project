@@ -1,0 +1,56 @@
+<%- include('../partials/header', { title: 'Automation Settings' }) %>
+<%- include('../partials/navbar') %>
+<%- include('./_admin_nav') %>
+
+<div class="container py-4">
+  <h2>Automation Settings</h2>
+
+  <% if (message) { %>
+    <div class="alert alert-success"><%= message %></div>
+  <% } %>
+
+  <form method="post" action="/admin/automation/settings" class="card p-4 mb-4">
+    <div class="mb-3">
+      <label class="form-label">Reminder lead window (days)</label>
+      <input class="form-control" name="payrollUploadReminderOffsetDays" value="<%= settings.payrollUploadReminderOffsetDays %>">
+    </div>
+
+    <div class="mb-3">
+      <label class="form-label">Payroll upload deadline</label>
+      <input class="form-control" type="date" name="payrollUploadDeadline" value="<%= settings.payrollUploadDeadline %>">
+    </div>
+
+    <div class="mb-3">
+      <label class="form-label">Finance approval deadline</label>
+      <input class="form-control" type="date" name="financeApprovalDeadline" value="<%= settings.financeApprovalDeadline %>">
+    </div>
+
+    <div class="mb-3">
+      <label class="form-label">Salary release date</label>
+      <input class="form-control" type="date" name="salaryReleaseDate" value="<%= settings.salaryReleaseDate %>">
+    </div>
+
+    <button class="btn btn-primary">Save Settings</button>
+  </form>
+
+  <form method="post" action="/admin/automation/run" class="card p-4 mb-4">
+    <h4>Run Reminder Scheduler</h4>
+    <p>Use this during your demo to trigger the same logic that would normally run automatically each morning.</p>
+    <button class="btn btn-success">Run Scheduler</button>
+  </form>
+
+  <div class="card p-4">
+    <h4>Reminder Preview</h4>
+    <% if (reminderPreview.length) { %>
+      <ul>
+        <% reminderPreview.forEach((item) => { %>
+          <li><strong><%= item.label %></strong>: <%= item.value %> (<%= item.daysUntil %> day(s) away)</li>
+        <% }) %>
+      </ul>
+    <% } else { %>
+      <p>No reminders are due in the current lead window.</p>
+    <% } %>
+  </div>
+</div>
+
+<%- include('../partials/footer') %>

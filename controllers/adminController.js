@@ -1,5 +1,11 @@
 const User = require('../models/User');
 const AuditLog = require('../models/AuditLog');
+const {
+  getAutomationSettings,
+  saveAutomationSettings,
+  runPayrollReminderAutomation,
+  evaluatePayrollReminders
+} = require('../services/payrollAutomation');
 
 exports.listUsers = async (req, res) => {
   try {
@@ -132,6 +138,47 @@ exports.dashboardView = async (req, res) => {
   } catch (err) {
     console.error(err);
     res.render('admin/dashboard', { title: 'Admin Dashboard', stats: null });
+  }
+};
+
+exports.automationPage = async (req, res) => {
+  try {
+    const settings = await getAutomationSettings();
+    const reminderPreview = evaluatePayrollReminders(settings, new Date());
+    res.render('admin/automation', {
+      title: 'Automation Settings',
+      settings,
+      reminderPreview,
+      message: req.query.message || ''
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).send('Server error');
+  }
+};
+
+exports.saveAutomationSettings = async (req, res) => {
+  try {
+    await saveAutomationSettings(req.body);
+    res.redirect('/admin/automation?message=Settings updated');
+  } catch (err) {
+    console.error(err);
+    res.status(500).send('Server error');
+  }
+};
+
+exports.triggerAutomation = async (req, res) => {
+  try {
+    const result = await runPayrollReminderAutomation({
+      currentDate: new Date(),
+      req,
+      source: 'manual'
+    });
+    const msg = encodeURIComponent(`Reminder run completed. ${result.reminders.length} reminder(s) found.`);
+    res.redirect(`/admin/automation?message=${msg}`);
+  } catch (err) {
+    console.error(err);
+    res.status(500).send('Server error');
   }
 };
 

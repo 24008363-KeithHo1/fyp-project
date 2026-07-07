@@ -2,7 +2,7 @@ const nodemailer = require('nodemailer');
 const { SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS, APP_URL, DEFAULT_FROM_EMAIL } = process.env;
 const smtpUser = (SMTP_USER || '').trim();
 const smtpPass = (SMTP_PASS || '').replace(/\s+/g, '');
-const defaultFromEmail = (DEFAULT_FROM_EMAIL || smtpUser || '').trim();
+const defaultFromEmail = (DEFAULT_FROM_EMAIL || smtpUser || 'fyp00362026@gmail.com').trim();
 
 let transporter = null;
 if (SMTP_HOST) {

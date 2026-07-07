@@ -9,6 +9,9 @@ router.use(auth);
 router.use(requireRole(['Admin']));
 
 router.get('/users', admin.listUsers);
+router.get('/automation', admin.automationPage);
+router.post('/automation/settings', admin.saveAutomationSettings);
+router.post('/automation/run', admin.triggerAutomation);
 router.get('/audit-logs', admin.listAuditLogs);
 router.get('/audit-logs-json', admin.listAuditLogsJson);
 router.get('/users/:id/edit', admin.editUserView);
