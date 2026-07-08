@@ -146,7 +146,7 @@ exports.automationPage = async (req, res) => {
     const settings = await getAutomationSettings();
     const reminderPreview = evaluatePayrollReminders(settings, new Date());
     res.render('admin/automation', {
-      title: 'Automation Settings',
+      title: 'Payroll Reminder Settings',
       settings,
       reminderPreview,
       message: req.query.message || ''

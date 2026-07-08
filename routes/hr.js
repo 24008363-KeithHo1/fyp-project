@@ -12,6 +12,10 @@ router.get('/dashboard', (req, res) => {
   res.render('hr/dashboard');
 });
 
+router.get('/automation', requireRole(['HR']), admin.automationPage);
+router.post('/automation/settings', requireRole(['HR']), admin.saveAutomationSettings);
+router.post('/automation/run', requireRole(['HR']), admin.triggerAutomation);
+
 router.get('/employees', admin.listUsersByDepartment);
 
 router.get('/requests', reqCtrl.deptInboxPage);
