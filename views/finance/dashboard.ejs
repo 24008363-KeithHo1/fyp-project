@@ -24,18 +24,19 @@ try {
   --radius: 16px; --radius-sm: 10px;
 }
 body { font-family: 'Sora', sans-serif; background: var(--g50); color: var(--ink); }
-.fd-wrap { max-width: 1280px; margin: 0 auto; padding: 2rem 1.5rem 4rem; }
+.fd-wrap { max-width: 1280px; width: 100%; margin: 0 auto; padding: 2rem 1.5rem 4rem; box-sizing: border-box; }
 #paymentSuccessAlert { border-radius: var(--radius-sm); font-size: .875rem; font-weight: 500; margin-bottom: 1.5rem; }
-.fd-header { display: flex; align-items: flex-end; justify-content: space-between; gap: 1rem; margin-bottom: 2rem; flex-wrap: wrap; }
+.fd-header { display: flex; align-items: flex-end; justify-content: space-between; gap: 1rem; margin-bottom: 2rem; flex-wrap: wrap; width: 100%; min-width: 0; }
+.fd-header-left { min-width: 0; }
+.fd-header-right { display: flex; align-items: center; gap: .75rem; flex-wrap: wrap; justify-content: flex-end; min-width: 0; }
 .fd-greeting { font-size: .78rem; font-weight: 600; letter-spacing: .1em; text-transform: uppercase; color: var(--g600); margin-bottom: .3rem; }
 .fd-title { font-size: 1.75rem; font-weight: 700; color: var(--ink); line-height: 1.2; margin: 0; }
 .fd-subtitle { font-size: .875rem; color: var(--ink3); margin: .3rem 0 0; font-weight: 400; }
-.fd-header-right { display: flex; align-items: center; gap: .75rem; }
 .fd-date { font-size: .8rem; color: var(--ink3); font-family: 'DM Mono', monospace; }
 .btn-payments { display: inline-flex; align-items: center; gap: .45rem; padding: .55rem 1.2rem; background: var(--g800); color: #fff; border-radius: 100px; font-size: .83rem; font-weight: 600; text-decoration: none; border: none; transition: background .18s,transform .15s,box-shadow .18s; box-shadow: 0 4px 14px rgba(6,78,39,.28); letter-spacing: .01em; }
 .btn-payments:hover { background: var(--g700); color: #fff; transform: translateY(-1px); box-shadow: 0 6px 20px rgba(6,78,39,.32); }
 .fd-kpis { display: grid; grid-template-columns: repeat(4,1fr); gap: 1rem; margin-bottom: 1.25rem; }
-.fd-kpi { background: var(--white); border: 1px solid var(--border); border-radius: var(--radius); padding: 1.4rem 1.5rem; display: flex; flex-direction: column; gap: .5rem; box-shadow: var(--shadow-sm); position: relative; overflow: hidden; transition: box-shadow .2s,transform .15s; }
+.fd-kpi { background: var(--white); border: 1px solid var(--border); border-radius: var(--radius); padding: 1.4rem 1.5rem; display: flex; flex-direction: column; gap: .5rem; box-shadow: var(--shadow-sm); position: relative; overflow: hidden; transition: box-shadow .2s,transform .15s; min-width: 0; width: 100%; box-sizing: border-box; }
 .fd-kpi:hover { box-shadow: var(--shadow-md); transform: translateY(-2px); }
 .fd-kpi::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px; border-radius: var(--radius) var(--radius) 0 0; }
 .fd-kpi.kpi-revenue::before { background: linear-gradient(90deg,var(--g600),var(--g400)); }
@@ -50,33 +51,35 @@ body { font-family: 'Sora', sans-serif; background: var(--g50); color: var(--ink
 .fd-kpi-label { font-size: .75rem; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--ink3); }
 .fd-kpi-value { font-size: 1.5rem; font-weight: 700; color: var(--ink); font-family: 'DM Mono', monospace; line-height: 1.1; }
 .fd-kpi-sub { font-size: .72rem; color: var(--ink3); }
-.fd-panel { background: var(--white); border: 1px solid var(--border); border-radius: var(--radius); padding: 1.5rem; box-shadow: var(--shadow-sm); }
+.fd-panel { background: var(--white); border: 1px solid var(--border); border-radius: var(--radius); padding: 1.5rem; box-shadow: var(--shadow-sm); min-width: 0; width: 100%; box-sizing: border-box; overflow: hidden; }
 .fd-panel-title { font-size: .95rem; font-weight: 700; color: var(--ink); margin: 0 0 1.25rem; display: flex; align-items: center; gap: .5rem; }
 .fd-panel-title i { width: 28px; height: 28px; background: var(--g100); color: var(--g700); border-radius: 8px; display: inline-flex; align-items: center; justify-content: center; font-size: .8rem; flex-shrink: 0; }
-.fd-row { display: grid; gap: 1rem; margin-bottom: 1.25rem; }
-.fd-row-2 { grid-template-columns: 1fr 1fr; }
-.fd-row-53 { grid-template-columns: 5fr 4fr; }
+.fd-row { display: grid; gap: 1rem; margin-bottom: 1.25rem; min-width: 0; width: 100%; }
+.fd-row-2 { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+.fd-row-53 { grid-template-columns: minmax(0, 5fr) minmax(0, 4fr); }
 .fd-spacer { margin-bottom: 1.25rem; }
 .payment-gateway-list { display: flex; flex-direction: column; gap: .75rem; }
-.payment-gateway-item { display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding: .85rem 1rem; background: var(--g50); border: 1px solid var(--border); border-radius: var(--radius-sm); }
-.gateway-left { display: flex; align-items: center; gap: .65rem; }
+.payment-gateway-item { display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding: .85rem 1rem; background: var(--g50); border: 1px solid var(--border); border-radius: var(--radius-sm); flex-wrap: wrap; }
+.gateway-left { display: flex; align-items: center; gap: .65rem; min-width: 0; }
+.gateway-name { font-size: .85rem; font-weight: 600; color: var(--ink2); overflow-wrap: anywhere; }
 .gateway-badge { width: 32px; height: 32px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: .78rem; font-weight: 700; flex-shrink: 0; font-family: 'DM Mono', monospace; }
 .gateway-stripe { background: #ede9fe; color: #5b21b6; }
 .gateway-paypal { background: #dbeafe; color: #1e40af; }
 .gateway-nets { background: #fef3c7; color: #b45309; }
 .gateway-name { font-size: .85rem; font-weight: 600; color: var(--ink2); }
 .gateway-amount { font-family: 'DM Mono', monospace; font-size: .9rem; font-weight: 600; color: var(--ink); }
-.chart-wrap { position: relative; height: 200px; }
-.chart-wrap-tall { position: relative; height: 260px; }
+.chart-wrap { position: relative; width: 100%; min-height: 220px; height: clamp(220px, 32vh, 280px); }
+.chart-wrap-tall { position: relative; width: 100%; min-height: 240px; height: clamp(240px, 36vh, 320px); }
 .fd-table-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 1rem; }
 .btn-view-all { font-size: .78rem; font-weight: 600; color: var(--g700); text-decoration: none; padding: .35rem .8rem; border: 1px solid var(--border2); border-radius: 100px; transition: background .15s; }
 .btn-view-all:hover { background: var(--g50); color: var(--g800); }
-.fd-table { width: 100%; border-collapse: collapse; }
+.fd-table { width: 100%; border-collapse: collapse; table-layout: auto; min-width: 420px; }
 .fd-table thead tr { border-bottom: 2px solid var(--border); }
-.fd-table th { font-size: .72rem; font-weight: 700; letter-spacing: .07em; text-transform: uppercase; color: var(--ink3); padding: .5rem .75rem; text-align: left; }
+.fd-table th { font-size: .72rem; font-weight: 700; letter-spacing: .07em; text-transform: uppercase; color: var(--ink3); padding: .5rem .75rem; text-align: left; white-space: normal; overflow-wrap: anywhere; }
 .fd-table th.text-end { text-align: right; }
-.fd-table td { padding: .75rem .75rem; font-size: .875rem; color: var(--ink); border-bottom: 1px solid #f0fdf4; }
+.fd-table td { padding: .75rem .75rem; font-size: .875rem; color: var(--ink); border-bottom: 1px solid #f0fdf4; white-space: normal; overflow-wrap: anywhere; }
 .fd-table td.text-end { text-align: right; font-family: 'DM Mono', monospace; }
+.fd-table-scroll { width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; }
 .fd-table tbody tr { transition: background .1s; }
 .fd-table tbody tr:hover { background: var(--g50); }
 .fd-table tbody tr:last-child td { border-bottom: none; }
@@ -107,7 +110,9 @@ body { font-family: 'Sora', sans-serif; background: var(--g50); color: var(--ink
 .fd-action-name { font-size: .8rem; font-weight: 700; color: var(--ink); line-height: 1.3; }
 .fd-action-desc { font-size: .72rem; color: var(--ink3); font-weight: 400; line-height: 1.4; }
 @media (max-width:1024px) { .fd-kpis{grid-template-columns:repeat(2,1fr)} .fd-row-53{grid-template-columns:1fr} .fd-actions-grid{grid-template-columns:repeat(3,1fr)} }
-@media (max-width:640px) { .fd-kpis{grid-template-columns:1fr 1fr} .fd-row-2{grid-template-columns:1fr} .fd-actions-grid{grid-template-columns:repeat(2,1fr)} .fd-title{font-size:1.4rem} }
+@media (max-width:820px) { .fd-wrap{padding:1rem .8rem 2rem} .fd-header{align-items:flex-start} .fd-header-right{justify-content:flex-start; width:100%} .fd-panel{padding:1rem} .fd-kpi{padding:1rem 1rem 1.1rem} .fd-table th, .fd-table td{padding:.6rem .5rem;font-size:.8rem} }
+@media (max-width:640px) { .fd-kpis{grid-template-columns:1fr 1fr} .fd-row-2{grid-template-columns:1fr} .fd-actions-grid{grid-template-columns:repeat(2,1fr)} .fd-title{font-size:1.4rem} .fd-panel-title{flex-wrap:wrap} .chart-wrap, .chart-wrap-tall{min-height:220px;height:clamp(220px, 45vh, 260px)} }
+@media (max-width:480px) { .fd-wrap{padding:.8rem .6rem 1.5rem} .fd-kpis{grid-template-columns:1fr} .fd-actions-grid{grid-template-columns:1fr} .fd-table{min-width:360px} .fd-table th, .fd-table td{font-size:.75rem} }
 </style>
 
 <div class="fd-wrap">
@@ -192,7 +197,7 @@ body { font-family: 'Sora', sans-serif; background: var(--g50); color: var(--ink
       <h2 class="fd-panel-title" style="margin:0"><i class="fa-solid fa-list-check"></i> Recent Payments</h2>
       <a href="/finance/payments" class="btn-view-all">View all →</a>
     </div>
-    <div style="overflow-x:auto">
+    <div class="fd-table-scroll">
       <table class="fd-table">
         <thead>
           <tr>
@@ -266,6 +271,11 @@ if (dashboardParams.get('payment') === 'stripe') {
 
 let paymentPieChart, monthlyRevenueChart;
 
+function refreshCharts() {
+  if (paymentPieChart) paymentPieChart.resize();
+  if (monthlyRevenueChart) monthlyRevenueChart.resize();
+}
+
 function financeMoney(value, currency) {
   return `${currency||'SGD'} ${Number(value||0).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2})}`;
 }
@@ -290,10 +300,12 @@ function renderPaymentPie(stripeRevenue, paypalRevenue, netsRevenue) {
   paymentPieChart = new Chart(canvas, {
     type: 'doughnut',
     data: { labels: ['Stripe','PayPal','NETS'], datasets: [{ data: values, backgroundColor: ['#8b5cf6','#3b82f6','#f59e0b'], borderColor: '#fff', borderWidth: 3, hoverOffset: 6 }] },
-    options: { responsive:true, maintainAspectRatio:false, cutout:'62%',
-      plugins: { legend: { position:'bottom', labels:{font:{family:'Sora',size:12},padding:16,boxWidth:12} },
+    options: { responsive:true, maintainAspectRatio:false, animation:{duration:500}, cutout:'62%',
+      layout:{padding:{top:6,bottom:6,left:6,right:6}},
+      plugins: { legend: { position:'bottom', labels:{font:{family:'Sora',size:12},padding:16,boxWidth:12,usePointStyle:false} },
         tooltip: { callbacks: { label: ctx => { const t=values.reduce((sum,value)=>sum+value,0); const p=t?Math.round((ctx.raw/t)*100):0; return ` ${ctx.label}: ${p}% (${financeMoney(ctx.raw)})`; } } } } }
   });
+  requestAnimationFrame(refreshCharts);
 }
 
 function renderMonthlyRevenue(mr) {
@@ -305,10 +317,12 @@ function renderMonthlyRevenue(mr) {
     type: 'bar',
     data: { labels: labels.map(l => { const p=String(l).split('-'); if(p.length!==2) return l; return new Date(Number(p[0]),Number(p[1])-1,1).toLocaleString(undefined,{month:'short'}); }),
       datasets: [{ label:'Revenue', data:values, backgroundColor:'rgba(22,163,74,0.18)', borderColor:'#16a34a', borderWidth:2, borderRadius:8, borderSkipped:false, hoverBackgroundColor:'rgba(22,163,74,0.35)' }] },
-    options: { responsive:true, maintainAspectRatio:false,
-      scales: { x:{grid:{display:false},ticks:{font:{family:'Sora',size:11}}}, y:{beginAtZero:true, grid:{color:'rgba(0,0,0,.05)'}, ticks:{callback:v=>'SGD '+v.toLocaleString(),font:{family:'DM Mono',size:10}}} },
+    options: { responsive:true, maintainAspectRatio:false, animation:{duration:500},
+      layout:{padding:{top:6,bottom:0,left:0,right:0}},
+      scales: { x:{grid:{display:false},ticks:{font:{family:'Sora',size:11},maxRotation:0,autoSkip:true}}, y:{beginAtZero:true, grid:{color:'rgba(0,0,0,.05)'}, ticks:{callback:v=>'SGD '+v.toLocaleString(),font:{family:'DM Mono',size:10}}} },
       plugins: { legend:{display:false}, tooltip:{callbacks:{label:ctx=>' '+financeMoney(ctx.raw)}} } }
   });
+  requestAnimationFrame(refreshCharts);
 }
 
 function renderRecentPayments(payments) {
@@ -352,6 +366,13 @@ async function loadFinanceDashboard() {
     renderAlerts(totals);
     renderMonthlyRevenue((summary.charts&&summary.charts.monthlyRevenue)||{});
   } catch(e) { console.error('Finance dashboard load error:',e); }
+}
+
+window.addEventListener('resize', refreshCharts);
+if ('ResizeObserver' in window) {
+  const chartContainers = [document.getElementById('paymentPieChart')?.parentElement, document.getElementById('monthlyRevenueChart')?.parentElement];
+  const resizeObserver = new ResizeObserver(() => refreshCharts());
+  chartContainers.filter(Boolean).forEach(container => resizeObserver.observe(container));
 }
 
 loadFinanceDashboard();
