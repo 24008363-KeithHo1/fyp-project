@@ -38,8 +38,8 @@ async function parsePayrollExcel(filePath){
       return String(value).trim();
     };
     
-    const employee_name = getCell(2);
-    const employee_email = getCell(3).toLowerCase();
+    const name = getCell(2);
+    const email = getCell(3).toLowerCase();
     const period = getCell(4);
     const gross = parseFloat(getCell(5)) || 0;
     const net = parseFloat(getCell(6)) || 0;
@@ -47,16 +47,16 @@ async function parsePayrollExcel(filePath){
 
     // Validate per row with better error messages
     const rowErrors = [];
-    if (!employee_name) {
-      rowErrors.push(`Row ${rowNumber}: Missing employee_name`);
+    if (!name) {
+      rowErrors.push(`Row ${rowNumber}: Missing name`);
     }
-    if (!employee_email) {
-      rowErrors.push(`Row ${rowNumber}: Missing employee_email`);
+    if (!email) {
+      rowErrors.push(`Row ${rowNumber}: Missing email`);
     } else {
       // More robust email validation
       const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-      if (!emailRegex.test(employee_email)) {
-        rowErrors.push(`Row ${rowNumber}: Invalid email format (got: "${employee_email}")`);
+      if (!emailRegex.test(email)) {
+        rowErrors.push(`Row ${rowNumber}: Invalid email format (got: "${email}")`);
       }
     }
     if (!period) {
@@ -76,11 +76,11 @@ async function parsePayrollExcel(filePath){
       errors.push(...rowErrors);
     } else {
       rows.push({
-        employee_name,
-        employee_email,
+        name,
+        email,
         period,
         gross,
-        deductions: { amount: deductions },
+        deductions,
         net
       });
     }

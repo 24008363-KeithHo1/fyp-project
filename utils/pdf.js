@@ -40,17 +40,15 @@ async function generatePayslipPDF(payroll){
   doc.fontSize(18).text('PAYSLIP', { align: 'center' });
   doc.moveDown();
   doc.fontSize(12)
-    .text(`Employee: ${payroll.employee_name}`)
-    .text(`Email: ${payroll.employee_email}`)
+    .text(`Employee: ${payroll.name}`)
+    .text(`Email: ${payroll.email}`)
     .text(`Period: ${payroll.period}`);
   
   doc.moveDown();
   doc.fontSize(11).text('EARNINGS:', { underline: true });
   doc.fontSize(10).text(`  Gross: $${payroll.gross}`);
-  const allowances = payroll.allowances || {};
-  Object.entries(allowances).forEach(([key, val]) => {
-    doc.text(`  ${key}: $${val}`);
-  });
+ 
+  
   
   doc.moveDown();
   doc.fontSize(11).text('DEDUCTIONS:', { underline: true });

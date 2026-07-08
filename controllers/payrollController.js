@@ -2,11 +2,13 @@ const Payroll = require('../models/Payroll');
 const multer = require('multer');
 const path = require('path');
 const { logAction } = require('../utils/audit');
+const { ensureUploadDir } = require('../utils/upload');
 
 // Configure multer for Excel uploads
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
-    cb(null, 'uploads/');
+    const uploadDir = ensureUploadDir();
+    cb(null, uploadDir);
   },
   filename: (req, file, cb) => {
     cb(null, Date.now() + path.extname(file.originalname));
@@ -37,7 +39,7 @@ const normalizeDeductions = (deductions) => {
 const ensurePayrollFields = (payload) => ({
   ...payload,
   deductions: normalizeDeductions(payload.deductions),
-  allowances: payload.allowances || {}
+   
 });
 exports.uploadMiddleware = upload.single('file');
 
@@ -61,14 +63,14 @@ exports.upload = async (req, res) => {
       // Try to find existing record by employee_email and period
       const existing = await Payroll.findOne({
         where: { 
-          employee_email: r.employee_email,
+          email: r.email,
           period: r.period
         }
       });
 
       const payrollData = ensurePayrollFields({
-        employee_name: r.employee_name,
-        employee_email: r.employee_email,
+        name: r.name,
+        email: r.email,
         period: r.period,
         gross: r.gross,
         deductions: r.deductions,
@@ -77,7 +79,8 @@ exports.upload = async (req, res) => {
 
       if (existing) {
         await existing.update({ 
-          employee_name: payrollData.employee_name,
+          name: payrollData.name,
+          email: payrollData.email,
           gross: payrollData.gross,
           deductions: payrollData.deductions,
           net: payrollData.net
@@ -126,18 +129,18 @@ exports.update = async (req, res) => {
     const p = await Payroll.findByPk(req.params.id);
     if (!p) return res.status(404).json({ error: 'Not found' });
     
-    const { employee_name, employee_email, period, gross, deductions, net } = req.body;
+    const { name, email, period, gross, deductions, net } = req.body;
     
     await p.update({
-      ...(employee_name && { employee_name }),
-      ...(employee_email && { employee_email }),
+      ...(name && { name }),
+      ...(email && { email }),
       ...(period && { period }),
       ...(gross !== undefined && { gross }),
       ...(deductions !== undefined && { deductions: normalizeDeductions(deductions) }),
       ...(net !== undefined && { net })
     });
     
-    await logAction(req, 'payroll_update', 'Payroll', p.id, { employee_email: p.employee_email, period: p.period, gross: p.gross, net: p.net });
+    await logAction(req, 'payroll_update', 'Payroll', p.id, { email: p.email, period: p.period, gross: p.gross, net: p.net });
     
     res.json({ message: 'Updated successfully', payroll: p });
   } catch (err) {
@@ -147,7 +150,7 @@ exports.update = async (req, res) => {
 
 exports.myslips = async (req, res) => {
   const payrolls = await Payroll.findAll({
-    where: { employee_email: req.user.email },
+    where: { email: req.user.email },
     order: [['id', 'DESC']]
   });
   res.json(payrolls);
@@ -155,7 +158,7 @@ exports.myslips = async (req, res) => {
 
 exports.mypayslipsView = async (req, res) => {
   const payrolls = await Payroll.findAll({
-    where: { employee_email: req.user.email },
+    where: { email: req.user.email },
     order: [['id', 'DESC']]
   });
   res.render('mypayslips', { payrolls });
@@ -164,7 +167,7 @@ exports.mypayslipsView = async (req, res) => {
 exports.payslip = async (req, res) => {
   const p = await Payroll.findByPk(req.params.id);
   if (!p) return res.status(404).json({ error: 'Not found' });
-  await logAction(req, 'payslip_download', 'Payroll', p.id, { employee_email: p.employee_email, period: p.period });
+  await logAction(req, 'payslip_download', 'Payroll', p.id, { email: p.email, period: p.period });
   const stream = await generatePayslipPDF(p);
   res.setHeader('Content-Type','application/pdf');
   stream.pipe(res);
@@ -172,7 +175,7 @@ exports.payslip = async (req, res) => {
 
 exports.mypayslipsView = async (req, res) => {
   const payrolls = await Payroll.findAll({
-    where: { employee_email: req.user.email },
+    where: { email: req.user.email },
     order: [['id', 'DESC']]
   });
   res.render('mypayslips', { payrolls });
