@@ -1,12 +1,25 @@
 const Excel = require('exceljs');
 const fs = require('fs');
 
+const normalizeHeader = (value) => String(value || '')
+  .trim()
+  .toLowerCase()
+  .replace(/[^a-z0-9]+/g, '_')
+  .replace(/^_+|_+$/g, '');
+
 async function parsePayrollExcel(filePath){
   const workbook = new Excel.Workbook();
   await workbook.xlsx.readFile(filePath);
   const ws = workbook.worksheets[0];
   const rows = [];
   const errors = [];
+  const headerRow = ws.getRow(1);
+  const headers = {};
+
+  headerRow.eachCell((cell, colNumber) => {
+    const normalized = normalizeHeader(cell.value && cell.value.text ? cell.value.text : cell.value);
+    if (normalized) headers[normalized] = colNumber;
+  });
   
   ws.eachRow((row, rowNumber) => {
     if (rowNumber === 1) return; // skip header
@@ -37,13 +50,26 @@ async function parsePayrollExcel(filePath){
       // Otherwise just stringify it
       return String(value).trim();
     };
+
+    const getByHeader = (aliases, fallbackCellNum) => {
+      const aliasList = Array.isArray(aliases) ? aliases : [aliases];
+      for (const alias of aliasList) {
+        const colNumber = headers[normalizeHeader(alias)];
+        if (colNumber) return getCell(colNumber);
+      }
+      return getCell(fallbackCellNum);
+    };
     
-    const name = getCell(2);
-    const email = getCell(3).toLowerCase();
-    const period = getCell(4);
-    const gross = parseFloat(getCell(5)) || 0;
-    const net = parseFloat(getCell(6)) || 0;
-    const deductions = parseFloat(getCell(7)) || 0;
+    const name = getByHeader(['name', 'employee_name'], 2);
+    const email = getByHeader(['email', 'employee_email'], 3).toLowerCase();
+    const bank_number = getByHeader(['bank_number', 'bank_no', 'bank_account', 'account_number', 'bank_account_number'], 4);
+    const period = getByHeader(['period', 'pay_period', 'payroll_period'], 5);
+    const grossRaw = getByHeader(['gross', 'gross_amount', 'gross_pay'], 6);
+    const deductionsRaw = getByHeader(['deductions', 'deduction', 'deduction_amount'], 7);
+    const netRaw = getByHeader(['net', 'net_amount', 'net_pay'], 8);
+    const gross = parseFloat(grossRaw) || 0;
+    const deductions = parseFloat(deductionsRaw) || 0;
+    const net = parseFloat(netRaw) || 0;
 
     // Validate per row with better error messages
     const rowErrors = [];
@@ -63,13 +89,13 @@ async function parsePayrollExcel(filePath){
       rowErrors.push(`Row ${rowNumber}: Missing period`);
     }
     if (isNaN(gross) || gross < 0) {
-      rowErrors.push(`Row ${rowNumber}: Invalid gross amount (got: ${getCell(5)})`);
-    }
-    if (isNaN(net) || net < 0) {
-      rowErrors.push(`Row ${rowNumber}: Invalid net amount (got: ${getCell(6)})`);
+      rowErrors.push(`Row ${rowNumber}: Invalid gross amount (got: ${grossRaw})`);
     }
     if (isNaN(deductions) || deductions < 0) {
-      rowErrors.push(`Row ${rowNumber}: Invalid deductions amount (got: ${getCell(7)})`);
+      rowErrors.push(`Row ${rowNumber}: Invalid deductions amount (got: ${deductionsRaw})`);
+    }
+    if (isNaN(net) || net < 0) {
+      rowErrors.push(`Row ${rowNumber}: Invalid net amount (got: ${netRaw})`);
     }
 
     if (rowErrors.length > 0) {
@@ -78,6 +104,7 @@ async function parsePayrollExcel(filePath){
       rows.push({
         name,
         email,
+        bank_number,
         period,
         gross,
         deductions,

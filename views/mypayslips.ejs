@@ -10,6 +10,7 @@
           <thead class="table-light">
             <tr>
               <th>Period</th>
+              <th>Bank Number</th>
               <th class="text-end">Gross</th>
               <th class="text-end">Net</th>
               <th class="text-center">Download</th>
@@ -19,10 +20,11 @@
             <% payrolls.forEach(p => { %>
               <tr>
                 <td><%= p.period %></td>
+                <td><%= p.bank_number || '-' %></td>
                 <td class="text-end">$<%= p.gross %></td>
                 <td class="text-end">$<%= p.net %></td>
                 <td class="text-center">
-                  <a href="/payroll/<%= p.id %>/payslip" target="_blank" class="btn btn-sm btn-outline-primary">PDF</a>
+                  <a href="/api/payroll/<%= p.id %>/payslip" target="_blank" class="btn btn-sm btn-outline-primary">PDF</a>
                 </td>
               </tr>
             <% }); %>

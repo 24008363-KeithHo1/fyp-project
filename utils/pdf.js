@@ -42,6 +42,7 @@ async function generatePayslipPDF(payroll){
   doc.fontSize(12)
     .text(`Employee: ${payroll.name}`)
     .text(`Email: ${payroll.email}`)
+    .text(`Bank Number: ${payroll.bank_number || '-'}`)
     .text(`Period: ${payroll.period}`);
   
   doc.moveDown();

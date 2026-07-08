@@ -25,7 +25,7 @@
             <i class="fas fa-upload text-primary"></i> Upload Payroll Data
           </h5>
           <p class="text-muted small mb-3">
-            <strong>Excel Format:</strong> Column 1 (ID) | Column 2: name | Column 3: email | Column 4: period | Column 5: gross | Column 6: deductions | Column 7: net
+            <strong>Excel Format:</strong> Use headers: ID | name | email | bank_number | period | gross | deductions | net
           </p>
           <form id="upload" enctype="multipart/form-data" class="d-flex gap-2 align-items-center">
             <input type="file" id="file" accept=".xlsx,.xls,.csv" required class="form-control form-control-sm">
@@ -74,6 +74,7 @@
             <tr>
               <th class="border-0">ID</th>
               <th class="border-0">Employee</th>
+              <th class="border-0">Bank Number</th>
               <th class="border-0">Period</th>
               <th class="text-end border-0">Gross</th>
               <th class="text-end border-0">Deductions</th>
@@ -108,6 +109,10 @@
               <div class="col-md-6">
                 <label for="editEmployeeEmail" class="form-label">Employee Email</label>
                 <input type="email" class="form-control" id="editEmployeeEmail" required>
+              </div>
+              <div class="col-md-6">
+                <label for="editBankNumber" class="form-label">Bank Number</label>
+                <input type="text" class="form-control" id="editBankNumber">
               </div>
               <div class="col-md-6">
                 <label for="editPeriod" class="form-label">Period</label>
@@ -178,6 +183,19 @@
     return parseFloat(value) || 0;
   }
 
+  async function readResponse(res) {
+    const text = await res.text();
+    try {
+      return text ? JSON.parse(text) : {};
+    } catch (err) {
+      return {
+        error: text && text.trim().startsWith('<!DOCTYPE')
+          ? `Server returned an HTML page instead of JSON (HTTP ${res.status}). Restart the server and try again.`
+          : text
+      };
+    }
+  }
+
   async function load() {
     try {
       const res = await fetch('/api/payroll', { headers: { authorization: 'Bearer ' + token } });
@@ -186,7 +204,7 @@
       const tbody = document.getElementById('list'); tbody.innerHTML = '';
       
       if (!items || items.length === 0) { 
-        tbody.innerHTML = '<tr><td colspan="9" class="text-center text-muted py-4">No payroll records found</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="10" class="text-center text-muted py-4">No payroll records found</td></tr>';
         updateStats(0, 0, 0);
         return; 
       }
@@ -206,6 +224,7 @@
             <div class="fw-semibold">${p.name || ''}</div>
             <small class="text-muted">${p.email || ''}</small>
           </td>
+          <td>${p.bank_number || '-'}</td>
           <td><span class="badge bg-light text-dark">${p.period || ''}</span></td>
           <td class="text-end fw-semibold">${parseFloat(p.gross||0).toFixed(2)}</td>
           <td class="text-end text-danger">${deductionValue.toFixed(2)}</td>
@@ -219,6 +238,9 @@
             <a class="btn btn-sm btn-outline-success" href="/api/payroll/${p.id}/payslip" target="_blank" title="Download PDF">
               <i class="fas fa-file-pdf"></i>
             </a>
+            <button class="btn btn-sm btn-outline-danger ms-1" onclick="deletePayroll(${p.id})" title="Delete Record">
+              <i class="fas fa-trash"></i>
+            </button>
           </td>
         `;
         tbody.appendChild(tr);
@@ -246,6 +268,7 @@
       document.getElementById('editId').value = payroll.id;
       document.getElementById('editEmployeeName').value = payroll.name || '';
       document.getElementById('editEmployeeEmail').value = payroll.email || '';
+      document.getElementById('editBankNumber').value = payroll.bank_number || '';
       document.getElementById('editPeriod').value = payroll.period || '';
       document.getElementById('editGross').value = payroll.gross || 0;
       document.getElementById('editDeductions').value = deductionsValue;
@@ -259,12 +282,34 @@
     }
   }
 
+  async function deletePayroll(id) {
+    if (!confirm(`Delete payroll record #${id}? This cannot be undone.`)) return;
+
+    try {
+      const res = await fetch(`/api/payroll/${id}`, {
+        method: 'DELETE',
+        headers: { authorization: 'Bearer ' + token }
+      });
+      const result = await readResponse(res);
+
+      if (!res.ok) {
+        return alert('Delete failed: ' + (result.error || 'Unknown error'));
+      }
+
+      alert('Payroll record deleted successfully!');
+      load();
+    } catch (err) {
+      alert('Delete failed: ' + err.message);
+    }
+  }
+
   // Save edit
   document.getElementById('saveEdit').addEventListener('click', async () => {
     const id = document.getElementById('editId').value;
     const data = {
       name: document.getElementById('editEmployeeName').value.trim(),
       email: document.getElementById('editEmployeeEmail').value.trim(),
+      bank_number: document.getElementById('editBankNumber').value.trim(),
       period: document.getElementById('editPeriod').value.trim(),
       gross: parseFloat(document.getElementById('editGross').value) || 0,
       deductions: parseFloat(document.getElementById('editDeductions').value) || 0,

@@ -57,6 +57,7 @@ CREATE TABLE IF NOT EXISTS Payrolls (
   id INT AUTO_INCREMENT PRIMARY KEY,
   name VARCHAR(255) NOT NULL,
   email VARCHAR(255) NOT NULL,
+  bank_number VARCHAR(100),
   period VARCHAR(100),
   gross DECIMAL(10,2),
   deductions JSON DEFAULT ('{}'),
@@ -109,6 +110,8 @@ ALTER TABLE Users
 
 ALTER TABLE Invoices
   ADD COLUMN IF NOT EXISTS currency VARCHAR(10) NOT NULL DEFAULT 'SGD';
+ALTER TABLE Payrolls
+  ADD COLUMN IF NOT EXISTS bank_number VARCHAR(100) AFTER email;
 ALTER TABLE Payments
   MODIFY COLUMN method ENUM('Stripe','PayPal','NETS','BankTransfer','Manual') NOT NULL;
 

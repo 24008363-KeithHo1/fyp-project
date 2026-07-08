@@ -71,6 +71,7 @@ exports.upload = async (req, res) => {
       const payrollData = ensurePayrollFields({
         name: r.name,
         email: r.email,
+        bank_number: r.bank_number,
         period: r.period,
         gross: r.gross,
         deductions: r.deductions,
@@ -81,6 +82,7 @@ exports.upload = async (req, res) => {
         await existing.update({ 
           name: payrollData.name,
           email: payrollData.email,
+          bank_number: payrollData.bank_number,
           gross: payrollData.gross,
           deductions: payrollData.deductions,
           net: payrollData.net
@@ -129,20 +131,43 @@ exports.update = async (req, res) => {
     const p = await Payroll.findByPk(req.params.id);
     if (!p) return res.status(404).json({ error: 'Not found' });
     
-    const { name, email, period, gross, deductions, net } = req.body;
+    const { name, email, bank_number, period, gross, deductions, net } = req.body;
     
     await p.update({
       ...(name && { name }),
       ...(email && { email }),
+      ...(bank_number !== undefined && { bank_number }),
       ...(period && { period }),
       ...(gross !== undefined && { gross }),
       ...(deductions !== undefined && { deductions: normalizeDeductions(deductions) }),
       ...(net !== undefined && { net })
     });
     
-    await logAction(req, 'payroll_update', 'Payroll', p.id, { email: p.email, period: p.period, gross: p.gross, net: p.net });
+    await logAction(req, 'payroll_update', 'Payroll', p.id, { email: p.email, bank_number: p.bank_number, period: p.period, gross: p.gross, net: p.net });
     
     res.json({ message: 'Updated successfully', payroll: p });
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+};
+
+exports.remove = async (req, res) => {
+  try {
+    const p = await Payroll.findByPk(req.params.id);
+    if (!p) return res.status(404).json({ error: 'Not found' });
+
+    const auditMeta = {
+      email: p.email,
+      bank_number: p.bank_number,
+      period: p.period,
+      gross: p.gross,
+      net: p.net
+    };
+
+    await p.destroy();
+    await logAction(req, 'payroll_delete', 'Payroll', Number(req.params.id), auditMeta);
+
+    res.json({ message: 'Deleted successfully' });
   } catch (err) {
     res.status(400).json({ error: err.message });
   }

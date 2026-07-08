@@ -71,12 +71,20 @@ app.get('/api/health', (req, res) => res.json({ status: 'ok' }));
 
 const PORT = process.env.PORT || 3000;
 
+async function ensurePayrollBankNumberColumn() {
+  const [columns] = await sequelize.query("SHOW COLUMNS FROM `Payrolls` LIKE 'bank_number'");
+  if (columns.length === 0) {
+    await sequelize.query("ALTER TABLE `Payrolls` ADD COLUMN `bank_number` VARCHAR(100) AFTER `email`");
+  }
+}
+
 async function start() {
   try {
     await sequelize.authenticate();
     console.log('DB connected');
     const shouldAlterSchema = process.env.DB_SYNC_ALTER === 'true';
     await sequelize.sync({ alter: shouldAlterSchema });
+    await ensurePayrollBankNumberColumn();
     startPayrollAutomationScheduler();
     app.listen(PORT, () => {
       console.log(`Server running at http://localhost:${PORT}`);
