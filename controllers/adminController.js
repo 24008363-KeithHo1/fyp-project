@@ -176,7 +176,12 @@ exports.triggerAutomation = async (req, res) => {
       req,
       source: 'manual'
     });
-    const msg = encodeURIComponent(`Reminder run completed. ${result.reminders.length} reminder(s) found.`);
+    const counts = result.deliveryCounts;
+    const msg = encodeURIComponent(
+      `Reminder run completed. ${result.reminders.length} reminder(s) found; ` +
+      `${counts.sent} sent, ${counts.duplicate} duplicate(s) skipped, ` +
+      `${counts.failed} failed, ${counts.skipped} not sent.`
+    );
     const automationBasePath = req.user.role === 'HR' ? '/hr/automation' : '/admin/automation';
     res.redirect(`${automationBasePath}?message=${msg}`);
   } catch (err) {

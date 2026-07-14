@@ -1,5 +1,6 @@
 const cron = require('node-cron');
 const AutomationSetting = require('../models/AutomationSetting');
+const ReminderDelivery = require('../models/ReminderDelivery');
 const User = require('../models/User');
 const { sendEmail } = require('../utils/email');
 const { logAction, logAudit } = require('../utils/audit');
@@ -102,7 +103,7 @@ async function runPayrollReminderAutomation({ currentDate = new Date(), req = nu
     financeApprovalDeadline: ['Finance'],
     salaryReleaseDate: null // All active accounts
   };
-  let targetedEmailCount = 0;
+  const deliveryCounts = { targeted: 0, sent: 0, failed: 0, skipped: 0, duplicate: 0 };
 
   for (const reminder of reminders) {
     const allowedRoles = recipientRoles[reminder.key];
@@ -118,11 +119,52 @@ async function runPayrollReminderAutomation({ currentDate = new Date(), req = nu
       <p>It is ${reminder.daysUntil === 0 ? 'due today' : `due in ${reminder.daysUntil} day${reminder.daysUntil === 1 ? '' : 's'}`}.</p>
     `;
 
-    targetedEmailCount += emails.length;
+    deliveryCounts.targeted += emails.length;
     for (const email of emails) {
+      const deliveryIdentity = {
+        reminderKey: reminder.key,
+        deadline: reminder.value,
+        recipient: email
+      };
+
+      const previousDelivery = await ReminderDelivery.findOne({
+        where: { ...deliveryIdentity, status: 'sent' }
+      });
+      if (previousDelivery) {
+        deliveryCounts.duplicate += 1;
+        continue;
+      }
+
       try {
-        await sendEmail(email, subject, html);
+        const result = await sendEmail(email, subject, html);
+        if (result && result.skipped) {
+          deliveryCounts.skipped += 1;
+          await ReminderDelivery.upsert({
+            ...deliveryIdentity,
+            status: 'skipped',
+            source,
+            sentAt: null,
+            error: result.reason
+          });
+        } else {
+          deliveryCounts.sent += 1;
+          await ReminderDelivery.upsert({
+            ...deliveryIdentity,
+            status: 'sent',
+            source,
+            sentAt: new Date(),
+            error: null
+          });
+        }
       } catch (err) {
+        deliveryCounts.failed += 1;
+        await ReminderDelivery.upsert({
+          ...deliveryIdentity,
+          status: 'failed',
+          source,
+          sentAt: null,
+          error: err.message
+        });
         console.error(`Payroll reminder email failed for ${reminder.key}:`, err.message);
       }
     }
@@ -131,7 +173,7 @@ async function runPayrollReminderAutomation({ currentDate = new Date(), req = nu
   const meta = {
     source,
     reminderCount: reminders.length,
-    recipients: targetedEmailCount
+    ...deliveryCounts
   };
 
   if (req) {
@@ -144,7 +186,7 @@ async function runPayrollReminderAutomation({ currentDate = new Date(), req = nu
     });
   }
 
-  return { settings, reminders, emailed: targetedEmailCount };
+  return { settings, reminders, emailed: deliveryCounts.sent, deliveryCounts };
 }
 
 function startPayrollAutomationScheduler() {

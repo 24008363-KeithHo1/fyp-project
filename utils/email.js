@@ -17,10 +17,11 @@ if (SMTP_HOST) {
 async function sendEmail(to, subject, html) {
   if (!transporter) {
     console.warn('SMTP not configured; skipping email to', to);
-    return;
+    return { skipped: true, reason: 'SMTP not configured' };
   }
   try {
-    await transporter.sendMail({ from: defaultFromEmail || smtpUser, to, subject, html });
+    const info = await transporter.sendMail({ from: defaultFromEmail || smtpUser, to, subject, html });
+    return { skipped: false, messageId: info.messageId };
   } catch (err) {
     if (err && (err.code === 'EAUTH' || err.responseCode === 535 || /Username and Password not accepted/i.test(err.message))) {
       throw new Error('Gmail authentication failed. Use a Gmail App Password (with 2-Step Verification enabled) and make sure SMTP_USER is the same Gmail address.');
