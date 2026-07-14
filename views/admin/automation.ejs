@@ -10,48 +10,69 @@
   </nav>
 <% } %>
 
-<div class="container py-4">
-  <div class="d-flex justify-content-between align-items-center mb-3">
-    <h2 class="mb-0">Payroll Reminder Settings</h2>
-    <a class="btn btn-outline-primary" href="<%= automationBasePath %>/history">View Delivery History</a>
+<div class="container py-4 payroll-automation-page">
+  <div class="automation-hero">
+    <div>
+      <span class="automation-eyebrow"><i class="fa-solid fa-bell"></i> Payroll automation</span>
+      <h2>Payroll Reminder Settings</h2>
+      <p>Configure important payroll dates and notify the right teams at the right time.</p>
+    </div>
+    <a class="automation-btn automation-btn-secondary" href="<%= automationBasePath %>/history">
+      <i class="fa-solid fa-clock-rotate-left"></i> View Delivery History
+    </a>
   </div>
 
   <% if (message) { %>
     <div class="alert alert-success"><%= message %></div>
   <% } %>
 
-  <form method="post" action="<%= automationBasePath %>/settings" class="card p-4 mb-4">
-    <div class="mb-3">
+  <form method="post" action="<%= automationBasePath %>/settings" class="automation-card automation-settings-card">
+    <div class="automation-card-heading">
+      <span class="automation-icon"><i class="fa-solid fa-calendar-days"></i></span>
+      <div><h3>Reminder schedule</h3><p>Choose when each payroll milestone is due.</p></div>
+    </div>
+    <div class="automation-form-grid">
+    <div class="automation-field automation-field-wide">
       <label class="form-label">Reminder lead window (days)</label>
-      <input class="form-control" name="payrollUploadReminderOffsetDays" value="<%= settings.payrollUploadReminderOffsetDays %>">
+      <input class="form-control" type="number" min="0" name="payrollUploadReminderOffsetDays" value="<%= settings.payrollUploadReminderOffsetDays %>">
+      <small>Reminders are included when a deadline falls within this window.</small>
     </div>
 
-    <div class="mb-3">
+    <div class="automation-field">
       <label class="form-label">Payroll upload deadline</label>
       <input class="form-control" type="date" name="payrollUploadDeadline" value="<%= settings.payrollUploadDeadline %>">
+      <small>Sent to active HR accounts.</small>
     </div>
 
-    <div class="mb-3">
+    <div class="automation-field">
       <label class="form-label">Finance approval deadline</label>
       <input class="form-control" type="date" name="financeApprovalDeadline" value="<%= settings.financeApprovalDeadline %>">
+      <small>Sent to active Finance accounts.</small>
     </div>
 
-    <div class="mb-3">
+    <div class="automation-field automation-field-wide">
       <label class="form-label">Salary release date</label>
       <input class="form-control" type="date" name="salaryReleaseDate" value="<%= settings.salaryReleaseDate %>">
+      <small>Sent to every active account.</small>
+    </div>
     </div>
 
-    <button class="btn btn-primary">Save Settings</button>
+    <button class="automation-btn automation-btn-primary" type="submit"><i class="fa-solid fa-check"></i> Save Settings</button>
   </form>
 
-  <form method="post" action="<%= automationBasePath %>/run" class="card p-4 mb-4">
-    <h4>Run Reminder Scheduler</h4>
-    <p>Use this during your demo to trigger the same logic that would normally run automatically each morning.</p>
-    <button class="btn btn-success">Run Scheduler</button>
+  <form method="post" action="<%= automationBasePath %>/run" class="automation-card automation-run-card">
+    <div class="automation-card-heading mb-0">
+      <span class="automation-icon"><i class="fa-solid fa-paper-plane"></i></span>
+      <div><h3>Run Reminder Scheduler</h3><p>Trigger the daily reminder process now. Duplicate deliveries will be skipped.</p></div>
+    </div>
+    <button class="automation-btn automation-btn-primary" type="submit"><i class="fa-solid fa-play"></i> Run Scheduler</button>
   </form>
 
-  <div class="card p-4">
-    <h4>Reminder Preview</h4>
+  <div class="automation-card automation-preview-card">
+    <div class="automation-card-heading">
+      <span class="automation-icon"><i class="fa-solid fa-eye"></i></span>
+      <div><h3>Reminder Preview</h3><p>Deadlines currently inside the lead window.</p></div>
+    </div>
     <% if (reminderPreview.length) { %>
       <ul>
         <% reminderPreview.forEach((item) => { %>
@@ -59,7 +80,7 @@
         <% }) %>
       </ul>
     <% } else { %>
-      <p>No reminders are due in the current lead window.</p>
+      <div class="automation-empty"><i class="fa-regular fa-calendar-check"></i><p>No reminders are due in the current lead window.</p></div>
     <% } %>
   </div>
 </div>

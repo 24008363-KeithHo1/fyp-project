@@ -1,18 +1,19 @@
 <%- include('../partials/header', { title }) %>
 <%- include('../partials/navbar') %>
 
-<div class="container py-4">
-  <div class="d-flex justify-content-between align-items-center mb-3">
+<div class="container py-4 payroll-automation-page">
+  <div class="automation-hero">
     <div>
-      <h2 class="mb-1">Payroll Reminder History</h2>
-      <p class="text-muted mb-0">The latest 200 reminder delivery records.</p>
+      <span class="automation-eyebrow"><i class="fa-solid fa-clock-rotate-left"></i> Delivery activity</span>
+      <h2>Payroll Reminder History</h2>
+      <p>Review the latest 200 reminder delivery records and troubleshoot unsuccessful attempts.</p>
     </div>
-    <a class="btn btn-outline-secondary" href="<%= automationBasePath %>">Back to Settings</a>
+    <a class="automation-btn automation-btn-secondary" href="<%= automationBasePath %>"><i class="fa-solid fa-arrow-left"></i> Back to Settings</a>
   </div>
 
-  <form method="get" action="<%= automationBasePath %>/history" class="card card-body mb-4">
-    <div class="row g-3 align-items-end">
-      <div class="col-md-4">
+  <form method="get" action="<%= automationBasePath %>/history" class="automation-card automation-filter-card">
+    <div class="automation-filter-grid">
+      <div class="automation-field">
         <label class="form-label" for="reminderKey">Reminder type</label>
         <select class="form-select" id="reminderKey" name="reminderKey">
           <option value="">All reminder types</option>
@@ -21,7 +22,7 @@
           <option value="salaryReleaseDate" <%= filters.reminderKey === 'salaryReleaseDate' ? 'selected' : '' %>>Salary release</option>
         </select>
       </div>
-      <div class="col-md-4">
+      <div class="automation-field">
         <label class="form-label" for="status">Delivery status</label>
         <select class="form-select" id="status" name="status">
           <option value="">All statuses</option>
@@ -30,14 +31,14 @@
           <option value="skipped" <%= filters.status === 'skipped' ? 'selected' : '' %>>Not sent</option>
         </select>
       </div>
-      <div class="col-md-4 d-flex gap-2">
-        <button class="btn btn-primary" type="submit">Apply Filters</button>
-        <a class="btn btn-outline-secondary" href="<%= automationBasePath %>/history">Clear</a>
+      <div class="automation-filter-actions">
+        <button class="automation-btn automation-btn-primary" type="submit"><i class="fa-solid fa-filter"></i> Apply Filters</button>
+        <a class="automation-btn automation-btn-ghost" href="<%= automationBasePath %>/history">Clear</a>
       </div>
     </div>
   </form>
 
-  <div class="card">
+  <div class="automation-card automation-table-card">
     <div class="table-responsive">
       <table class="table table-striped table-hover mb-0 align-middle">
         <thead>
@@ -53,7 +54,7 @@
         </thead>
         <tbody>
           <% if (!deliveries.length) { %>
-            <tr><td colspan="7" class="text-center text-muted py-4">No reminder deliveries found.</td></tr>
+            <tr><td colspan="7"><div class="automation-empty"><i class="fa-solid fa-inbox"></i><p>No reminder deliveries found.</p><span>Run the scheduler to create the first delivery record.</span></div></td></tr>
           <% } %>
           <% deliveries.forEach((delivery) => { %>
             <% const labels = {
