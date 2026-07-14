@@ -1,5 +1,6 @@
 const User = require('../models/User');
 const AuditLog = require('../models/AuditLog');
+const ReminderDelivery = require('../models/ReminderDelivery');
 const {
   getAutomationSettings,
   saveAutomationSettings,
@@ -184,6 +185,41 @@ exports.triggerAutomation = async (req, res) => {
     );
     const automationBasePath = req.user.role === 'HR' ? '/hr/automation' : '/admin/automation';
     res.redirect(`${automationBasePath}?message=${msg}`);
+  } catch (err) {
+    console.error(err);
+    res.status(500).send('Server error');
+  }
+};
+
+exports.reminderHistory = async (req, res) => {
+  try {
+    const where = {};
+    const allowedStatuses = ['sent', 'failed', 'skipped'];
+    const allowedReminderKeys = [
+      'payrollUploadDeadline',
+      'financeApprovalDeadline',
+      'salaryReleaseDate'
+    ];
+
+    if (allowedStatuses.includes(req.query.status)) where.status = req.query.status;
+    if (allowedReminderKeys.includes(req.query.reminderKey)) where.reminderKey = req.query.reminderKey;
+
+    const deliveries = await ReminderDelivery.findAll({
+      where,
+      order: [['updatedAt', 'DESC']],
+      limit: 200
+    });
+    const automationBasePath = req.user.role === 'HR' ? '/hr/automation' : '/admin/automation';
+
+    res.render('admin/reminder-history', {
+      title: 'Payroll Reminder History',
+      deliveries,
+      filters: {
+        status: req.query.status || '',
+        reminderKey: req.query.reminderKey || ''
+      },
+      automationBasePath
+    });
   } catch (err) {
     console.error(err);
     res.status(500).send('Server error');

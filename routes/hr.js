@@ -13,6 +13,7 @@ router.get('/dashboard', (req, res) => {
 });
 
 router.get('/automation', requireRole(['HR']), admin.automationPage);
+router.get('/automation/history', requireRole(['HR']), admin.reminderHistory);
 router.post('/automation/settings', requireRole(['HR']), admin.saveAutomationSettings);
 router.post('/automation/run', requireRole(['HR']), admin.triggerAutomation);
 

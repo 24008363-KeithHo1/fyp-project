@@ -10,6 +10,7 @@ router.use(requireRole(['Admin']));
 
 router.get('/users', admin.listUsers);
 router.get('/automation', admin.automationPage);
+router.get('/automation/history', admin.reminderHistory);
 router.post('/automation/settings', admin.saveAutomationSettings);
 router.post('/automation/run', admin.triggerAutomation);
 router.get('/audit-logs', admin.listAuditLogs);
