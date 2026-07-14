@@ -13,6 +13,8 @@
               <th>Bank Number</th>
               <th class="text-end">Gross</th>
               <th class="text-end">Net</th>
+              <th>Payroll Status</th>
+              <th>Salary Release</th>
               <th class="text-center">Download</th>
             </tr>
           </thead>
@@ -23,6 +25,30 @@
                 <td><%= p.bank_number || '-' %></td>
                 <td class="text-end">$<%= p.gross %></td>
                 <td class="text-end">$<%= p.net %></td>
+                <td>
+                  <% const status = p.payment_status || 'Pending'; %>
+                  <% if (status === 'Paid') { %>
+                    <span class="badge bg-success">Paid</span>
+                  <% } else if (status === 'Approved') { %>
+                    <span class="badge bg-primary">Approved</span>
+                  <% } else { %>
+                    <span class="badge bg-warning text-dark">Pending</span>
+                  <% } %>
+                </td>
+                <td>
+                  <% if (status === 'Paid') { %>
+                    <div class="fw-semibold text-success">Salary Released</div>
+                    <small class="text-muted d-block">Release Date: <%= p.paid_at ? new Date(p.paid_at).toLocaleString() : '-' %></small>
+                    <small class="text-muted d-block">Payment Method: <%= p.payment_method || 'Simulated Bank Transfer' %></small>
+                    <% const release = p.data && p.data.salaryRelease; %>
+                    <% if (release) { %>
+                      <small class="text-muted d-block">Test Bank Account: <%= release.testBankAccountNumber || '-' %></small>
+                      <small class="text-muted d-block">Bank Reference: <%= release.testBankReference || '-' %></small>
+                    <% } %>
+                  <% } else { %>
+                    <span class="text-muted">Not released yet</span>
+                  <% } %>
+                </td>
                 <td class="text-center">
                   <a href="/api/payroll/<%= p.id %>/payslip" target="_blank" class="btn btn-sm btn-outline-primary">PDF</a>
                 </td>

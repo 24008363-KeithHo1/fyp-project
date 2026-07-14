@@ -62,11 +62,15 @@ CREATE TABLE IF NOT EXISTS Payrolls (
   gross DECIMAL(10,2),
   deductions JSON DEFAULT ('{}'),
   net DECIMAL(10,2),
+  payment_status ENUM('Pending','Approved','Paid') DEFAULT 'Pending',
+  paid_at DATETIME,
+  payment_method VARCHAR(100),
+  data JSON,
   createdAt DATETIME DEFAULT CURRENT_TIMESTAMP,
   updatedAt DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
--- Payment history for Stripe, PayPal, NETS and bank-transfer confirmations
+-- Added: Payment history table for Stripe, PayPal, NETS and bank-transfer confirmations
 CREATE TABLE IF NOT EXISTS Payments (
   id INT AUTO_INCREMENT PRIMARY KEY,
   invoiceId INT NOT NULL,
@@ -74,11 +78,43 @@ CREATE TABLE IF NOT EXISTS Payments (
   method ENUM('Stripe','PayPal','NETS','BankTransfer','Manual') NOT NULL,
   amount DECIMAL(10,2) NOT NULL,
   currency VARCHAR(10) DEFAULT 'SGD',
-  status ENUM('Paid','Failed','Pending') DEFAULT 'Paid',
+  status ENUM('Paid','Failed','Pending','Refunded') DEFAULT 'Paid',
   providerReference VARCHAR(255) UNIQUE,
   paidAt DATETIME NOT NULL,
   recordedBy INT,
   data JSON,
+  createdAt DATETIME DEFAULT CURRENT_TIMESTAMP,
+  updatedAt DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS TestBankAccounts (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  ownerType ENUM('Company','Employee','Customer') NOT NULL,
+  ownerReference VARCHAR(255) NOT NULL,
+  accountName VARCHAR(255) NOT NULL,
+  bankName VARCHAR(255) DEFAULT 'FYP Test Bank',
+  accountNumber VARCHAR(255) NOT NULL UNIQUE,
+  balance DECIMAL(12,2) DEFAULT 0,
+  currency VARCHAR(10) DEFAULT 'SGD',
+  status ENUM('Active','Closed') DEFAULT 'Active',
+  data JSON,
+  createdAt DATETIME DEFAULT CURRENT_TIMESTAMP,
+  updatedAt DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  UNIQUE KEY uniq_test_bank_owner (ownerType, ownerReference)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS TestBankTransactions (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  type ENUM('SalaryRelease','Refund','Adjustment') NOT NULL,
+  fromAccountId INT,
+  toAccountId INT NOT NULL,
+  amount DECIMAL(12,2) NOT NULL,
+  currency VARCHAR(10) DEFAULT 'SGD',
+  status ENUM('Completed','Failed') DEFAULT 'Completed',
+  reference VARCHAR(255) NOT NULL UNIQUE,
+  description VARCHAR(255),
+  data JSON,
+  processedAt DATETIME NOT NULL,
   createdAt DATETIME DEFAULT CURRENT_TIMESTAMP,
   updatedAt DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
@@ -111,9 +147,15 @@ ALTER TABLE Users
 ALTER TABLE Invoices
   ADD COLUMN IF NOT EXISTS currency VARCHAR(10) NOT NULL DEFAULT 'SGD';
 ALTER TABLE Payrolls
-  ADD COLUMN IF NOT EXISTS bank_number VARCHAR(100) AFTER email;
+  ADD COLUMN IF NOT EXISTS bank_number VARCHAR(100) AFTER email,
+  ADD COLUMN IF NOT EXISTS data JSON,
+  ADD COLUMN IF NOT EXISTS payment_status ENUM('Pending','Approved','Paid') DEFAULT 'Pending',
+  ADD COLUMN IF NOT EXISTS paid_at DATETIME,
+  ADD COLUMN IF NOT EXISTS payment_method VARCHAR(100);
 ALTER TABLE Payments
   MODIFY COLUMN method ENUM('Stripe','PayPal','NETS','BankTransfer','Manual') NOT NULL;
+ALTER TABLE Payments
+  MODIFY COLUMN status ENUM('Paid','Failed','Pending','Refunded') DEFAULT 'Paid';
 
 -- Roles are stored directly on Users.role. The old Roles table is no longer used.
 DROP TABLE IF EXISTS Roles;

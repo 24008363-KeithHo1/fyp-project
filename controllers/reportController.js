@@ -34,13 +34,18 @@ exports.summary = async (req, res) => {
   try {
     const [invoices, payrolls, payments] = await Promise.all([
       Invoice.findAll({ order: [['createdAt', 'ASC']] }),
-      Payroll.findAll({ order: [['createdAt', 'ASC']] }),
+      Payroll.findAll({
+        attributes: ['id', 'period', 'gross', 'net', 'payment_status', 'createdAt'],
+        order: [['createdAt', 'ASC']]
+      }),
       Payment.findAll({ order: [['paidAt', 'DESC'], ['id', 'DESC']] })
     ]);
 
     const invoiceStatus = {};
     const monthlyRevenue = {};
+    // Added: tracks revenue by payment method for the finance dashboard chart.
     const paymentMethodRevenue = { Stripe: 0, PayPal: 0, NETS: 0 };
+    // Added: sends latest payment transactions to the dashboard recent payments table.
     const recentTransactions = payments.slice(0, 5).map((payment) => ({
       invoiceNumber: payment.invoiceNumber,
       method: payment.method,
@@ -53,10 +58,12 @@ exports.summary = async (req, res) => {
     let paidRevenue = 0;
     let outstandingRevenue = 0;
     let overdueRevenue = 0;
-    let paidInvoiceCount = 0;
     let pendingPaymentCount = 0;
     let overdueInvoiceCount = 0;
     let failedPayPalCount = 0;
+    let refundedPaymentCount = 0;
+    let refundedPaymentAmount = 0;
+    const paidInvoiceIds = new Set();
 
     invoices.forEach((invoice) => {
       const amount = money(invoice.amount);
@@ -64,12 +71,7 @@ exports.summary = async (req, res) => {
       invoiceStatus[status] = (invoiceStatus[status] || 0) + 1;
       totalInvoiced += amount;
 
-      if (status === 'Paid') {
-        paidInvoiceCount += 1;
-        paidRevenue += amount;
-        const key = monthKey(invoice.updatedAt || invoice.createdAt);
-        monthlyRevenue[key] = (monthlyRevenue[key] || 0) + amount;
-      } else {
+      if (status !== 'Paid') {
         outstandingRevenue += amount;
         pendingPaymentCount += 1;
       }
@@ -80,11 +82,22 @@ exports.summary = async (req, res) => {
       }
     });
 
+    // Added: totals paid Stripe, PayPal, and NETS payments for dashboard analytics.
     payments.forEach((payment) => {
       const method = payment.method || 'Manual';
       const amount = money(payment.amount);
-      if ((method === 'Stripe' || method === 'PayPal' || method === 'NETS') && payment.status === 'Paid') {
-        paymentMethodRevenue[method] = (paymentMethodRevenue[method] || 0) + amount;
+      if (payment.status === 'Paid') {
+        paidRevenue += amount;
+        if (payment.invoiceId) paidInvoiceIds.add(payment.invoiceId);
+        const key = monthKey(payment.paidAt || payment.createdAt);
+        monthlyRevenue[key] = (monthlyRevenue[key] || 0) + amount;
+        if (method === 'Stripe' || method === 'PayPal' || method === 'NETS') {
+          paymentMethodRevenue[method] = (paymentMethodRevenue[method] || 0) + amount;
+        }
+      }
+      if (payment.status === 'Refunded') {
+        refundedPaymentCount += 1;
+        refundedPaymentAmount += amount;
       }
       if (method === 'PayPal' && payment.status === 'Failed') {
         failedPayPalCount += 1;
@@ -93,6 +106,9 @@ exports.summary = async (req, res) => {
 
     let payrollGross = 0;
     let payrollNet = 0;
+    let totalPayrollPaid = 0;
+    let employeesPaid = 0;
+    let pendingPayrolls = 0;
     const payrollByPeriod = {};
     const now = new Date();
     const twoDaysFromNow = new Date(now.getTime() + (2 * 24 * 60 * 60 * 1000));
@@ -103,6 +119,12 @@ exports.summary = async (req, res) => {
       const net = money(payroll.net);
       payrollGross += gross;
       payrollNet += net;
+      if (payroll.payment_status === 'Paid') {
+        totalPayrollPaid += net;
+        employeesPaid += 1;
+      } else {
+        pendingPayrolls += 1;
+      }
       const period = payroll.period || 'Unassigned';
       payrollByPeriod[period] = (payrollByPeriod[period] || 0) + net;
       const dueDate = getPayrollDueDate(payroll);
@@ -119,13 +141,18 @@ exports.summary = async (req, res) => {
         paidRevenue,
         outstandingRevenue,
         overdueRevenue,
-        paidInvoiceCount,
+        paidInvoiceCount: paidInvoiceIds.size,
         pendingPaymentCount,
         overdueInvoiceCount,
         failedPayPalCount,
+        refundedPaymentCount,
+        refundedPaymentAmount,
         payrollDueSoonCount,
         payrollGross,
-        payrollNet
+        payrollNet,
+        totalPayrollPaid,
+        employeesPaid,
+        pendingPayrolls
       },
       charts: {
         invoiceStatus,
@@ -144,7 +171,10 @@ exports.validation = async (req, res) => {
   try {
     const [invoices, payrolls] = await Promise.all([
       Invoice.findAll({ order: [['id', 'DESC']] }),
-      Payroll.findAll({ order: [['id', 'DESC']] })
+      Payroll.findAll({
+        attributes: ['id', 'employee_name', 'employee_email', 'period', 'gross', 'net'],
+        order: [['id', 'DESC']]
+      })
     ]);
 
     const issues = [];

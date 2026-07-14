@@ -29,6 +29,7 @@ const upload = multer({
 
 const { parsePayrollExcel } = require('../utils/excel');
 const { generatePayslipPDF } = require('../utils/pdf');
+const { simulateSalaryRelease } = require('../utils/testBank');
 const normalizeDeductions = (deductions) => {
   if (deductions == null) return {};
   if (typeof deductions === 'object') return deductions;
@@ -38,9 +39,20 @@ const normalizeDeductions = (deductions) => {
 
 const ensurePayrollFields = (payload) => ({
   ...payload,
+  payment_status: payload.payment_status || 'Pending',
   deductions: normalizeDeductions(payload.deductions),
    
 });
+const wantsJson = (req) => req.xhr || (req.get('accept') || '').includes('application/json') || (req.get('content-type') || '').includes('application/json');
+
+function sendPayrollResult(req, res, statusCode, payload, redirectFallback = '/payroll') {
+  if (wantsJson(req)) return res.status(statusCode).json(payload);
+  const params = new URLSearchParams({
+    status: statusCode >= 400 ? 'error' : 'success',
+    message: payload.error || payload.message || ''
+  });
+  return res.redirect(`${redirectFallback}?${params.toString()}`);
+}
 exports.uploadMiddleware = upload.single('file');
 
 exports.upload = async (req, res) => {
@@ -85,7 +97,8 @@ exports.upload = async (req, res) => {
           bank_number: payrollData.bank_number,
           gross: payrollData.gross,
           deductions: payrollData.deductions,
-          net: payrollData.net
+          net: payrollData.net,
+          payment_status: existing.payment_status || 'Pending'
         });
         updated.push(existing);
       } else {
@@ -170,6 +183,80 @@ exports.remove = async (req, res) => {
     res.json({ message: 'Deleted successfully' });
   } catch (err) {
     res.status(400).json({ error: err.message });
+  }
+};
+
+exports.approvePayroll = async (req, res) => {
+  try {
+    const p = await Payroll.findByPk(req.params.id);
+    if (!p) return sendPayrollResult(req, res, 404, { error: 'Payroll not found' });
+    if (p.payment_status === 'Paid') {
+      return sendPayrollResult(req, res, 400, { error: 'Paid payroll cannot be approved again' });
+    }
+    if (p.payment_status === 'Approved') {
+      return sendPayrollResult(req, res, 400, { error: 'Payroll is already approved' });
+    }
+
+    await p.update({ payment_status: 'Approved' });
+    await logAction(req, 'payroll_approved', 'Payroll', p.id, {
+      payrollId: p.id,
+      employeeEmail: p.email,
+      approvedBy: req.user ? req.user.id : null
+    });
+
+    return sendPayrollResult(req, res, 200, { message: 'Payroll approved successfully.', payroll: p });
+  } catch (err) {
+    return sendPayrollResult(req, res, 400, { error: err.message });
+  }
+};
+
+exports.releaseSalary = async (req, res) => {
+  try {
+    const p = await Payroll.findByPk(req.params.id);
+    if (!p) return sendPayrollResult(req, res, 404, { error: 'Payroll not found' });
+    if (p.payment_status === 'Paid') {
+      return sendPayrollResult(req, res, 400, { error: 'Salary has already been released for this payroll' });
+    }
+    if (p.payment_status !== 'Approved') {
+      return sendPayrollResult(req, res, 400, { error: 'Payroll must be approved before salary release' });
+    }
+
+    const releasedAt = new Date();
+    const paymentMethod = 'Simulated Bank Transfer';
+    const bankResult = await simulateSalaryRelease({
+      payroll: p,
+      releasedBy: req.user ? req.user.id : null
+    });
+    await p.update({
+      payment_status: 'Paid',
+      paid_at: releasedAt,
+      payment_method: paymentMethod,
+      data: Object.assign({}, p.data || {}, {
+        salaryRelease: {
+          testBankAccountId: bankResult.employeeAccount.id,
+          testBankAccountNumber: bankResult.employeeAccount.accountNumber,
+          testBankTransactionId: bankResult.transaction.id,
+          testBankReference: bankResult.transaction.reference
+        }
+      })
+    });
+
+    await logAction(req, 'salary_released', 'Payroll', p.id, {
+      payrollId: p.id,
+      employeeId: p.email,
+      employeeEmail: p.email,
+      releasedBy: req.user ? req.user.id : null,
+      releasedAt: releasedAt.toISOString(),
+      paymentMethod,
+      testBankAccountId: bankResult.employeeAccount.id,
+      testBankAccountNumber: bankResult.employeeAccount.accountNumber,
+      testBankTransactionId: bankResult.transaction.id,
+      testBankReference: bankResult.transaction.reference
+    });
+
+    return sendPayrollResult(req, res, 200, { message: 'Salary released using simulated bank transfer.', payroll: p });
+  } catch (err) {
+    return sendPayrollResult(req, res, 400, { error: err.message });
   }
 };
 

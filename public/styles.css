@@ -234,12 +234,25 @@ header .btn-outline-primary{border-radius:20px;padding:.35rem .6rem}
 .finance-alert i{color:#b54708}
 .finance-alert-success{border-color:rgba(11,94,58,0.18);background:#eefaf3;color:#0b5e3a}
 .finance-alert-success i{color:#0b5e3a}
+/* Added: finance payments page layout, tab controls, payment method badges, and NETS QR box styling. */
 .payments-page{max-width:1100px}
 .payments-page form input,.payments-page form select,.payments-page input,.payments-page select{max-width:none}
 .payments-page .payment-tabs{display:flex;flex-wrap:wrap;gap:.25rem;padding-left:0;margin-bottom:0;list-style:none}
 .payments-page .payment-tabs .nav-link{background:transparent;border:1px solid transparent;border-bottom:0;color:#0b5e3a;border-radius:.5rem .5rem 0 0;padding:.5rem 1rem}
 .payments-page .payment-tabs .nav-link:hover{background:#f7faf8;border-color:rgba(11,94,58,.14);color:#094726}
 .payments-page .payment-tabs .nav-link.active{background:#fff;border-color:rgba(11,94,58,.14);border-bottom-color:#fff;color:#0b5e3a;font-weight:700}
+.payment-refresh-btn,.provider-load-btn{display:inline-flex;align-items:center;justify-content:center;gap:.5rem;border:0;border-radius:999px;font-weight:700;letter-spacing:.01em;transition:transform .15s ease,box-shadow .15s ease,background .15s ease}
+.payment-refresh-btn{padding:.55rem 1rem;background:#fff;color:#0b5e3a;border:1px solid rgba(11,94,58,.18);box-shadow:0 6px 16px rgba(16,24,40,.06)}
+.payment-refresh-btn:hover,.payment-refresh-btn:focus{background:#eefaf3;color:#094726;box-shadow:0 8px 22px rgba(11,94,58,.13);transform:translateY(-1px)}
+.provider-load-btn{min-height:38px;padding:.56rem .95rem;color:#fff}
+.provider-load-btn:hover,.provider-load-btn:focus{color:#fff;transform:translateY(-1px)}
+.provider-load-btn i{font-size:1rem}
+.stripe-load-btn{background:#635bff;box-shadow:0 8px 20px rgba(99,91,255,.18)}
+.stripe-load-btn:hover,.stripe-load-btn:focus{background:#4f46e5;box-shadow:0 10px 24px rgba(99,91,255,.25)}
+.paypal-load-btn{background:#0b5eaa;box-shadow:0 8px 20px rgba(11,94,170,.18)}
+.paypal-load-btn:hover,.paypal-load-btn:focus{background:#074a88;box-shadow:0 10px 24px rgba(11,94,170,.24)}
+.nets-load-btn{background:#111827;box-shadow:0 8px 20px rgba(17,24,39,.18)}
+.nets-load-btn:hover,.nets-load-btn:focus{background:#0b1220;box-shadow:0 10px 24px rgba(17,24,39,.24)}
 .bank-instructions,.payment-method-card{border:1px solid rgba(11,94,58,0.08);border-radius:8px;background:#fbfffb;padding:1rem;height:100%}
 .bank-instructions h5,.payment-method-card h5{font-size:1rem;color:#0b5e3a;font-weight:700;margin-bottom:.75rem}
 .method-pill{display:inline-flex;align-items:center;border-radius:999px;padding:.25rem .55rem;font-size:.8rem;font-weight:700;background:#eef2f6;color:#344054}

@@ -97,6 +97,8 @@ body { font-family: 'Sora', sans-serif; background: var(--g50); color: var(--ink
 .status-pending::before { background: #f59e0b; }
 .status-failed { background: #fee2e2; color: #b91c1c; }
 .status-failed::before { background: #ef4444; }
+.status-refunded { background: #cffafe; color: #0e7490; }
+.status-refunded::before { background: #06b6d4; }
 .fd-alerts-list { display: flex; flex-direction: column; gap: .6rem; }
 .fd-alert-item { display: flex; align-items: center; gap: .75rem; padding: .75rem 1rem; background: #fff7ed; border: 1px solid #fed7aa; border-radius: var(--radius-sm); font-size: .875rem; color: #92400e; }
 .fd-alert-item i { color: #f97316; font-size: .9rem; flex-shrink: 0; }
@@ -159,6 +161,7 @@ body { font-family: 'Sora', sans-serif; background: var(--g50); color: var(--ink
     </div>
   </div>
 
+  <!-- Added: payment analytics panel showing revenue split by Stripe, PayPal, and NETS. -->
   <div class="fd-row fd-row-53 fd-spacer">
     <div class="fd-panel">
       <h2 class="fd-panel-title"><i class="fa-solid fa-chart-pie"></i> Payment Analytics</h2>
@@ -220,8 +223,32 @@ body { font-family: 'Sora', sans-serif; background: var(--g50); color: var(--ink
       </div>
     </div>
     <div class="fd-panel">
+      <h2 class="fd-panel-title"><i class="fa-solid fa-money-check-dollar"></i> Salary Release</h2>
+      <div class="payment-gateway-list">
+        <div class="payment-gateway-item">
+          <span class="gateway-name">Total Payroll Paid</span>
+          <span class="gateway-amount" id="totalPayrollPaid">SGD 0.00</span>
+        </div>
+        <div class="payment-gateway-item">
+          <span class="gateway-name">Employees Paid</span>
+          <span class="gateway-amount" id="employeesPaid">0</span>
+        </div>
+        <div class="payment-gateway-item">
+          <span class="gateway-name">Pending Payrolls</span>
+          <span class="gateway-amount" id="pendingPayrolls">0</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="fd-row fd-row-2 fd-spacer">
+    <div class="fd-panel">
       <h2 class="fd-panel-title"><i class="fa-solid fa-chart-column"></i> Monthly Revenue</h2>
       <div class="chart-wrap-tall"><canvas id="monthlyRevenueChart"></canvas></div>
+    </div>
+    <div class="fd-panel">
+      <h2 class="fd-panel-title"><i class="fa-solid fa-chart-column"></i> Payroll by Period</h2>
+      <div class="chart-wrap-tall"><canvas id="payrollReleaseChart"></canvas></div>
     </div>
   </div>
 
@@ -269,7 +296,7 @@ if (dashboardParams.get('payment') === 'stripe') {
   alertEl.textContent = isPaid ? 'Stripe payment completed successfully and the invoice was marked Paid.' : 'Stripe returned but the payment could not be confirmed automatically. Check the invoice and payment history.';
 }
 
-let paymentPieChart, monthlyRevenueChart;
+let paymentPieChart, monthlyRevenueChart, payrollReleaseChart;
 
 function refreshCharts() {
   if (paymentPieChart) paymentPieChart.resize();
@@ -282,8 +309,10 @@ function financeMoney(value, currency) {
 function statusClass(s) {
   if (s==='Paid') return 'status-paid';
   if (s==='Failed') return 'status-failed';
+  if (s==='Refunded') return 'status-refunded';
   return 'status-pending';
 }
+// Added: styles each payment method badge in the recent payments table.
 function methodClass(m) {
   if (!m) return 'method-other';
   const ml = m.toLowerCase();
@@ -293,6 +322,7 @@ function methodClass(m) {
   return 'method-other';
 }
 
+// Added: renders payment method share for Stripe, PayPal, and NETS.
 function renderPaymentPie(stripeRevenue, paypalRevenue, netsRevenue) {
   const canvas = document.getElementById('paymentPieChart');
   const values = [stripeRevenue, paypalRevenue, netsRevenue];
@@ -309,13 +339,17 @@ function renderPaymentPie(stripeRevenue, paypalRevenue, netsRevenue) {
 }
 
 function renderMonthlyRevenue(mr) {
-  const labels = Object.keys(mr||{});
-  const values = Object.values(mr||{}).map(Number);
+  const labels = calendarMonths;
+  const values = Array(12).fill(0);
+  Object.entries(mr||{}).forEach(([period, amount]) => {
+    const monthIndex = monthIndexFromPeriod(period);
+    if (monthIndex >= 0) values[monthIndex] += Number(amount || 0);
+  });
   const canvas = document.getElementById('monthlyRevenueChart');
   if (monthlyRevenueChart) monthlyRevenueChart.destroy();
   monthlyRevenueChart = new Chart(canvas, {
     type: 'bar',
-    data: { labels: labels.map(l => { const p=String(l).split('-'); if(p.length!==2) return l; return new Date(Number(p[0]),Number(p[1])-1,1).toLocaleString(undefined,{month:'short'}); }),
+    data: { labels,
       datasets: [{ label:'Revenue', data:values, backgroundColor:'rgba(22,163,74,0.18)', borderColor:'#16a34a', borderWidth:2, borderRadius:8, borderSkipped:false, hoverBackgroundColor:'rgba(22,163,74,0.35)' }] },
     options: { responsive:true, maintainAspectRatio:false, animation:{duration:500},
       layout:{padding:{top:6,bottom:0,left:0,right:0}},
@@ -325,6 +359,42 @@ function renderMonthlyRevenue(mr) {
   requestAnimationFrame(refreshCharts);
 }
 
+const calendarMonths = [
+  'January','February','March','April','May','June',
+  'July','August','September','October','November','December'
+];
+
+function monthIndexFromPeriod(period) {
+  const text = String(period || '').toLowerCase();
+  if (/^\d{4}-\d{2}$/.test(text)) return Math.max(0, Math.min(11, Number(text.split('-')[1]) - 1));
+  let matchedIndex = -1;
+  calendarMonths.forEach((month, index) => {
+    if (text.includes(month.toLowerCase()) || text.includes(month.slice(0, 3).toLowerCase())) {
+      matchedIndex = index;
+    }
+  });
+  return matchedIndex;
+}
+
+function renderPayrollReleaseChart(payrollByPeriod) {
+  const labels = calendarMonths;
+  const values = Array(12).fill(0);
+  Object.entries(payrollByPeriod||{}).forEach(([period, amount]) => {
+    const monthIndex = monthIndexFromPeriod(period);
+    if (monthIndex >= 0) values[monthIndex] += Number(amount || 0);
+  });
+  const canvas = document.getElementById('payrollReleaseChart');
+  if (payrollReleaseChart) payrollReleaseChart.destroy();
+  payrollReleaseChart = new Chart(canvas, {
+    type: 'line',
+    data: { labels, datasets: [{ label:'Payroll', data:values, backgroundColor:'rgba(37,99,235,0.12)', borderColor:'#2563eb', borderWidth:3, pointBackgroundColor:'#2563eb', pointBorderColor:'#fff', pointBorderWidth:2, pointRadius:4, pointHoverRadius:6, tension:.35, fill:true }] },
+    options: { responsive:true, maintainAspectRatio:false,
+      scales: { x:{grid:{display:false},ticks:{font:{family:'Sora',size:10}}}, y:{beginAtZero:true, grid:{color:'rgba(0,0,0,.05)'}, ticks:{callback:v=>'SGD '+v.toLocaleString(),font:{family:'DM Mono',size:10}}} },
+      plugins: { legend:{display:false}, tooltip:{callbacks:{label:ctx=>' '+financeMoney(ctx.raw)}} } }
+  });
+}
+
+// Added: displays the latest payment transactions on the finance dashboard.
 function renderRecentPayments(payments) {
   const tbody = document.getElementById('recentPaymentsBody');
   if (!payments||!payments.length) { tbody.innerHTML='<tr><td colspan="4" style="text-align:center;color:var(--ink3);padding:1.5rem">No payments recorded yet</td></tr>'; return; }
@@ -340,12 +410,14 @@ function renderAlerts(totals) {
   const items = [];
   if ((totals.overdueInvoiceCount||0)>0) items.push(`${totals.overdueInvoiceCount} overdue invoice${totals.overdueInvoiceCount===1?'':'s'}`);
   if ((totals.failedPayPalCount||0)>0) items.push(`${totals.failedPayPalCount} failed PayPal transaction${totals.failedPayPalCount===1?'':'s'}`);
+  if ((totals.refundedPaymentCount||0)>0) items.push(`${totals.refundedPaymentCount} refunded payment${totals.refundedPaymentCount===1?'':'s'} totalling ${financeMoney(totals.refundedPaymentAmount)}`);
   if ((totals.payrollDueSoonCount||0)>0) items.push(`${totals.payrollDueSoonCount} payroll run${totals.payrollDueSoonCount===1?'':'s'} due in 2 days`);
   const container = document.getElementById('financeAlerts');
   if (!items.length) { container.innerHTML='<div class="fd-alerts-empty"><i class="fa-solid fa-circle-check"></i> No active finance alerts.</div>'; return; }
   container.innerHTML = '<div class="fd-alerts-list">'+items.map(msg=>`<div class="fd-alert-item"><i class="fa-solid fa-triangle-exclamation"></i><span>${msg}</span></div>`).join('')+'</div>';
 }
 
+// Added: loads finance summary data and updates payment KPIs, charts, alerts, and recent payments.
 async function loadFinanceDashboard() {
   try {
     const res = await fetch('/api/reports/summary', { headers: { authorization: 'Bearer ' + token } });
@@ -358,6 +430,9 @@ async function loadFinanceDashboard() {
     document.getElementById('financePaidInvoices').textContent = totals.paidInvoiceCount||0;
     document.getElementById('financePendingPayments').textContent = totals.pendingPaymentCount||0;
     document.getElementById('financeOverdueInvoices').textContent = totals.overdueInvoiceCount||0;
+    document.getElementById('totalPayrollPaid').textContent = financeMoney(totals.totalPayrollPaid);
+    document.getElementById('employeesPaid').textContent = totals.employeesPaid||0;
+    document.getElementById('pendingPayrolls').textContent = totals.pendingPayrolls||0;
     document.getElementById('stripeRevenue').textContent = financeMoney(sr);
     document.getElementById('paypalRevenue').textContent = financeMoney(paypalR);
     document.getElementById('netsRevenue').textContent = financeMoney(netsR);
@@ -365,6 +440,7 @@ async function loadFinanceDashboard() {
     renderRecentPayments(summary.recentTransactions||[]);
     renderAlerts(totals);
     renderMonthlyRevenue((summary.charts&&summary.charts.monthlyRevenue)||{});
+    renderPayrollReleaseChart((summary.charts&&summary.charts.payrollByPeriod)||{});
   } catch(e) { console.error('Finance dashboard load error:',e); }
 }
 

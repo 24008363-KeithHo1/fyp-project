@@ -53,6 +53,7 @@ router.get('/:id', auth, checkRole(['Admin','Finance','HR']), ctrl.get);
 router.get('/:id/pdf', allowViewTokenOrStaffAuth, ctrl.exportPdf);
 router.get('/:id/excel', allowViewTokenOrStaffAuth, ctrl.exportExcel);
 router.post('/:id/send', auth, checkRole(['Admin','Finance']), ctrl.send);
+router.delete('/:id', auth, checkRole(['Admin','Finance']), ctrl.remove);
 // Public view link (tokenized) -- does not require auth
 router.get('/:id/view', ctrl.viewPage);
 

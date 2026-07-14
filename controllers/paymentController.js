@@ -6,6 +6,7 @@ const stripe = stripeSecretKey ? Stripe(stripeSecretKey) : null;
 const Invoice = require('../models/Invoice');
 const Payment = require('../models/Payment');
 const { logAudit, getRequestMetadata } = require('../utils/audit');
+const { simulateRefundDestination } = require('../utils/testBank');
 
 const paypalEnv = process.env.PAYPAL_ENV || process.env.PAYPAL_MODE || 'sandbox';
 const PAYPAL_API_BASE = process.env.PAYPAL_API_BASE || (
@@ -16,9 +17,11 @@ const PAYPAL_API_BASE = process.env.PAYPAL_API_BASE || (
 const PAYPAL_CURRENCY = process.env.PAYPAL_CURRENCY || 'SGD';
 const NETS_CURRENCY = 'SGD';
 
+// Added to keep all payment providers using consistent Paid/Pending/Failed labels.
 function normalizePaymentStatus(status) {
   if (!status) return 'Paid';
   const value = String(status).toLowerCase();
+  if (value === 'refunded' || value === 'refund') return 'Refunded';
   if (value === 'paid' || value === 'complete' || value === 'completed' || value === 'succeeded') return 'Paid';
   if (value === 'failed' || value === 'declined') return 'Failed';
   return 'Pending';
@@ -41,12 +44,14 @@ function crc16Ccitt(payload) {
   return crc.toString(16).toUpperCase().padStart(4, '0');
 }
 
+// Added for NETS QR: decides which NETS proxy type is stored in the QR payload.
 function NETSProxyType() {
   const raw = String(process.env.NETS_PROXY_TYPE || '').trim().toUpperCase();
   if (raw === 'MOBILE' || raw === 'MSISDN' || raw === '0') return '0';
   return '2';
 }
 
+// Added for NETS QR: builds the Singapore EMV payload from invoice amount and merchant settings.
 function createNETSPayload(invoice) {
   const proxyValue = process.env.NETS_PROXY_VALUE || process.env.NETS_UEN || process.env.NETS_MOBILE;
   if (!proxyValue) {
@@ -85,6 +90,7 @@ function createNETSPayload(invoice) {
   };
 }
 
+// Added so Stripe, PayPal, NETS, bank transfer, and manual payments are saved in one history table.
 async function recordPayment(invoice, paymentData) {
   const providerReference = paymentData.providerReference || `${paymentData.method}-${invoice.id}-${Date.now()}`;
   const payload = {
@@ -429,6 +435,7 @@ exports.handleWebhook = async (req, res) => {
   }
 };
 
+// Added for bank transfer: returns account details and invoice reference for finance users.
 exports.bankTransferInstructions = async (req, res) => {
   const invoice = await Invoice.findByPk(req.params.id);
   if (!invoice) return res.status(404).json({ error: 'Invoice not found' });
@@ -444,6 +451,7 @@ exports.bankTransferInstructions = async (req, res) => {
   });
 };
 
+// Added for NETS QR: generates a QR image for an unpaid invoice and stores its reference.
 exports.netsQr = async (req, res) => {
   try {
     const invoice = await Invoice.findByPk(req.params.id);
@@ -484,6 +492,7 @@ exports.netsQr = async (req, res) => {
   }
 };
 
+// Added for finance confirmation: marks verified bank transfer or NETS payments as Paid.
 exports.confirmBankTransfer = async (req, res) => {
   try {
     const invoice = await Invoice.findByPk(req.params.id);
@@ -537,6 +546,7 @@ exports.confirmBankTransfer = async (req, res) => {
   }
 };
 
+// Added for the finance payments page: returns payment history with invoice/customer details.
 exports.history = async (req, res) => {
   try {
     const payments = await Payment.findAll({ order: [['paidAt', 'DESC'], ['id', 'DESC']] });
@@ -554,5 +564,79 @@ exports.history = async (req, res) => {
     }));
   } catch (err) {
     res.status(500).json({ error: err.message });
+  }
+};
+
+// Added for finance: marks a recorded payment as refunded and reopens the invoice.
+exports.refundPayment = async (req, res) => {
+  try {
+    const payment = await Payment.findByPk(req.params.id);
+    if (!payment) return res.status(404).json({ error: 'Payment not found' });
+    if (payment.status === 'Refunded') return res.status(400).json({ error: 'Payment is already refunded' });
+    if (payment.status !== 'Paid') return res.status(400).json({ error: 'Only paid payments can be refunded' });
+
+    const invoice = await Invoice.findByPk(payment.invoiceId);
+    const refundedAt = new Date();
+    const reason = req.body && req.body.reason ? String(req.body.reason).trim() : '';
+    const refundDestination = await simulateRefundDestination({
+      payment,
+      invoice,
+      refundedBy: req.user && req.user.id
+    });
+    const refundReference = req.body && req.body.refundReference
+      ? String(req.body.refundReference).trim()
+      : refundDestination.transaction.reference;
+    const refundData = {
+      refundReference,
+      reason,
+      refundedAt: refundedAt.toISOString(),
+      refundedBy: req.user && req.user.id,
+      testBankAccountId: refundDestination.refundAccount.id,
+      testBankAccountNumber: refundDestination.refundAccount.accountNumber,
+      testBankTransactionId: refundDestination.transaction.id,
+      testBankReference: refundDestination.transaction.reference
+    };
+
+    await payment.update({
+      status: 'Refunded',
+      data: Object.assign({}, payment.data || {}, { refund: refundData })
+    });
+
+    if (invoice) {
+      const invoiceData = Object.assign({}, invoice.data || {}, {
+        payment: Object.assign({}, (invoice.data && invoice.data.payment) || {}, {
+          status: 'refunded',
+          refundedAt: refundedAt.toISOString(),
+        refundReference,
+        refundReason: reason,
+        refundTestBankAccount: refundDestination.refundAccount.accountNumber
+      })
+      });
+      await invoice.update({ status: 'Sent', data: invoiceData });
+    }
+
+    const { ip, userAgent } = getRequestMetadata(req);
+    await logAudit({
+      userId: req.user ? req.user.id : null,
+      action: 'payment_refunded',
+      entity: 'Payment',
+      entityId: payment.id,
+      meta: {
+        invoiceNumber: payment.invoiceNumber,
+        amount: payment.amount,
+        method: payment.method,
+        refundReference,
+        reason,
+        testBankAccountId: refundDestination.refundAccount.id,
+        testBankAccountNumber: refundDestination.refundAccount.accountNumber,
+        testBankTransactionId: refundDestination.transaction.id
+      },
+      ip,
+      userAgent
+    });
+
+    res.json({ ok: true, payment, invoice, refundDestination });
+  } catch (err) {
+    res.status(400).json({ error: err.message });
   }
 };

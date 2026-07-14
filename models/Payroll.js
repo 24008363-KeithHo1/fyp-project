@@ -10,6 +10,10 @@ const Payroll = sequelize.define('Payroll', {
   gross: { type: DataTypes.DECIMAL(10,2) },
   deductions: { type: DataTypes.JSON, defaultValue: {} },
   net: { type: DataTypes.DECIMAL(10,2) },
+  payment_status: { type: DataTypes.ENUM('Pending', 'Approved', 'Paid'), defaultValue: 'Pending' },
+  paid_at: { type: DataTypes.DATE },
+  payment_method: { type: DataTypes.STRING },
+  data: { type: DataTypes.JSON, defaultValue: {} }
 }, {
   timestamps: true,
   underscored: false

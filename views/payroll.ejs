@@ -79,6 +79,9 @@
               <th class="text-end border-0">Gross</th>
               <th class="text-end border-0">Deductions</th>
               <th class="text-end border-0">Net</th>
+              <th class="border-0">Payment Status</th>
+              <th class="border-0">Released Date</th>
+              <th class="border-0">Payment Method</th>
               <th class="border-0">Created</th>
               <th class="border-0">Updated</th>
               <th class="text-center border-0">Actions</th>
@@ -204,7 +207,7 @@
       const tbody = document.getElementById('list'); tbody.innerHTML = '';
       
       if (!items || items.length === 0) { 
-        tbody.innerHTML = '<tr><td colspan="10" class="text-center text-muted py-4">No payroll records found</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="13" class="text-center text-muted py-4">No payroll records found</td></tr>';
         updateStats(0, 0, 0);
         return; 
       }
@@ -216,6 +219,8 @@
         totalGross += parseFloat(p.gross || 0);
         totalNet += parseFloat(p.net || 0);
         const deductionValue = formatDeductionValue(p.deductions);
+        const status = p.payment_status || 'Pending';
+        const actionHtml = payrollActionHtml(p);
         
         const tr = document.createElement('tr');
         tr.innerHTML = `
@@ -229,6 +234,9 @@
           <td class="text-end fw-semibold">${parseFloat(p.gross||0).toFixed(2)}</td>
           <td class="text-end text-danger">${deductionValue.toFixed(2)}</td>
           <td class="text-end fw-bold text-primary">${parseFloat(p.net||0).toFixed(2)}</td>
+          <td>${paymentStatusBadge(status)}</td>
+          <td><small class="text-muted">${p.paid_at ? formatDate(p.paid_at) : '-'}</small></td>
+          <td><small>${paymentMethodDetails(p)}</small></td>
           <td><small class="text-muted">${formatDate(p.createdAt)}</small></td>
           <td><small class="text-muted">${formatDate(p.updatedAt)}</small></td>
           <td class="text-center">
@@ -241,6 +249,7 @@
             <button class="btn btn-sm btn-outline-danger ms-1" onclick="deletePayroll(${p.id})" title="Delete Record">
               <i class="fas fa-trash"></i>
             </button>
+            ${actionHtml}
           </td>
         `;
         tbody.appendChild(tr);
@@ -254,6 +263,66 @@
     document.getElementById('totalRecords').textContent = records;
     document.getElementById('totalGross').textContent = '$' + gross.toFixed(2);
     document.getElementById('totalNet').textContent = '$' + net.toFixed(2);
+  }
+
+  function paymentStatusBadge(status) {
+    if (status === 'Paid') return '<span class="badge bg-success">Paid</span>';
+    if (status === 'Approved') return '<span class="badge bg-primary">Approved</span>';
+    return '<span class="badge bg-warning text-dark">Pending</span>';
+  }
+
+  function payrollActionHtml(p) {
+    const status = p.payment_status || 'Pending';
+    if (status === 'Paid') {
+      return '<button class="btn btn-sm btn-success ms-1" type="button" disabled>&check; Salary Released</button>';
+    }
+    if (status === 'Approved') {
+      return `<button class="btn btn-sm btn-outline-success ms-1" type="button" onclick="releaseSalary(${p.id}, this)">Release Salary</button>`;
+    }
+    return `<button class="btn btn-sm btn-outline-primary ms-1" type="button" onclick="approvePayroll(${p.id}, this)">Approve Payroll</button>`;
+  }
+
+  function paymentMethodDetails(p) {
+    const release = p.data && p.data.salaryRelease;
+    if (!p.payment_method) return '-';
+    if (!release) return p.payment_method;
+    return `${p.payment_method}<br><span class="text-muted">To: ${release.testBankAccountNumber || '-'}</span>`;
+  }
+
+  async function postPayrollAction(id, action, button) {
+    const originalText = button ? button.textContent : '';
+    try {
+      if (button) {
+        button.disabled = true;
+        button.textContent = action === 'approve' ? 'Approving...' : 'Releasing...';
+      }
+      const res = await fetch(`/api/payroll/${id}/${action}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          authorization: 'Bearer ' + token
+        }
+      });
+      const data = await res.json();
+      if (!res.ok) return alert(data.error || 'Payroll action failed');
+      alert(data.message || 'Payroll updated successfully');
+      await load();
+    } catch (err) {
+      alert('Payroll action failed: ' + err.message);
+    } finally {
+      if (button) {
+        button.disabled = false;
+        button.textContent = originalText;
+      }
+    }
+  }
+
+  function approvePayroll(id, button) {
+    postPayrollAction(id, 'approve', button);
+  }
+
+  function releaseSalary(id, button) {
+    postPayrollAction(id, 'release', button);
   }
 
   async function editPayroll(id) {

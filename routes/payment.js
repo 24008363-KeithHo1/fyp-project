@@ -5,6 +5,7 @@ const checkRole = require('../middlewares/roles');
 
 const paymentController = require('../controllers/paymentController');
 
+// Payment routes added for the different payment flows used by invoices and the finance page.
 router.post('/checkout/:id', paymentController.createCheckoutSession);
 router.get('/paypal/config', paymentController.paypalConfig);
 router.post('/paypal/orders/:id', paymentController.createPayPalOrder);
@@ -13,7 +14,9 @@ router.get('/nets/:id', paymentController.netsQr);
 router.get('/bank-transfer/:id', paymentController.bankTransferInstructions);
 router.post('/bank-transfer/:id/confirm', auth, checkRole(['Admin', 'Finance']), paymentController.confirmBankTransfer);
 router.get('/history', auth, checkRole(['Admin', 'Finance']), paymentController.history);
+router.post('/:id/refund', auth, checkRole(['Admin', 'Finance']), paymentController.refundPayment);
 
+// Stripe redirects users here after checkout success or cancellation.
 router.get('/success', paymentController.handleSuccess);
 
 router.get('/cancel', (req, res) => {

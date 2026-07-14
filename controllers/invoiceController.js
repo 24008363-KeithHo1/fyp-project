@@ -1,5 +1,6 @@
 const Invoice = require('../models/Invoice');
 const InvoiceItem = require('../models/InvoiceItem');
+const Payment = require('../models/Payment');
 const { sequelize } = require('../config/db');
 const { generateInvoicePDF } = require('../utils/pdf');
 const { sendEmail } = require('../utils/email');
@@ -465,6 +466,35 @@ exports.send = async (req, res) => {
     await logAction(req, 'send', 'Invoice', inv.id, { number: inv.number, recipient: to, amount: inv.amount });
     res.json({ ok: true });
   } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+
+exports.remove = async (req, res) => {
+  const tx = await sequelize.transaction();
+  try {
+    const inv = await Invoice.findByPk(req.params.id, { transaction: tx });
+    if (!inv) {
+      await tx.rollback();
+      return res.status(404).json({ error: 'Invoice not found' });
+    }
+    const paidPayment = await Payment.findOne({ where: { invoiceId: inv.id, status: 'Paid' }, transaction: tx });
+    if (inv.status === 'Paid' || paidPayment) {
+      await tx.rollback();
+      return res.status(400).json({ error: 'Paid invoices cannot be deleted. Refund or void the payment first.' });
+    }
+
+    await InvoiceItem.destroy({ where: { invoiceId: inv.id }, transaction: tx });
+    await inv.destroy({ transaction: tx });
+    await tx.commit();
+    await logAction(req, 'delete', 'Invoice', inv.id, {
+      number: inv.number,
+      customer_name: inv.customer_name,
+      amount: inv.amount
+    });
+    res.json({ ok: true, message: 'Invoice deleted successfully' });
+  } catch (err) {
+    await tx.rollback();
     res.status(500).json({ error: err.message });
   }
 };

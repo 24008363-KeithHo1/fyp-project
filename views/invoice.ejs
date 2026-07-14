@@ -419,6 +419,11 @@
     color: #1d4ed8;
   }
 
+  .invoice-action-btn-danger {
+    border-color: rgba(220,38,38,.25);
+    color: #b91c1c;
+  }
+
   .invoice-empty {
     text-align: center;
     color: var(--inv-muted);
@@ -747,6 +752,7 @@
         <td>${i.due_date ? new Date(i.due_date).toLocaleDateString() : ''}</td>
         <td><span class="invoice-badge ${statusClass(i.status, i.due_date)}">${statusLabel(i.status, i.due_date)}</span></td>
         <td class="text-end">
+          <!-- Added: invoice payment actions for PDF/CSV export, card, PayPal, NETS QR, bank transfer, and sending invoices. -->
           <div class="invoice-actions">
             <a class="invoice-action-btn" href="/api/invoices/${i.id}/pdf" target="_blank"><i class="fa-solid fa-file-pdf"></i> PDF</a>
             <a class="invoice-action-btn" href="/api/invoices/${i.id}/excel" target="_blank"><i class="fa-solid fa-file-excel"></i> Excel</a>
@@ -755,6 +761,7 @@
             ${i.status !== 'Paid' ? `<button class="invoice-action-btn invoice-action-btn-dark" onclick="showNETS(${i.id})"><i class="fa-solid fa-qrcode"></i> NETS</button>` : ''}
             ${i.status !== 'Paid' ? `<button class="invoice-action-btn invoice-action-btn-info" onclick="showBankTransfer(${i.id})"><i class="fa-solid fa-building-columns"></i> Bank</button>` : ''}
             <button class="invoice-action-btn invoice-action-btn-primary" onclick="sendInvoice(${i.id}, '${escapeHtml((i.data && i.data.email) || '').replace(/'/g, "\\'")}')"><i class="fa-solid fa-paper-plane"></i> Send</button>
+            ${i.status !== 'Paid' ? `<button class="invoice-action-btn invoice-action-btn-danger" onclick="deleteInvoice(${i.id}, '${escapeHtml(i.number || '').replace(/'/g, "\\'")}')"><i class="fa-solid fa-trash"></i> Delete</button>` : ''}
           </div>
           <div id="paypal-buttons-${i.id}" class="mt-2"></div>
           <div id="nets-qr-${i.id}" class="mt-2"></div>
@@ -850,6 +857,19 @@
     if (res.ok) { alert('Invoice sent'); load(); } else { const err = await res.json(); alert(err.error || 'Failed to send'); }
   }
 
+  async function deleteInvoice(id, number){
+    if (!confirm(`Delete invoice ${number || id}? This cannot be undone.`)) return;
+    const res = await fetch(`/api/invoices/${id}`, { method: 'DELETE', headers: { authorization:'Bearer '+token } });
+    const data = await res.json();
+    if (res.ok) {
+      alert(data.message || 'Invoice deleted');
+      load();
+    } else {
+      alert(data.error || 'Failed to delete invoice');
+    }
+  }
+
+  // Added: starts Stripe card checkout directly from an invoice row.
   async function payByCard(id){
     const res = await fetch(`/payment/checkout/${id}`, { method: 'POST' });
     const data = await res.json();
@@ -857,6 +877,7 @@
     else alert(data.error || 'Unable to start card payment');
   }
 
+  // Added: loads PayPal buttons inside the selected invoice row.
   async function payByPayPal(id){
     const container = document.getElementById(`paypal-buttons-${id}`);
     container.innerHTML = '';
@@ -886,6 +907,7 @@
     }
   }
 
+  // Added: displays a NETS QR code for the invoice so customers can scan and pay.
   async function showNETS(id){
     const box = document.getElementById(`nets-qr-${id}`);
     box.innerHTML = '';
@@ -907,6 +929,7 @@
     }
   }
 
+  // Added: shows bank transfer instructions for customers paying outside card/PayPal/NETS.
   async function showBankTransfer(id){
     const res = await fetch(`/payment/bank-transfer/${id}`);
     const data = await res.json();
