@@ -1,3 +1,4 @@
+const cron = require('node-cron');
 const AutomationSetting = require('../models/AutomationSetting');
 const User = require('../models/User');
 const { sendEmail } = require('../utils/email');
@@ -150,14 +151,20 @@ function startPayrollAutomationScheduler() {
   if (global.__payrollAutomationSchedulerStarted) return;
   global.__payrollAutomationSchedulerStarted = true;
 
-  setInterval(() => {
-    const now = new Date();
-    if (now.getHours() === 8 && now.getMinutes() === 0 && now.getSeconds() === 0) {
-      runPayrollReminderAutomation({ currentDate: now, source: 'scheduler' }).catch((err) => {
-        console.error('Payroll automation scheduler failed:', err);
-      });
+  const timezone = process.env.PAYROLL_REMINDER_TIMEZONE || 'Asia/Singapore';
+  global.__payrollAutomationSchedulerTask = cron.schedule('0 8 * * *', async () => {
+    try {
+      await runPayrollReminderAutomation({ currentDate: new Date(), source: 'scheduler' });
+    } catch (err) {
+      console.error('Payroll automation scheduler failed:', err);
     }
-  }, 1000 * 60);
+  }, {
+    timezone,
+    noOverlap: true,
+    name: 'daily-payroll-reminders'
+  });
+
+  console.log(`Payroll reminder scheduler started: daily at 08:00 (${timezone})`);
 }
 
 module.exports = {
