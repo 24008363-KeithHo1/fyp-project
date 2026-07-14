@@ -149,7 +149,8 @@ exports.automationPage = async (req, res) => {
       title: 'Payroll Reminder Settings',
       settings,
       reminderPreview,
-      message: req.query.message || ''
+      message: req.query.message || '',
+      automationBasePath: req.user.role === 'HR' ? '/hr/automation' : '/admin/automation'
     });
   } catch (err) {
     console.error(err);
@@ -160,7 +161,8 @@ exports.automationPage = async (req, res) => {
 exports.saveAutomationSettings = async (req, res) => {
   try {
     await saveAutomationSettings(req.body);
-    res.redirect('/admin/automation?message=Settings updated');
+    const automationBasePath = req.user.role === 'HR' ? '/hr/automation' : '/admin/automation';
+    res.redirect(`${automationBasePath}?message=Settings updated`);
   } catch (err) {
     console.error(err);
     res.status(500).send('Server error');
@@ -175,7 +177,8 @@ exports.triggerAutomation = async (req, res) => {
       source: 'manual'
     });
     const msg = encodeURIComponent(`Reminder run completed. ${result.reminders.length} reminder(s) found.`);
-    res.redirect(`/admin/automation?message=${msg}`);
+    const automationBasePath = req.user.role === 'HR' ? '/hr/automation' : '/admin/automation';
+    res.redirect(`${automationBasePath}?message=${msg}`);
   } catch (err) {
     console.error(err);
     res.status(500).send('Server error');

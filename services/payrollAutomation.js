@@ -1,4 +1,3 @@
-const { Op } = require('sequelize');
 const AutomationSetting = require('../models/AutomationSetting');
 const User = require('../models/User');
 const { sendEmail } = require('../utils/email');
@@ -96,32 +95,34 @@ async function runPayrollReminderAutomation({ currentDate = new Date(), req = nu
   const settings = await getAutomationSettings();
   const reminders = evaluatePayrollReminders(settings, currentDate);
 
-  const recipients = await User.findAll({
-    where: {
-      isActive: true,
-      role: { [Op.in]: ['Admin', 'Finance', 'HR'] }
-    }
-  });
+  const users = await User.findAll({ where: { isActive: true } });
+  const recipientRoles = {
+    payrollUploadDeadline: ['HR'],
+    financeApprovalDeadline: ['Finance'],
+    salaryReleaseDate: null // All active accounts
+  };
+  let targetedEmailCount = 0;
 
-  const emails = recipients
-    .map((user) => user.email)
-    .filter(Boolean);
+  for (const reminder of reminders) {
+    const allowedRoles = recipientRoles[reminder.key];
+    const emails = [...new Set(users
+      .filter((user) => !allowedRoles || allowedRoles.includes(user.role))
+      .map((user) => user.email)
+      .filter(Boolean))];
 
-  if (emails.length && reminders.length) {
-    const subject = 'Payroll reminder';
+    const subject = `${reminder.label} reminder`;
     const html = `
-      <h3>Payroll reminder</h3>
-      <p>The following payroll deadlines are approaching:</p>
-      <ul>
-        ${reminders.map((item) => `<li>${item.label}: ${item.value} (${item.daysUntil} day${item.daysUntil === 1 ? '' : 's'} away)</li>`).join('')}
-      </ul>
+      <h3>${reminder.label} reminder</h3>
+      <p>${reminder.label} is scheduled for <strong>${reminder.value}</strong>.</p>
+      <p>It is ${reminder.daysUntil === 0 ? 'due today' : `due in ${reminder.daysUntil} day${reminder.daysUntil === 1 ? '' : 's'}`}.</p>
     `;
 
+    targetedEmailCount += emails.length;
     for (const email of emails) {
       try {
         await sendEmail(email, subject, html);
       } catch (err) {
-        console.error('Payroll reminder email failed:', err.message);
+        console.error(`Payroll reminder email failed for ${reminder.key}:`, err.message);
       }
     }
   }
@@ -129,7 +130,7 @@ async function runPayrollReminderAutomation({ currentDate = new Date(), req = nu
   const meta = {
     source,
     reminderCount: reminders.length,
-    recipients: emails.length
+    recipients: targetedEmailCount
   };
 
   if (req) {
@@ -142,7 +143,7 @@ async function runPayrollReminderAutomation({ currentDate = new Date(), req = nu
     });
   }
 
-  return { settings, reminders, emailed: emails.length };
+  return { settings, reminders, emailed: targetedEmailCount };
 }
 
 function startPayrollAutomationScheduler() {

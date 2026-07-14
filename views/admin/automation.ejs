@@ -1,6 +1,14 @@
 <%- include('../partials/header', { title: 'Automation Settings' }) %>
 <%- include('../partials/navbar') %>
-<%- include('./_admin_nav') %>
+<% if (automationBasePath === '/admin/automation') { %>
+  <%- include('./_admin_nav') %>
+<% } else { %>
+  <nav class="admin-nav" aria-label="HR navigation">
+    <a href="/hr/dashboard">HR Dashboard</a>
+    <a href="/hr/employees">Employees</a>
+    <a href="/hr/requests">Requests</a>
+  </nav>
+<% } %>
 
 <div class="container py-4">
   <h2>Payroll Reminder Settings</h2>
@@ -9,7 +17,7 @@
     <div class="alert alert-success"><%= message %></div>
   <% } %>
 
-  <form method="post" action="/admin/automation/settings" class="card p-4 mb-4">
+  <form method="post" action="<%= automationBasePath %>/settings" class="card p-4 mb-4">
     <div class="mb-3">
       <label class="form-label">Reminder lead window (days)</label>
       <input class="form-control" name="payrollUploadReminderOffsetDays" value="<%= settings.payrollUploadReminderOffsetDays %>">
@@ -33,7 +41,7 @@
     <button class="btn btn-primary">Save Settings</button>
   </form>
 
-  <form method="post" action="/admin/automation/run" class="card p-4 mb-4">
+  <form method="post" action="<%= automationBasePath %>/run" class="card p-4 mb-4">
     <h4>Run Reminder Scheduler</h4>
     <p>Use this during your demo to trigger the same logic that would normally run automatically each morning.</p>
     <button class="btn btn-success">Run Scheduler</button>
