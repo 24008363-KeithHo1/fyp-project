@@ -11,7 +11,7 @@ try{
 </script>
 
 <div class="container mt-4 payments-page">
-  <div class="d-flex flex-wrap align-items-end justify-content-between gap-2 mb-3">
+  <div class="payment-page-hero d-flex flex-wrap align-items-end justify-content-between gap-2 mb-3">
     <div>
       <h2>Payments</h2>
       <p class="text-muted mb-0">Record, review, and reconcile payments for invoices and bank activity.</p>
@@ -45,7 +45,7 @@ try{
   <div id="paymentAlerts" class="finance-alerts mt-3"></div>
 
   <!-- Added: tabbed payment workspace for Bank Transfer, Stripe, PayPal, and NETS QR. -->
-  <section class="report-panel finance-row">
+  <section class="report-panel finance-row payment-workspace-panel">
     <ul class="nav nav-tabs payment-tabs" id="paymentMethodTabs" role="tablist">
       <li class="nav-item" role="presentation">
         <button class="nav-link active" id="bank-tab" data-bs-toggle="tab" data-bs-target="#bankPanel" type="button" role="tab">Bank Transfer</button>
@@ -91,7 +91,7 @@ try{
                 <label class="form-label" for="note">Note</label>
                 <input id="note" class="form-control" placeholder="Optional note">
               </div>
-              <button class="btn btn-primary" type="submit">Mark as Paid</button>
+              <button class="btn btn-primary payment-primary-action" type="submit">Mark as Paid</button>
             </form>
           </div>
         </div>
@@ -159,7 +159,7 @@ try{
   </section>
 
   <!-- Added: filters for searching payment history by method, status, and date range. -->
-  <section class="report-panel finance-row">
+  <section class="report-panel finance-row payment-filter-panel">
     <h5>Search and Filter</h5>
     <div class="row g-2">
       <div class="col-md-4">
@@ -194,7 +194,7 @@ try{
   </section>
 
   <!-- Added: payment history table showing recorded payments and invoice links. -->
-  <section class="report-panel finance-row">
+  <section class="report-panel finance-row payment-history-panel">
     <div class="d-flex justify-content-between align-items-center mb-2">
       <h5 class="mb-0">Payment History</h5>
       <span class="text-muted small" id="paymentCount">0 payments</span>
@@ -210,7 +210,7 @@ try{
             <th class="text-end">Amount</th>
             <th>Status</th>
             <th>Reference</th>
-            <th>Action</th>
+            <th class="payment-action-heading">Action</th>
           </tr>
         </thead>
         <tbody id="historyBody">
@@ -221,7 +221,7 @@ try{
   </section>
 
   <!-- Added: recent payment activity summary for quick finance review. -->
-  <section class="report-panel finance-row">
+  <section class="report-panel finance-row payment-activity-panel">
     <h5>Recent Payment Activity</h5>
     <div id="recentActivity" class="payment-activity">
       <div class="text-muted">Loading activity...</div>
@@ -415,11 +415,11 @@ function renderPayments(){
       <td class="text-end">${money(payment.amount, payment.currency)}</td>
       <td>${statusBadge(payment.status, payment.method)}</td>
       <td class="text-break">${paymentReferenceDetails(payment)}</td>
-      <td>
-        <div class="btn-group btn-group-sm">
-          <a class="btn btn-outline-primary" href="/api/invoices/${payment.invoiceId}/pdf" target="_blank">View Invoice</a>
-          <a class="btn btn-outline-secondary" href="/api/invoices/${payment.invoiceId}/pdf" target="_blank" download>Receipt</a>
-          ${normalizeStatus(payment.status) === 'Paid' ? `<button class="btn btn-outline-danger refund-payment-btn" type="button" data-payment-id="${payment.id}" onclick="refundPayment('${payment.id}', this)">Refund</button>` : ''}
+      <td class="payment-action-cell">
+        <div class="payment-action-group" aria-label="Payment actions for ${payment.invoiceNumber || 'invoice'}">
+          <a class="payment-history-btn invoice-btn" href="/api/invoices/${payment.invoiceId}/pdf" target="_blank" rel="noopener">Invoice</a>
+          <a class="payment-history-btn receipt-btn" href="/api/invoices/${payment.invoiceId}/pdf" target="_blank" rel="noopener" download>Receipt</a>
+          ${normalizeStatus(payment.status) === 'Paid' ? `<button class="payment-history-btn refund-btn refund-payment-btn" type="button" data-payment-id="${payment.id}">Refund</button>` : ''}
         </div>
       </td>
     `;
