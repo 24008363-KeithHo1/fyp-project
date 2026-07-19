@@ -48,21 +48,21 @@ try{
   <section class="report-panel finance-row payment-workspace-panel">
     <ul class="nav nav-tabs payment-tabs" id="paymentMethodTabs" role="tablist">
       <li class="nav-item" role="presentation">
-        <button class="nav-link active" id="bank-tab" data-bs-toggle="tab" data-bs-target="#bankPanel" type="button" role="tab">Bank Transfer</button>
+        <button class="nav-link active" id="bank-tab" data-payment-target="bankPanel" type="button" role="tab" aria-controls="bankPanel" aria-selected="true">Bank Transfer</button>
       </li>
       <li class="nav-item" role="presentation">
-        <button class="nav-link" id="stripe-tab" data-bs-toggle="tab" data-bs-target="#stripePanel" type="button" role="tab">Stripe</button>
+        <button class="nav-link" id="stripe-tab" data-payment-target="stripePanel" type="button" role="tab" aria-controls="stripePanel" aria-selected="false">Stripe</button>
       </li>
       <li class="nav-item" role="presentation">
-        <button class="nav-link" id="paypal-tab" data-bs-toggle="tab" data-bs-target="#paypalPanel" type="button" role="tab">PayPal</button>
+        <button class="nav-link" id="paypal-tab" data-payment-target="paypalPanel" type="button" role="tab" aria-controls="paypalPanel" aria-selected="false">PayPal</button>
       </li>
       <li class="nav-item" role="presentation">
-        <button class="nav-link" id="nets-tab" data-bs-toggle="tab" data-bs-target="#netsPanel" type="button" role="tab">NETS QR</button>
+        <button class="nav-link" id="nets-tab" data-payment-target="netsPanel" type="button" role="tab" aria-controls="netsPanel" aria-selected="false">NETS QR</button>
       </li>
     </ul>
 
     <div class="tab-content pt-3">
-      <div class="tab-pane fade show active" id="bankPanel" role="tabpanel">
+      <div class="tab-pane fade show active payment-tab-panel" id="bankPanel" role="tabpanel" aria-labelledby="bank-tab">
         <div class="row g-3">
           <div class="col-lg-5">
             <div class="bank-instructions">
@@ -97,7 +97,7 @@ try{
         </div>
       </div>
 
-      <div class="tab-pane fade" id="stripePanel" role="tabpanel">
+      <div class="tab-pane fade payment-tab-panel" id="stripePanel" role="tabpanel" aria-labelledby="stripe-tab" hidden>
         <div class="payment-method-card">
           <h5>Stripe Card Payment</h5>
           <p class="text-muted">Start a Stripe Checkout session for an unpaid invoice.</p>
@@ -116,7 +116,7 @@ try{
         </div>
       </div>
 
-      <div class="tab-pane fade" id="paypalPanel" role="tabpanel">
+      <div class="tab-pane fade payment-tab-panel" id="paypalPanel" role="tabpanel" aria-labelledby="paypal-tab" hidden>
         <div class="payment-method-card">
           <h5>PayPal Payment</h5>
           <p class="text-muted">Create and capture a PayPal order for an unpaid invoice.</p>
@@ -136,7 +136,7 @@ try{
         </div>
       </div>
 
-      <div class="tab-pane fade" id="netsPanel" role="tabpanel">
+      <div class="tab-pane fade payment-tab-panel" id="netsPanel" role="tabpanel" aria-labelledby="nets-tab" hidden>
         <div class="payment-method-card">
           <h5>NETS QR</h5>
           <p class="text-muted">Generate a NETS QR for an unpaid invoice, then confirm after receipt is verified.</p>
@@ -233,6 +233,48 @@ try{
 let allInvoices = [];
 let allPayments = [];
 let paypalSdkPromise;
+
+const paymentTabs = Array.from(document.querySelectorAll('#paymentMethodTabs .nav-link'));
+const paymentPanels = Array.from(document.querySelectorAll('.payment-workspace-panel .payment-tab-panel'));
+
+function activatePaymentTab(tab){
+  const targetId = tab.dataset.paymentTarget;
+  if (!targetId) return;
+
+  paymentTabs.forEach(item => {
+    const isActive = item === tab;
+    item.classList.toggle('active', isActive);
+    item.setAttribute('aria-selected', String(isActive));
+    item.tabIndex = isActive ? 0 : -1;
+  });
+
+  paymentPanels.forEach(panel => {
+    const isActive = panel.id === targetId;
+    panel.classList.toggle('active', isActive);
+    panel.classList.toggle('show', isActive);
+    panel.hidden = !isActive;
+  });
+}
+
+paymentTabs.forEach((tab, index) => {
+  tab.addEventListener('click', () => activatePaymentTab(tab));
+  tab.addEventListener('keydown', event => {
+    const isPrevious = event.key === 'ArrowLeft' || event.key === 'ArrowUp';
+    const isNext = event.key === 'ArrowRight' || event.key === 'ArrowDown';
+    const isBoundary = event.key === 'Home' || event.key === 'End';
+    if (!isPrevious && !isNext && !isBoundary) return;
+
+    event.preventDefault();
+    const nextIndex = event.key === 'Home'
+      ? 0
+      : event.key === 'End'
+        ? paymentTabs.length - 1
+        : (index + (isNext ? 1 : -1) + paymentTabs.length) % paymentTabs.length;
+    const nextTab = paymentTabs[nextIndex];
+    nextTab.focus();
+    activatePaymentTab(nextTab);
+  });
+});
 
 function money(value, currency){
   return `${currency || 'SGD'} ${Number(value || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
