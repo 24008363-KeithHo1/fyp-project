@@ -1,6 +1,7 @@
 const User = require('../models/User');
 const AuditLog = require('../models/AuditLog');
 const ReminderDelivery = require('../models/ReminderDelivery');
+const { reconcileReminderBounces } = require('../services/emailBounceReconciliation');
 const {
   getAutomationSettings,
   saveAutomationSettings,
@@ -193,6 +194,13 @@ exports.triggerAutomation = async (req, res) => {
 
 exports.reminderHistory = async (req, res) => {
   try {
+    let bounceSyncError = '';
+    try {
+      await reconcileReminderBounces();
+    } catch (err) {
+      bounceSyncError = 'Could not check the sender mailbox for delivery failures. Verify the IMAP settings.';
+      console.error('Reminder bounce reconciliation failed:', err.message);
+    }
     const where = {};
     const allowedStatuses = ['sent', 'failed', 'skipped'];
     const allowedReminderKeys = [
@@ -214,6 +222,7 @@ exports.reminderHistory = async (req, res) => {
     res.render('admin/reminder-history', {
       title: 'Payroll Reminder History',
       deliveries,
+      bounceSyncError,
       filters: {
         status: req.query.status || '',
         reminderKey: req.query.reminderKey || ''

@@ -11,6 +11,10 @@
     <a class="automation-btn automation-btn-secondary" href="<%= automationBasePath %>"><i class="fa-solid fa-arrow-left"></i> Back to Settings</a>
   </div>
 
+  <% if (bounceSyncError) { %>
+    <div class="alert alert-warning"><%= bounceSyncError %></div>
+  <% } %>
+
   <form method="get" action="<%= automationBasePath %>/history" class="automation-card automation-filter-card">
     <div class="automation-filter-grid">
       <div class="automation-field">
@@ -62,13 +66,18 @@
               financeApprovalDeadline: 'Finance approval',
               salaryReleaseDate: 'Salary release'
             }; %>
+            <% const statusLabels = {
+              sent: 'Sent',
+              failed: 'Failed',
+              skipped: 'Not sent'
+            }; %>
             <tr>
               <td><%= labels[delivery.reminderKey] || delivery.reminderKey %></td>
               <td><%= delivery.deadline %></td>
               <td><%= delivery.recipient %></td>
               <td>
                 <span class="badge <%= delivery.status === 'sent' ? 'bg-success' : delivery.status === 'failed' ? 'bg-danger' : 'bg-warning text-dark' %>">
-                  <%= delivery.status %>
+                  <%= statusLabels[delivery.status] || delivery.status %>
                 </span>
               </td>
               <td><%= delivery.source %></td>
