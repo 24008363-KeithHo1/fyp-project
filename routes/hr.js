@@ -15,6 +15,8 @@ router.get('/dashboard', (req, res) => {
 router.get('/automation', requireRole(['HR']), admin.automationPage);
 router.get('/automation/history', requireRole(['HR']), admin.reminderHistory);
 router.post('/automation/settings', requireRole(['HR']), admin.saveAutomationSettings);
+router.post('/automation/period', requireRole(['HR']), admin.savePayrollPeriod);
+router.post('/automation/period/:id/advance', requireRole(['HR']), admin.advancePayrollPeriod);
 router.post('/automation/run', requireRole(['HR']), admin.triggerAutomation);
 
 router.get('/employees', admin.listUsersByDepartment);

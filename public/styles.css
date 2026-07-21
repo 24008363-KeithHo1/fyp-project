@@ -1422,6 +1422,8 @@ main .form-select:hover{
 .automation-empty p{margin:0;color:#48685c;font-weight:700}
 .automation-empty span{font-size:.82rem}
 .payroll-automation-page .alert{border:0;border-radius:12px;background:#e5f7ed;color:#12683e;padding:.9rem 1rem}
+.payroll-automation-page .alert-danger{background:#fdebec;color:#9f2632}
+.payroll-automation-page .automation-card-heading>.badge{margin-left:auto;padding:.5rem .7rem;border-radius:999px}
 @media (max-width:767px){
   .payroll-automation-page{padding-top:1.25rem!important}
   .automation-hero{align-items:flex-start;flex-direction:column;gap:1rem}

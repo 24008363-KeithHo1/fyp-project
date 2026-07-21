@@ -4,6 +4,7 @@ const ReminderDelivery = require('../models/ReminderDelivery');
 const User = require('../models/User');
 const { sendEmail } = require('../utils/email');
 const { logAction, logAudit } = require('../utils/audit');
+const { getActivePayrollPeriod } = require('./payrollPeriod');
 
 const DEFAULT_SETTINGS = {
   payrollUploadReminderOffsetDays: '2',
@@ -35,11 +36,18 @@ async function getAutomationSettings() {
   rows.forEach((row) => {
     settings[row.key] = row.value;
   });
-  return { ...DEFAULT_SETTINGS, ...settings };
+  const activePeriod = await getActivePayrollPeriod();
+  const merged = { ...DEFAULT_SETTINGS, ...settings };
+  if (activePeriod) {
+    merged.payrollUploadDeadline = activePeriod.payrollUploadDeadline;
+    merged.financeApprovalDeadline = activePeriod.financeApprovalDeadline;
+    merged.salaryReleaseDate = activePeriod.salaryReleaseDate;
+  }
+  return { ...merged, activePeriod };
 }
 
 async function saveAutomationSettings(payload = {}) {
-  const allowedKeys = Object.keys(DEFAULT_SETTINGS);
+  const allowedKeys = ['payrollUploadReminderOffsetDays'];
   for (const key of allowedKeys) {
     if (payload[key] !== undefined) {
       await AutomationSetting.upsert({
@@ -95,7 +103,7 @@ function evaluatePayrollReminders(settings = {}, currentDate = new Date()) {
 
 async function runPayrollReminderAutomation({ currentDate = new Date(), req = null, source = 'scheduler' } = {}) {
   const settings = await getAutomationSettings();
-  const reminders = evaluatePayrollReminders(settings, currentDate);
+  const reminders = settings.activePeriod ? evaluatePayrollReminders(settings, currentDate) : [];
 
   const users = await User.findAll({ where: { isActive: true } });
   const recipientRoles = {
@@ -122,6 +130,7 @@ async function runPayrollReminderAutomation({ currentDate = new Date(), req = nu
     deliveryCounts.targeted += emails.length;
     for (const email of emails) {
       const deliveryIdentity = {
+        payrollPeriodId: settings.activePeriod ? settings.activePeriod.id : null,
         reminderKey: reminder.key,
         deadline: reminder.value,
         recipient: email

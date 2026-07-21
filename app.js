@@ -78,6 +78,24 @@ async function ensurePayrollBankNumberColumn() {
   }
 }
 
+async function ensureReminderPayrollPeriodColumn() {
+  const [columns] = await sequelize.query("SHOW COLUMNS FROM `ReminderDeliveries` LIKE 'payrollPeriodId'");
+  if (columns.length === 0) {
+    await sequelize.query("ALTER TABLE `ReminderDeliveries` ADD COLUMN `payrollPeriodId` INTEGER NULL AFTER `id`");
+  }
+  const [uniqueIndex] = await sequelize.query("SHOW INDEX FROM `ReminderDeliveries` WHERE `Key_name` = 'reminder_delivery_unique_recipient'");
+  const indexFields = uniqueIndex
+    .sort((a, b) => a.Seq_in_index - b.Seq_in_index)
+    .map((row) => row.Column_name);
+  const expectedFields = ['payrollPeriodId', 'reminderKey', 'deadline', 'recipient'];
+  if (indexFields.join(',') !== expectedFields.join(',')) {
+    if (uniqueIndex.length) {
+      await sequelize.query("DROP INDEX `reminder_delivery_unique_recipient` ON `ReminderDeliveries`");
+    }
+    await sequelize.query("CREATE UNIQUE INDEX `reminder_delivery_unique_recipient` ON `ReminderDeliveries` (`payrollPeriodId`, `reminderKey`, `deadline`, `recipient`)");
+  }
+}
+
 async function start() {
   try {
     await sequelize.authenticate();
@@ -85,6 +103,7 @@ async function start() {
     const shouldAlterSchema = process.env.DB_SYNC_ALTER === 'true';
     await sequelize.sync({ alter: shouldAlterSchema });
     await ensurePayrollBankNumberColumn();
+    await ensureReminderPayrollPeriodColumn();
     startPayrollAutomationScheduler();
     app.listen(PORT, () => {
       console.log(`Server running at http://localhost:${PORT}`);

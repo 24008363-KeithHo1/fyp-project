@@ -48,6 +48,7 @@
         <thead>
           <tr>
             <th>Reminder</th>
+            <th>Payroll period</th>
             <th>Deadline</th>
             <th>Recipient</th>
             <th>Status</th>
@@ -58,7 +59,7 @@
         </thead>
         <tbody>
           <% if (!deliveries.length) { %>
-            <tr><td colspan="7"><div class="automation-empty"><i class="fa-solid fa-inbox"></i><p>No reminder deliveries found.</p><span>Run the scheduler to create the first delivery record.</span></div></td></tr>
+            <tr><td colspan="8"><div class="automation-empty"><i class="fa-solid fa-inbox"></i><p>No reminder deliveries found.</p><span>Run the scheduler to create the first delivery record.</span></div></td></tr>
           <% } %>
           <% deliveries.forEach((delivery) => { %>
             <% const labels = {
@@ -73,6 +74,7 @@
             }; %>
             <tr>
               <td><%= labels[delivery.reminderKey] || delivery.reminderKey %></td>
+              <td><%= delivery.payrollPeriodId ? (periodNames[delivery.payrollPeriodId] || `Period #${delivery.payrollPeriodId}`) : 'Legacy' %></td>
               <td><%= delivery.deadline %></td>
               <td><%= delivery.recipient %></td>
               <td>

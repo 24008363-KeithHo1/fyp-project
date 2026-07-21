@@ -12,6 +12,8 @@ router.get('/users', admin.listUsers);
 router.get('/automation', admin.automationPage);
 router.get('/automation/history', admin.reminderHistory);
 router.post('/automation/settings', admin.saveAutomationSettings);
+router.post('/automation/period', admin.savePayrollPeriod);
+router.post('/automation/period/:id/advance', admin.advancePayrollPeriod);
 router.post('/automation/run', admin.triggerAutomation);
 router.get('/audit-logs', admin.listAuditLogs);
 router.get('/audit-logs-json', admin.listAuditLogsJson);

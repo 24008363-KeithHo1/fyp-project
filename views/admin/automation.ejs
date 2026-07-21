@@ -25,11 +25,51 @@
   <% if (message) { %>
     <div class="alert alert-success"><%= message %></div>
   <% } %>
+  <% if (error) { %>
+    <div class="alert alert-danger"><%= error %></div>
+  <% } %>
+
+  <% const period = settings.activePeriod; %>
+  <form method="post" action="<%= automationBasePath %>/period" class="automation-card automation-settings-card">
+    <div class="automation-card-heading">
+      <span class="automation-icon"><i class="fa-solid fa-calendar-check"></i></span>
+      <div>
+        <h3><%= period ? period.name : 'Create payroll period' %></h3>
+        <p>All payroll milestones and reminder deliveries belong to this active period.</p>
+      </div>
+      <% if (period) { %><span class="badge bg-primary ms-auto"><%= period.status.replace(/([a-z])([A-Z])/g, '$1 $2') %></span><% } %>
+    </div>
+    <div class="automation-form-grid">
+      <div class="automation-field automation-field-wide">
+        <label class="form-label">Period name</label>
+        <input class="form-control" name="name" required <%= period && period.status !== 'Draft' ? 'readonly' : '' %> value="<%= period ? period.name : '' %>" placeholder="e.g. July 2026 Payroll">
+      </div>
+      <div class="automation-field"><label class="form-label">Period start</label><input class="form-control" type="date" name="periodStart" required <%= period && period.status !== 'Draft' ? 'readonly' : '' %> value="<%= period ? period.periodStart : '' %>"></div>
+      <div class="automation-field"><label class="form-label">Period end</label><input class="form-control" type="date" name="periodEnd" required <%= period && period.status !== 'Draft' ? 'readonly' : '' %> value="<%= period ? period.periodEnd : '' %>"></div>
+      <div class="automation-field"><label class="form-label">Payroll upload deadline</label><input class="form-control" type="date" name="payrollUploadDeadline" required <%= period && period.status !== 'Draft' ? 'readonly' : '' %> value="<%= period ? period.payrollUploadDeadline : settings.payrollUploadDeadline %>"></div>
+      <div class="automation-field"><label class="form-label">Finance approval deadline</label><input class="form-control" type="date" name="financeApprovalDeadline" required <%= period && period.status !== 'Draft' ? 'readonly' : '' %> value="<%= period ? period.financeApprovalDeadline : settings.financeApprovalDeadline %>"></div>
+      <div class="automation-field automation-field-wide"><label class="form-label">Salary release date</label><input class="form-control" type="date" name="salaryReleaseDate" required <%= period && period.status !== 'Draft' ? 'readonly' : '' %> value="<%= period ? period.salaryReleaseDate : settings.salaryReleaseDate %>"></div>
+    </div>
+    <% if (!period || period.status === 'Draft') { %>
+      <button class="automation-btn automation-btn-primary" type="submit"><i class="fa-solid fa-check"></i> <%= period ? 'Save Period' : 'Create Period' %></button>
+    <% } %>
+  </form>
+
+  <% if (period && period.status !== 'Closed') { %>
+    <% const currentIndex = workflow.indexOf(period.status); %>
+    <form method="post" action="<%= automationBasePath %>/period/<%= period.id %>/advance" class="automation-card automation-run-card">
+      <div class="automation-card-heading mb-0">
+        <span class="automation-icon"><i class="fa-solid fa-arrow-right"></i></span>
+        <div><h3>Advance payroll workflow</h3><p>Current: <strong><%= period.status.replace(/([a-z])([A-Z])/g, '$1 $2') %></strong>. Next: <strong><%= workflow[currentIndex + 1].replace(/([a-z])([A-Z])/g, '$1 $2') %></strong>.</p></div>
+      </div>
+      <button class="automation-btn automation-btn-secondary" type="submit">Advance Stage</button>
+    </form>
+  <% } %>
 
   <form method="post" action="<%= automationBasePath %>/settings" class="automation-card automation-settings-card">
     <div class="automation-card-heading">
       <span class="automation-icon"><i class="fa-solid fa-calendar-days"></i></span>
-      <div><h3>Reminder schedule</h3><p>Choose when each payroll milestone is due.</p></div>
+      <div><h3>Reminder policy</h3><p>Choose how early reminders begin for the active period.</p></div>
     </div>
     <div class="automation-form-grid">
     <div class="automation-field automation-field-wide">
@@ -38,23 +78,6 @@
       <small>Reminders are included when a deadline falls within this window.</small>
     </div>
 
-    <div class="automation-field">
-      <label class="form-label">Payroll upload deadline</label>
-      <input class="form-control" type="date" name="payrollUploadDeadline" value="<%= settings.payrollUploadDeadline %>">
-      <small>Sent to active HR accounts.</small>
-    </div>
-
-    <div class="automation-field">
-      <label class="form-label">Finance approval deadline</label>
-      <input class="form-control" type="date" name="financeApprovalDeadline" value="<%= settings.financeApprovalDeadline %>">
-      <small>Sent to active Finance accounts.</small>
-    </div>
-
-    <div class="automation-field automation-field-wide">
-      <label class="form-label">Salary release date</label>
-      <input class="form-control" type="date" name="salaryReleaseDate" value="<%= settings.salaryReleaseDate %>">
-      <small>Sent to every active account.</small>
-    </div>
     </div>
 
     <button class="automation-btn automation-btn-primary" type="submit"><i class="fa-solid fa-check"></i> Save Settings</button>
@@ -65,7 +88,7 @@
       <span class="automation-icon"><i class="fa-solid fa-paper-plane"></i></span>
       <div><h3>Run Reminder Scheduler</h3><p>Trigger the daily reminder process now. Duplicate deliveries will be skipped.</p></div>
     </div>
-    <button class="automation-btn automation-btn-primary" type="submit"><i class="fa-solid fa-play"></i> Run Scheduler</button>
+    <button class="automation-btn automation-btn-primary" type="submit" <%= period ? '' : 'disabled' %>><i class="fa-solid fa-play"></i> Run Scheduler</button>
   </form>
 
   <div class="automation-card automation-preview-card">

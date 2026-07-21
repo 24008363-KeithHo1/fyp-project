@@ -1,7 +1,9 @@
 const User = require('../models/User');
 const AuditLog = require('../models/AuditLog');
 const ReminderDelivery = require('../models/ReminderDelivery');
+const PayrollPeriod = require('../models/PayrollPeriod');
 const { reconcileReminderBounces } = require('../services/emailBounceReconciliation');
+const { WORKFLOW, advancePayrollPeriod, saveActivePayrollPeriod } = require('../services/payrollPeriod');
 const {
   getAutomationSettings,
   saveAutomationSettings,
@@ -146,12 +148,14 @@ exports.dashboardView = async (req, res) => {
 exports.automationPage = async (req, res) => {
   try {
     const settings = await getAutomationSettings();
-    const reminderPreview = evaluatePayrollReminders(settings, new Date());
+    const reminderPreview = settings.activePeriod ? evaluatePayrollReminders(settings, new Date()) : [];
     res.render('admin/automation', {
       title: 'Payroll Reminder Settings',
       settings,
+      workflow: WORKFLOW,
       reminderPreview,
       message: req.query.message || '',
+      error: req.query.error || '',
       automationBasePath: req.user.role === 'HR' ? '/hr/automation' : '/admin/automation'
     });
   } catch (err) {
@@ -192,6 +196,28 @@ exports.triggerAutomation = async (req, res) => {
   }
 };
 
+exports.savePayrollPeriod = async (req, res) => {
+  const automationBasePath = req.user.role === 'HR' ? '/hr/automation' : '/admin/automation';
+  try {
+    await saveActivePayrollPeriod(req.body);
+    res.redirect(`${automationBasePath}?message=${encodeURIComponent('Payroll period saved')}`);
+  } catch (err) {
+    console.error(err);
+    res.redirect(`${automationBasePath}?error=${encodeURIComponent(err.message)}`);
+  }
+};
+
+exports.advancePayrollPeriod = async (req, res) => {
+  const automationBasePath = req.user.role === 'HR' ? '/hr/automation' : '/admin/automation';
+  try {
+    const period = await advancePayrollPeriod(req.params.id);
+    res.redirect(`${automationBasePath}?message=${encodeURIComponent(`Payroll period moved to ${period.status}`)}`);
+  } catch (err) {
+    console.error(err);
+    res.redirect(`${automationBasePath}?error=${encodeURIComponent(err.message)}`);
+  }
+};
+
 exports.reminderHistory = async (req, res) => {
   try {
     let bounceSyncError = '';
@@ -217,11 +243,15 @@ exports.reminderHistory = async (req, res) => {
       order: [['updatedAt', 'DESC']],
       limit: 200
     });
+    const periodIds = [...new Set(deliveries.map((delivery) => delivery.payrollPeriodId).filter(Boolean))];
+    const periods = periodIds.length ? await PayrollPeriod.findAll({ where: { id: periodIds } }) : [];
+    const periodNames = Object.fromEntries(periods.map((period) => [period.id, period.name]));
     const automationBasePath = req.user.role === 'HR' ? '/hr/automation' : '/admin/automation';
 
     res.render('admin/reminder-history', {
       title: 'Payroll Reminder History',
       deliveries,
+      periodNames,
       bounceSyncError,
       filters: {
         status: req.query.status || '',
