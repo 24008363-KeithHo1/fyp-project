@@ -8,6 +8,10 @@ const requireRole = require('./middlewares/roles');
 const { sequelize } = require('./config/db');
 const { startPayrollAutomationScheduler } = require('./services/payrollAutomation');
 
+// Register the separate Partner Subscription Billing master-data model with
+// Sequelize. It intentionally has no relationship to the existing invoices.
+require('./models/PartnerCustomer');
+
 const app = express();
 // view engine
 app.set('views', path.join(__dirname, 'views'));

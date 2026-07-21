@@ -52,6 +52,32 @@ CREATE TABLE IF NOT EXISTS InvoiceItems (
   INDEX idx_invoice_items_line_no (line_no)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
+-- Partner Subscription Billing module: independent customer master data.
+-- Do not link this table to the existing Invoices or Payments tables.
+CREATE TABLE IF NOT EXISTS PartnerCustomers (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  customerCode VARCHAR(30) NOT NULL UNIQUE,
+  businessName VARCHAR(255) NOT NULL,
+  businessType VARCHAR(100) NOT NULL,
+  contactPerson VARCHAR(255) NOT NULL,
+  billingEmail VARCHAR(255) NOT NULL,
+  phone VARCHAR(30),
+  billingAddress VARCHAR(500),
+  region VARCHAR(100),
+  currency VARCHAR(10) NOT NULL DEFAULT 'SGD',
+  billingCycle ENUM('Monthly') NOT NULL DEFAULT 'Monthly',
+  paymentTermsDays INT UNSIGNED NOT NULL DEFAULT 14,
+  subscriptionStartDate DATE NOT NULL,
+  status ENUM('Active','Suspended','Inactive') NOT NULL DEFAULT 'Active',
+  notes TEXT,
+  data JSON,
+  createdAt DATETIME DEFAULT CURRENT_TIMESTAMP,
+  updatedAt DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  INDEX idx_partner_customers_status (status),
+  INDEX idx_partner_customers_business_type (businessType),
+  INDEX idx_partner_customers_billing_email (billingEmail)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
 -- Payrolls
 CREATE TABLE IF NOT EXISTS Payrolls (
   id INT AUTO_INCREMENT PRIMARY KEY,
