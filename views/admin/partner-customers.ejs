@@ -1,0 +1,145 @@
+<%- include('../partials/header', { title }) %>
+
+<style>
+  .partner-page{max-width:1200px;margin:auto}.partner-hero{background:linear-gradient(135deg,#064e3b,#0f766e);color:#fff;border-radius:18px;padding:1.5rem;box-shadow:0 16px 35px rgba(6,78,59,.18)}
+  .partner-panel{background:#fff;border:1px solid #d1fae5;border-radius:16px;padding:1.25rem;box-shadow:0 8px 24px rgba(15,23,42,.06)}
+  .partner-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:.8rem}.partner-stat{padding:1rem;border-radius:14px;background:#f0fdf4;border:1px solid #d1fae5}.partner-stat strong{display:block;font-size:1.5rem;color:#065f46}
+  .status-pill{display:inline-flex;padding:.25rem .65rem;border-radius:999px;font-size:.75rem;font-weight:700}.status-Active{background:#dcfce7;color:#166534}.status-Suspended{background:#fef3c7;color:#92400e}.status-Inactive{background:#e2e8f0;color:#475569}
+  .partner-actions{display:flex;gap:.35rem;flex-wrap:wrap}.required::after{content:' *';color:#dc2626}.table td{vertical-align:middle}
+  @media(max-width:760px){.partner-stats{grid-template-columns:repeat(2,1fr)}}
+</style>
+
+<div class="partner-page">
+  <section class="partner-hero d-flex justify-content-between align-items-center flex-wrap gap-3 mb-3">
+    <div><div class="text-uppercase small opacity-75 fw-bold">Partner Subscription Billing</div><h1 class="h3 mb-1">Partner Customers</h1><p class="mb-0 opacity-75">Admin master-data workspace for fictional demonstration customers.</p></div>
+    <button class="btn btn-light fw-bold" id="newCustomer"><i class="fa-solid fa-plus me-1"></i> Add Customer</button>
+  </section>
+
+  <div id="alertBox"></div>
+  <section class="partner-stats mb-3">
+    <div class="partner-stat"><span>Total Customers</span><strong id="totalCount">0</strong></div>
+    <div class="partner-stat"><span>Active</span><strong id="activeCount">0</strong></div>
+    <div class="partner-stat"><span>Suspended</span><strong id="suspendedCount">0</strong></div>
+    <div class="partner-stat"><span>Inactive</span><strong id="inactiveCount">0</strong></div>
+  </section>
+
+  <section class="partner-panel mb-3">
+    <div class="row g-2">
+      <div class="col-md-8"><label class="form-label" for="search">Search</label><input class="form-control" id="search" placeholder="Customer code, business, contact, or email"></div>
+      <div class="col-md-4"><label class="form-label" for="statusFilter">Status</label><select class="form-select" id="statusFilter"><option value="">All statuses</option><option>Active</option><option>Suspended</option><option>Inactive</option></select></div>
+    </div>
+  </section>
+
+  <section class="partner-panel mb-3">
+    <div class="table-responsive">
+      <table class="table table-hover mb-0"><thead><tr><th>Customer</th><th>Business</th><th>Contact</th><th>Billing</th><th>Status</th><th>Actions</th></tr></thead><tbody id="customerRows"><tr><td colspan="6" class="text-center text-muted py-4">Loading…</td></tr></tbody></table>
+    </div>
+  </section>
+
+  <section class="partner-panel d-none" id="editorPanel">
+    <div class="d-flex justify-content-between align-items-center"><h2 class="h5 mb-3" id="editorTitle">Add Customer</h2><button class="btn-close" id="closeEditor" aria-label="Close"></button></div>
+    <form id="customerForm">
+      <input type="hidden" id="customerId">
+      <div class="row g-3">
+        <div class="col-md-6"><label class="form-label required" for="businessName">Business name</label><input class="form-control" id="businessName" maxlength="255" placeholder="Customer 1" required></div>
+        <div class="col-md-6"><label class="form-label required" for="businessType">Business type</label><select class="form-select" id="businessType" required><option value="">Select a type</option><% businessTypes.forEach(type => { %><option><%= type %></option><% }) %></select></div>
+        <div class="col-md-6"><label class="form-label required" for="contactPerson">Contact person</label><input class="form-control" id="contactPerson" maxlength="255" placeholder="Contact Person 1" required></div>
+        <div class="col-md-6"><label class="form-label required" for="billingEmail">Billing email</label><input class="form-control" id="billingEmail" type="email" maxlength="255" placeholder="customer1@example.com" required></div>
+        <div class="col-md-4"><label class="form-label" for="phone">Phone</label><input class="form-control" id="phone" maxlength="30"></div>
+        <div class="col-md-4"><label class="form-label" for="region">Region</label><select class="form-select" id="region"><option value="">Select region</option><option>Central Singapore</option><option>East Singapore</option><option>North Singapore</option><option>North-East Singapore</option><option>West Singapore</option></select></div>
+        <div class="col-md-4"><label class="form-label required" for="subscriptionStartDate">Subscription start</label><input class="form-control" id="subscriptionStartDate" type="date" required></div>
+        <div class="col-md-8"><label class="form-label" for="billingAddress">Billing address</label><input class="form-control" id="billingAddress" maxlength="500"></div>
+        <div class="col-md-2"><label class="form-label" for="paymentTermsDays">Payment terms</label><div class="input-group"><input class="form-control" id="paymentTermsDays" type="number" min="0" max="365" value="14"><span class="input-group-text">days</span></div></div>
+        <div class="col-md-2"><label class="form-label" for="customerStatus">Status</label><select class="form-select" id="customerStatus"><option>Active</option><option>Suspended</option><option>Inactive</option></select></div>
+        <div class="col-12"><label class="form-label" for="notes">Internal notes</label><textarea class="form-control" id="notes" rows="2"></textarea></div>
+      </div>
+      <div class="d-flex justify-content-end gap-2 mt-3"><button type="button" class="btn btn-outline-secondary" id="cancelEditor">Cancel</button><button class="btn btn-success" id="saveCustomer">Save Customer</button></div>
+    </form>
+  </section>
+</div>
+
+<script>
+const token = localStorage.getItem('token');
+if (!token) location.href = '/login';
+let customers = [];
+const authHeaders = {'Authorization': `Bearer ${token}`};
+const escapeHtml = value => String(value ?? '').replace(/[&<>'"]/g, char => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[char]));
+
+function showAlert(message, type='danger') {
+  document.getElementById('alertBox').innerHTML = `<div class="alert alert-${type}" role="alert">${escapeHtml(message)}</div>`;
+}
+async function api(url, options={}) {
+  const headers = {...authHeaders, ...(options.headers || {})};
+  const response = await fetch(url, {...options, headers});
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) throw new Error(data.details?.map(item => item.message).join(' ') || data.error || 'Request failed');
+  return data;
+}
+function refreshStats() {
+  document.getElementById('totalCount').textContent = customers.length;
+  ['Active','Suspended','Inactive'].forEach(status => document.getElementById(status.toLowerCase() + 'Count').textContent = customers.filter(c => c.status === status).length);
+}
+function render() {
+  const query = document.getElementById('search').value.trim().toLowerCase();
+  const status = document.getElementById('statusFilter').value;
+  const visible = customers.filter(c => (!status || c.status === status) && (!query || `${c.customerCode} ${c.businessName} ${c.contactPerson} ${c.billingEmail}`.toLowerCase().includes(query)));
+  const rows = document.getElementById('customerRows');
+  if (!visible.length) { rows.innerHTML = '<tr><td colspan="6" class="text-center text-muted py-4">No partner customers found.</td></tr>'; return; }
+  rows.innerHTML = visible.map(c => `<tr>
+    <td><strong>${escapeHtml(c.customerCode)}</strong><div class="small text-muted">Started ${escapeHtml(c.subscriptionStartDate)}</div></td>
+    <td><strong>${escapeHtml(c.businessName)}</strong><div class="small text-muted">${escapeHtml(c.businessType)}${c.region ? ' · ' + escapeHtml(c.region) : ''}</div></td>
+    <td>${escapeHtml(c.contactPerson)}<div class="small text-muted">${escapeHtml(c.phone || 'No phone')}</div></td>
+    <td>${escapeHtml(c.billingEmail)}<div class="small text-muted">Monthly · ${Number(c.paymentTermsDays)} days</div></td>
+    <td><span class="status-pill status-${escapeHtml(c.status)}">${escapeHtml(c.status)}</span></td>
+    <td><div class="partner-actions"><button class="btn btn-sm btn-outline-primary" data-edit="${c.id}">Edit</button>${c.status === 'Active' ? `<button class="btn btn-sm btn-outline-warning" data-status-id="${c.id}" data-status="Suspended">Suspend</button>` : `<button class="btn btn-sm btn-outline-success" data-status-id="${c.id}" data-status="Active">Activate</button>`}<button class="btn btn-sm btn-outline-secondary" data-status-id="${c.id}" data-status="Inactive">Deactivate</button></div></td>
+  </tr>`).join('');
+}
+async function loadCustomers() {
+  customers = await api('/api/partner-customers');
+  refreshStats(); render();
+}
+function openEditor(customer=null) {
+  document.getElementById('customerForm').reset();
+  document.getElementById('paymentTermsDays').value = 14;
+  document.getElementById('customerStatus').value = 'Active';
+  document.getElementById('customerId').value = customer?.id || '';
+  document.getElementById('editorTitle').textContent = customer ? `Edit ${customer.customerCode}` : 'Add Customer';
+  ['businessName','businessType','contactPerson','billingEmail','phone','billingAddress','region','subscriptionStartDate','status','notes'].forEach(field => {
+    const element = document.getElementById(field === 'status' ? 'customerStatus' : field);
+    if (customer && element) element.value = customer[field] || '';
+  });
+  if (customer) document.getElementById('paymentTermsDays').value = customer.paymentTermsDays;
+  document.getElementById('editorPanel').classList.remove('d-none');
+  document.getElementById('editorPanel').scrollIntoView({behavior:'smooth'});
+}
+function closeEditor() { document.getElementById('editorPanel').classList.add('d-none'); }
+document.getElementById('newCustomer').addEventListener('click', () => openEditor());
+document.getElementById('closeEditor').addEventListener('click', closeEditor);
+document.getElementById('cancelEditor').addEventListener('click', closeEditor);
+['search','statusFilter'].forEach(id => document.getElementById(id).addEventListener('input', render));
+document.getElementById('customerRows').addEventListener('click', async event => {
+  const edit = event.target.closest('[data-edit]');
+  if (edit) return openEditor(customers.find(c => Number(c.id) === Number(edit.dataset.edit)));
+  const statusButton = event.target.closest('[data-status-id]');
+  if (!statusButton) return;
+  const customer = customers.find(c => Number(c.id) === Number(statusButton.dataset.statusId));
+  if (!confirm(`${statusButton.dataset.status} ${customer?.businessName || 'this customer'}?`)) return;
+  try { await api(`/api/partner-customers/${statusButton.dataset.statusId}/status`, {method:'PATCH', headers:{'Content-Type':'application/json'}, body:JSON.stringify({status:statusButton.dataset.status})}); await loadCustomers(); showAlert('Customer status updated.', 'success'); } catch(error) { showAlert(error.message); }
+});
+document.getElementById('customerForm').addEventListener('submit', async event => {
+  event.preventDefault();
+  const id = document.getElementById('customerId').value;
+  const payload = {};
+  ['businessName','businessType','contactPerson','billingEmail','phone','billingAddress','region','subscriptionStartDate','notes'].forEach(field => payload[field] = document.getElementById(field).value);
+  payload.paymentTermsDays = Number(document.getElementById('paymentTermsDays').value);
+  payload.status = document.getElementById('customerStatus').value;
+  const button = document.getElementById('saveCustomer'); button.disabled = true;
+  try {
+    await api(id ? `/api/partner-customers/${id}` : '/api/partner-customers', {method:id ? 'PATCH' : 'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(payload)});
+    closeEditor(); await loadCustomers(); showAlert(id ? 'Customer updated.' : 'Customer created.', 'success');
+  } catch(error) { showAlert(error.message); } finally { button.disabled = false; }
+});
+loadCustomers().catch(error => showAlert(error.message));
+</script>
+
+<%- include('../partials/footer') %>
