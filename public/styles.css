@@ -318,7 +318,12 @@ header .btn-outline-primary{border-radius:20px;padding:.35rem .6rem}
 }
 .invoice-btn{background:linear-gradient(135deg,#0b8f3e,#11b767)}
 .receipt-btn{background:linear-gradient(135deg,#2563eb,#06b6d4)}
-.refund-btn{background:linear-gradient(135deg,#ef4444,#f97316)}
+.refund-btn{background:linear-gradient(135deg,#f59e0b,#facc15);color:#422006}
+.refund-btn:hover,
+.refund-btn:focus{background:linear-gradient(135deg,#d97706,#f59e0b);color:#422006}
+.delete-payment-btn{background:linear-gradient(135deg,#dc2626,#ef4444)}
+.delete-payment-btn:hover,
+.delete-payment-btn:focus{background:linear-gradient(135deg,#b91c1c,#dc2626)}
 .payment-activity{display:grid;gap:.55rem}
 .activity-item{display:flex;align-items:center;gap:.65rem;border-bottom:1px solid rgba(11,94,58,0.08);padding:.55rem 0}
 .activity-item:last-child{border-bottom:none}

@@ -567,6 +567,36 @@ exports.history = async (req, res) => {
   }
 };
 
+// Added for finance: removes a payment history record from the table.
+exports.removeHistoryItem = async (req, res) => {
+  try {
+    const payment = await Payment.findByPk(req.params.id);
+    if (!payment) return res.status(404).json({ error: 'Payment not found' });
+
+    await payment.destroy();
+
+    const { ip, userAgent } = getRequestMetadata(req);
+    await logAudit({
+      userId: req.user ? req.user.id : null,
+      action: 'payment_history_deleted',
+      entity: 'Payment',
+      entityId: payment.id,
+      meta: {
+        invoiceNumber: payment.invoiceNumber,
+        amount: payment.amount,
+        method: payment.method,
+        providerReference: payment.providerReference
+      },
+      ip,
+      userAgent
+    });
+
+    res.json({ ok: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+
 // Added for finance: marks a recorded payment as refunded and reopens the invoice.
 exports.refundPayment = async (req, res) => {
   try {

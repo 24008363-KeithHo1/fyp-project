@@ -14,6 +14,7 @@ router.get('/nets/:id', paymentController.netsQr);
 router.get('/bank-transfer/:id', paymentController.bankTransferInstructions);
 router.post('/bank-transfer/:id/confirm', auth, checkRole(['Admin', 'Finance']), paymentController.confirmBankTransfer);
 router.get('/history', auth, checkRole(['Admin', 'Finance']), paymentController.history);
+router.delete('/history/:id', auth, checkRole(['Admin', 'Finance']), paymentController.removeHistoryItem);
 router.post('/:id/refund', auth, checkRole(['Admin', 'Finance']), paymentController.refundPayment);
 
 // Stripe redirects users here after checkout success or cancellation.
