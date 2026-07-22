@@ -168,7 +168,7 @@ exports.automationPage = async (req, res) => {
       reminderPreview,
       message: req.query.message || '',
       error: req.query.error || '',
-      automationBasePath: req.user.role === 'HR' ? '/hr/automation' : '/admin/automation'
+      automationBasePath: '/hr/automation'
     });
   } catch (err) {
     console.error(err);
@@ -179,7 +179,7 @@ exports.automationPage = async (req, res) => {
 exports.saveAutomationSettings = async (req, res) => {
   try {
     await saveAutomationSettings(req.body);
-    const automationBasePath = req.user.role === 'HR' ? '/hr/automation' : '/admin/automation';
+    const automationBasePath = '/hr/automation';
     res.redirect(`${automationBasePath}?message=Settings updated`);
   } catch (err) {
     console.error(err);
@@ -200,7 +200,7 @@ exports.triggerAutomation = async (req, res) => {
       `${counts.sent} sent, ${counts.duplicate} duplicate(s) skipped, ` +
       `${counts.failed} failed, ${counts.skipped} not sent.`
     );
-    const automationBasePath = req.user.role === 'HR' ? '/hr/automation' : '/admin/automation';
+    const automationBasePath = '/hr/automation';
     res.redirect(`${automationBasePath}?message=${msg}`);
   } catch (err) {
     console.error(err);
@@ -209,7 +209,7 @@ exports.triggerAutomation = async (req, res) => {
 };
 
 exports.savePayrollPeriod = async (req, res) => {
-  const automationBasePath = req.user.role === 'HR' ? '/hr/automation' : '/admin/automation';
+  const automationBasePath = '/hr/automation';
   try {
     await saveActivePayrollPeriod(req.body);
     res.redirect(`${automationBasePath}?message=${encodeURIComponent('Payroll period saved')}`);
@@ -220,7 +220,7 @@ exports.savePayrollPeriod = async (req, res) => {
 };
 
 exports.submitPayrollPeriod = async (req, res) => {
-  const automationBasePath = req.user.role === 'HR' ? '/hr/automation' : '/admin/automation';
+  const automationBasePath = '/hr/automation';
   try {
     const { period, totals } = await submitPayrollPeriod(req.params.id, req.user.id, req.body.notes);
     await logAction(req, 'payroll_submitted_for_approval', 'PayrollPeriod', period.id, totals);
@@ -261,7 +261,7 @@ exports.submitPayrollPeriod = async (req, res) => {
 };
 
 exports.closePayrollPeriod = async (req, res) => {
-  const automationBasePath = req.user.role === 'HR' ? '/hr/automation' : '/admin/automation';
+  const automationBasePath = '/hr/automation';
   try {
     const { period, total } = await closePayrollPeriod(req.params.id, req.user.id);
     await logAction(req, 'payroll_period_closed', 'PayrollPeriod', period.id, { employeeCount: total });
@@ -300,7 +300,7 @@ exports.reminderHistory = async (req, res) => {
     const periodIds = [...new Set(deliveries.map((delivery) => delivery.payrollPeriodId).filter(Boolean))];
     const periods = periodIds.length ? await PayrollPeriod.findAll({ where: { id: periodIds } }) : [];
     const periodNames = Object.fromEntries(periods.map((period) => [period.id, period.name]));
-    const automationBasePath = req.user.role === 'HR' ? '/hr/automation' : '/admin/automation';
+    const automationBasePath = '/hr/automation';
 
     res.render('admin/reminder-history', {
       title: 'Payroll Reminder History',

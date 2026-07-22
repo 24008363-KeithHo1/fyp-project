@@ -1,6 +1,6 @@
 <%- include('../partials/header', { title: 'Automation Settings' }) %>
 <%- include('../partials/navbar') %>
-<% const isHrAutomation = automationBasePath === '/hr/automation'; %>
+<% const isHrAutomation = true; %>
 <% if (isHrAutomation) { %>
   <link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
   <style>
@@ -526,11 +526,7 @@
     }
   </style>
 <% } %>
-<% if (automationBasePath === '/admin/automation') { %>
-  <%- include('./_admin_nav') %>
-<% } %>
-
-<div class="container py-4 payroll-automation-page<%= isHrAutomation ? ' hr-automation-workspace' : '' %>">
+<div class="container py-4 payroll-automation-page hr-automation-workspace">
   <div class="automation-hero">
     <div>
       <span class="automation-eyebrow"><i class="fa-solid fa-bell"></i> Payroll automation</span>

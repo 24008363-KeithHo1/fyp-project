@@ -9,13 +9,6 @@ router.use(auth);
 router.use(requireRole(['Admin']));
 
 router.get('/users', admin.listUsers);
-router.get('/automation', admin.automationPage);
-router.get('/automation/history', admin.reminderHistory);
-router.post('/automation/settings', admin.saveAutomationSettings);
-router.post('/automation/period', admin.savePayrollPeriod);
-router.post('/automation/period/:id/submit', admin.submitPayrollPeriod);
-router.post('/automation/period/:id/close', admin.closePayrollPeriod);
-router.post('/automation/run', admin.triggerAutomation);
 router.get('/audit-logs', admin.listAuditLogs);
 router.get('/audit-logs-json', admin.listAuditLogsJson);
 router.get('/users/:id/edit', admin.editUserView);

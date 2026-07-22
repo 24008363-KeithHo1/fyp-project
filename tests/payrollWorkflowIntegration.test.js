@@ -25,11 +25,9 @@ test('links payroll records to a payroll period', () => {
 test('uses an explicit submit-to-Finance transition instead of generic advancement routes', () => {
   const adminRoutes = fs.readFileSync(path.join(root, 'routes', 'admin.js'), 'utf8');
   const hrRoutes = fs.readFileSync(path.join(root, 'routes', 'hr.js'), 'utf8');
-  assert.match(adminRoutes, /period\/:id\/submit/);
   assert.match(hrRoutes, /period\/:id\/submit/);
-  assert.doesNotMatch(adminRoutes, /period\/:id\/advance/);
+  assert.doesNotMatch(adminRoutes, /automation/);
   assert.doesNotMatch(hrRoutes, /period\/:id\/advance/);
-  assert.match(adminRoutes, /period\/:id\/close/);
   assert.match(hrRoutes, /period\/:id\/close/);
 });
 
