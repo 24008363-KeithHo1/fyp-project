@@ -51,18 +51,18 @@ try{
         <button class="nav-link active" id="bank-tab" data-payment-target="bankPanel" type="button" role="tab" aria-controls="bankPanel" aria-selected="true">Bank Transfer</button>
       </li>
       <li class="nav-item" role="presentation">
-        <button class="nav-link" id="stripe-tab" data-payment-target="stripePanel" type="button" role="tab" aria-controls="stripePanel" aria-selected="false">Stripe</button>
+        <button class="nav-link" id="stripe-tab" data-payment-target="stripePanel" type="button" role="tab" aria-controls="stripePanel" aria-selected="false" tabindex="-1">Stripe</button>
       </li>
       <li class="nav-item" role="presentation">
-        <button class="nav-link" id="paypal-tab" data-payment-target="paypalPanel" type="button" role="tab" aria-controls="paypalPanel" aria-selected="false">PayPal</button>
+        <button class="nav-link" id="paypal-tab" data-payment-target="paypalPanel" type="button" role="tab" aria-controls="paypalPanel" aria-selected="false" tabindex="-1">PayPal</button>
       </li>
       <li class="nav-item" role="presentation">
-        <button class="nav-link" id="nets-tab" data-payment-target="netsPanel" type="button" role="tab" aria-controls="netsPanel" aria-selected="false">NETS QR</button>
+        <button class="nav-link" id="nets-tab" data-payment-target="netsPanel" type="button" role="tab" aria-controls="netsPanel" aria-selected="false" tabindex="-1">NETS QR</button>
       </li>
     </ul>
 
     <div class="tab-content pt-3">
-      <div class="tab-pane fade show active payment-tab-panel" id="bankPanel" role="tabpanel" aria-labelledby="bank-tab">
+      <div class="tab-pane payment-tab-panel fade show active" id="bankPanel" role="tabpanel" aria-labelledby="bank-tab">
         <div class="row g-3">
           <div class="col-lg-5">
             <div class="bank-instructions">
@@ -97,7 +97,7 @@ try{
         </div>
       </div>
 
-      <div class="tab-pane fade payment-tab-panel" id="stripePanel" role="tabpanel" aria-labelledby="stripe-tab" hidden>
+      <div class="tab-pane payment-tab-panel fade" id="stripePanel" role="tabpanel" aria-labelledby="stripe-tab" hidden>
         <div class="payment-method-card">
           <h5>Stripe Card Payment</h5>
           <p class="text-muted">Start a Stripe Checkout session for an unpaid invoice.</p>
@@ -116,7 +116,7 @@ try{
         </div>
       </div>
 
-      <div class="tab-pane fade payment-tab-panel" id="paypalPanel" role="tabpanel" aria-labelledby="paypal-tab" hidden>
+      <div class="tab-pane payment-tab-panel fade" id="paypalPanel" role="tabpanel" aria-labelledby="paypal-tab" hidden>
         <div class="payment-method-card">
           <h5>PayPal Payment</h5>
           <p class="text-muted">Create and capture a PayPal order for an unpaid invoice.</p>
@@ -136,7 +136,7 @@ try{
         </div>
       </div>
 
-      <div class="tab-pane fade payment-tab-panel" id="netsPanel" role="tabpanel" aria-labelledby="nets-tab" hidden>
+      <div class="tab-pane payment-tab-panel fade" id="netsPanel" role="tabpanel" aria-labelledby="nets-tab" hidden>
         <div class="payment-method-card">
           <h5>NETS QR</h5>
           <p class="text-muted">Generate a NETS QR for an unpaid invoice, then confirm after receipt is verified.</p>
@@ -345,6 +345,7 @@ async function loadPayPalSdk(){
 
 function populateInvoiceSelect(selectId, invoices){
   const select = document.getElementById(selectId);
+  if (!select) return;
   const unpaid = invoices.filter(inv => inv.status !== 'Paid');
   select.innerHTML = '';
 
@@ -376,9 +377,11 @@ async function loadInvoices(){
 
 function updateBankInstructions(){
   const select = document.getElementById('invoiceId');
+  if (!select) return;
   const invoiceId = select.value;
   if (!invoiceId) return;
   fetchJson(`/payment/bank-transfer/${invoiceId}`).then(data => {
+    if (!document.getElementById('bankName')) return;
     document.getElementById('bankName').textContent = data.bankName;
     document.getElementById('bankAccountName').textContent = data.accountName;
     document.getElementById('bankAccountNumber').textContent = data.accountNumber;
@@ -462,6 +465,7 @@ function renderPayments(){
           <a class="payment-history-btn invoice-btn" href="/api/invoices/${payment.invoiceId}/pdf" target="_blank" rel="noopener">Invoice</a>
           <a class="payment-history-btn receipt-btn" href="/api/invoices/${payment.invoiceId}/pdf" target="_blank" rel="noopener" download>Receipt</a>
           ${normalizeStatus(payment.status) === 'Paid' ? `<button class="payment-history-btn refund-btn refund-payment-btn" type="button" data-payment-id="${payment.id}">Refund</button>` : ''}
+          <button class="payment-history-btn delete-payment-btn" type="button" data-payment-id="${payment.id}">Delete</button>
         </div>
       </td>
     `;
@@ -502,6 +506,30 @@ function paymentReferenceDetails(payment){
     `;
   }
   return payment.providerReference || '';
+}
+
+// Added: deletes a payment history record and refreshes the finance payments page.
+async function deletePayment(paymentId, button){
+  const payment = allPayments.find(item => Number(item.id) === Number(paymentId));
+  if (!payment) return showAlert('Payment not found');
+  if (!confirm(`Delete payment history for ${payment.invoiceNumber || 'this invoice'}? This cannot be undone.`)) return;
+
+  try {
+    if (button) {
+      button.disabled = true;
+      button.textContent = 'Deleting...';
+    }
+    await fetchJson(`/payment/history/${paymentId}`, { method: 'DELETE' });
+    showAlert('Payment history record deleted.', 'success');
+    await refreshPayments();
+  } catch (err) {
+    showAlert(err.message);
+  } finally {
+    if (button) {
+      button.disabled = false;
+      button.textContent = 'Delete';
+    }
+  }
 }
 
 // Added: lets finance refund a paid payment and reopens the invoice for repayment.
@@ -632,8 +660,16 @@ async function confirmNETSPayment(invoiceId, reference){
   }
 }
 
-document.getElementById('invoiceId').addEventListener('change', updateBankInstructions);
+const bankInvoiceSelect = document.getElementById('invoiceId');
+if (bankInvoiceSelect) bankInvoiceSelect.addEventListener('change', updateBankInstructions);
 document.getElementById('historyBody').addEventListener('click', event => {
+  const deleteButton = event.target.closest('.delete-payment-btn');
+  if (deleteButton) {
+    if (deleteButton.disabled) return;
+    deletePayment(deleteButton.dataset.paymentId, deleteButton);
+    return;
+  }
+
   const button = event.target.closest('.refund-payment-btn');
   if (!button) return;
   if (button.disabled) return;
@@ -644,34 +680,37 @@ document.getElementById('historyBody').addEventListener('click', event => {
 });
 
 // Added: records verified bank transfer payments and marks the invoice as Paid.
-document.getElementById('bankTransferForm').addEventListener('submit', async (event) => {
-  event.preventDefault();
-  clearAlerts();
-  const invoiceId = document.getElementById('invoiceId').value;
-  const reference = document.getElementById('reference').value.trim();
-  const paidAt = document.getElementById('paidAt').value;
+const bankTransferForm = document.getElementById('bankTransferForm');
+if (bankTransferForm) {
+  bankTransferForm.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    clearAlerts();
+    const invoiceId = document.getElementById('invoiceId').value;
+    const reference = document.getElementById('reference').value.trim();
+    const paidAt = document.getElementById('paidAt').value;
 
-  if (!invoiceId) return showAlert('Select an unpaid invoice first');
-  if (!reference) return showAlert('Bank reference is required');
-  if (paidAt && new Date(paidAt) > new Date()) return showAlert('Paid date cannot be future date');
+    if (!invoiceId) return showAlert('Select an unpaid invoice first');
+    if (!reference) return showAlert('Bank reference is required');
+    if (paidAt && new Date(paidAt) > new Date()) return showAlert('Paid date cannot be future date');
 
-  try {
-    await fetchJson(`/payment/bank-transfer/${invoiceId}/confirm`, {
-      method: 'POST',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({
-        reference,
-        paidAt,
-        note: document.getElementById('note').value
-      })
-    });
-    document.getElementById('bankTransferForm').reset();
-    showAlert('Bank transfer recorded and invoice marked Paid.', 'success');
-    await refreshPayments();
-  } catch (err) {
-    showAlert(err.message);
-  }
-});
+    try {
+      await fetchJson(`/payment/bank-transfer/${invoiceId}/confirm`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          reference,
+          paidAt,
+          note: document.getElementById('note').value
+        })
+      });
+      bankTransferForm.reset();
+      showAlert('Bank transfer recorded and invoice marked Paid.', 'success');
+      await refreshPayments();
+    } catch (err) {
+      showAlert(err.message);
+    }
+  });
+}
 
 refreshPayments().catch(err => {
   document.getElementById('historyBody').innerHTML = `<tr><td colspan="8" class="text-danger">${err.message}</td></tr>`;
