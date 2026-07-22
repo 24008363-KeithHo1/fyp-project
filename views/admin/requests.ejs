@@ -2,17 +2,36 @@
 <%- include('../partials/navbar') %>
 <%- include('./_admin_nav') %>
 
-<section class="admin-page">
-  <h2>Admin Requests Inbox</h2>
-  <div class="content-card requests-card mt-3">
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+
+<style>
+  :root{--ar-text:#102033;--ar-muted:#64748b;--ar-border:rgba(148,163,184,.18);--ar-radius:8px;--ar-shadow:0 14px 30px rgba(15,23,42,.08)}
+  body:has(.admin-requests-workspace){background:linear-gradient(135deg,#f7faf8 0%,#e8f7ee 48%,#f8fbf9 100%)!important;color:var(--ar-text);font-family:'Sora',sans-serif}.admin-requests-workspace{max-width:1220px;margin:0 auto;padding:1.1rem;box-sizing:border-box;background:linear-gradient(135deg,rgba(255,255,255,.98),rgba(248,250,252,.94)),linear-gradient(90deg,rgba(6,182,212,.12),rgba(124,58,237,.12));animation:admin-requests-in .4s cubic-bezier(.22,.8,.36,1) both}@keyframes admin-requests-in{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+  .admin-requests-hero{position:relative;overflow:hidden;display:flex;align-items:flex-end;justify-content:space-between;gap:1rem;flex-wrap:wrap;margin-bottom:1rem;padding:1.35rem;border:1px solid rgba(37,99,235,.18);border-radius:var(--ar-radius);background:linear-gradient(135deg,rgba(15,23,42,.94),rgba(37,99,235,.86) 46%,rgba(11,143,62,.82));box-shadow:0 18px 38px rgba(15,23,42,.16)}.admin-requests-hero::after{position:absolute;right:-56px;bottom:-84px;width:260px;height:150px;background:linear-gradient(135deg,rgba(255,255,255,.18),rgba(255,255,255,.03));content:'';transform:rotate(-18deg)}.admin-requests-hero>*{position:relative;z-index:1}.admin-requests-eyebrow{display:inline-flex;align-items:center;gap:.42rem;min-height:24px;margin:0 0 .3rem;padding:.25rem .58rem;border:1px solid rgba(255,255,255,.28);border-radius:999px;background:rgba(255,255,255,.12);color:#fff;font-size:.72rem;font-weight:700}.admin-requests-title{margin:0;color:#fff;font-size:1.75rem;font-weight:700}.admin-requests-subtitle{margin:.35rem 0 0;color:#fff;font-size:.875rem;opacity:.88}.admin-requests-count{display:inline-flex;align-items:center;gap:.45rem;padding:.52rem .78rem;border-radius:8px;background:#fff;box-shadow:0 14px 28px rgba(15,23,42,.24);color:#1d4ed8;font-size:.78rem;font-weight:700}.admin-requests-count strong{font-family:'DM Mono',monospace}
+  .admin-requests-panel{overflow:hidden;border:1px solid var(--ar-border);border-radius:var(--ar-radius);background:linear-gradient(180deg,rgba(255,255,255,.98),rgba(240,249,255,.78));box-shadow:var(--ar-shadow);transition:border-color .16s ease,box-shadow .16s ease}.admin-requests-panel:hover{border-color:rgba(6,182,212,.28);box-shadow:0 20px 36px rgba(15,23,42,.12)}.admin-requests-panel-head{display:flex;align-items:center;gap:.52rem;padding:1.05rem 1.2rem;border-bottom:1px solid rgba(148,163,184,.16)}.admin-requests-panel-head i{display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;border-radius:8px;background:linear-gradient(135deg,#0f766e,#22c55e);color:#fff;font-size:.8rem}.admin-requests-panel-head h2{margin:0;color:var(--ar-text);font-size:.95rem;font-weight:700}
+  .admin-requests-table{min-width:1050px;margin:0;border-collapse:separate;border-spacing:0}.admin-requests-table thead th{background:linear-gradient(135deg,#e0f2fe,#ecfdf3)!important;color:#0f172a;font-size:.76rem;font-weight:800;letter-spacing:0;text-transform:uppercase}.admin-requests-table th,.admin-requests-table td{padding:.78rem .8rem;border-color:rgba(148,163,184,.13);vertical-align:middle}.admin-requests-table tbody tr{transition:background .14s ease,box-shadow .14s ease}.admin-requests-table tbody tr:hover{box-shadow:inset 4px 0 0 #06b6d4}.admin-requests-table tbody tr:hover>*{background:#f0f9ff}.admin-request-id{color:#1d4ed8;font-family:'DM Mono',monospace;font-size:.78rem}.admin-request-title{color:var(--ar-text);font-weight:700;text-decoration:none}.admin-request-title:hover{color:#1d4ed8}.admin-request-message{max-width:260px;color:var(--ar-muted);line-height:1.45}.admin-request-created{color:var(--ar-muted);font-family:'DM Mono',monospace;font-size:.72rem;white-space:nowrap}.admin-request-status{display:inline-flex;align-items:center;gap:.35rem;padding:.28rem .58rem;border-radius:999px;color:#fff;font-size:.72rem;font-weight:800;white-space:nowrap}.admin-request-status::before{width:6px;height:6px;border-radius:50%;background:currentColor;content:''}.admin-request-pending{background:linear-gradient(135deg,#f59e0b,#facc15)}.admin-request-completed{background:linear-gradient(135deg,#16a34a,#22c55e)}.admin-request-incomplete{background:linear-gradient(135deg,#dc2626,#fb7185)}.admin-request-default{background:#e2e8f0;color:#475569}.admin-request-attachments{display:grid;gap:.28rem}.admin-request-attachments a{display:inline-flex;align-items:center;gap:.3rem;color:#1d4ed8;font-size:.78rem;text-decoration:none}.admin-request-none{color:var(--ar-muted);font-size:.78rem}.admin-request-action{display:flex;align-items:center;gap:.45rem;min-width:190px}.admin-request-action .form-select{min-height:36px;margin:0;padding:.36rem .55rem;border-color:rgba(148,163,184,.28);border-radius:8px;background:#fff;font-size:.78rem}.admin-request-action .form-select:focus{border-color:#06b6d4;box-shadow:0 0 0 .2rem rgba(6,182,212,.16)}.admin-request-update{display:inline-flex;flex:0 0 auto;align-items:center;justify-content:center;width:36px;height:36px;padding:0;border:0;border-radius:7px;background:linear-gradient(135deg,#0b8f3e,#84cc16);box-shadow:0 10px 20px rgba(11,143,62,.2);color:#fff}.admin-request-update:hover{background:linear-gradient(135deg,#087a34,#65a30d);transform:translateY(-2px)}.admin-request-update:disabled{cursor:wait;opacity:.7;transform:none}.admin-requests-empty{display:flex;align-items:center;justify-content:center;gap:.6rem;min-height:160px;margin:1.25rem;padding:1rem;border:1px dashed rgba(37,99,235,.26);border-radius:8px;background:linear-gradient(135deg,#fff,#f0f9ff);color:var(--ar-muted);font-size:.875rem}@media(max-width:720px){.admin-requests-workspace{padding:.85rem}.admin-requests-hero{padding:1rem;align-items:flex-start}.admin-requests-count{width:100%;justify-content:center}.admin-requests-panel-head{padding:1rem}}
+</style>
+
+<section class="admin-requests-workspace">
+  <header class="admin-requests-hero">
+    <div>
+      <p class="admin-requests-eyebrow"><i class="fa-solid fa-inbox" aria-hidden="true"></i> System operations</p>
+      <h1 class="admin-requests-title">Admin Requests Inbox</h1>
+      <p class="admin-requests-subtitle">Review operational requests, supporting files, and completion status from one queue.</p>
+    </div>
+    <span class="admin-requests-count"><i class="fa-solid fa-list-check" aria-hidden="true"></i> <strong><%= requests ? requests.length : 0 %></strong> total requests</span>
+  </header>
+
+  <section class="admin-requests-panel" aria-labelledby="adminRequestQueueTitle">
+    <div class="admin-requests-panel-head"><i class="fa-solid fa-list-check" aria-hidden="true"></i><h2 id="adminRequestQueueTitle">Request Queue</h2></div>
     <% if (!requests || !requests.length) { %>
-      <div class="alert alert-info">No requests.</div>
+      <div class="admin-requests-empty"><i class="fa-solid fa-circle-check" aria-hidden="true"></i> No requests are waiting in this inbox.</div>
     <% } else { %>
-      <div class="table-responsive mt-2">
-        <table class="table table-striped table-hover table-bordered align-middle table-sm">
+      <div class="table-responsive">
+        <table class="table table-hover align-middle admin-requests-table">
           <thead>
             <tr>
-              <th>#</th>
+              <th>Request</th>
               <th>From</th>
               <th>Title</th>
               <th>Message</th>
@@ -24,27 +43,23 @@
           </thead>
           <tbody>
             <% requests.forEach(r => { %>
+              <% const requestStatusClass = r.status === 'Pending' ? 'admin-request-pending' : (r.status === 'Completed' ? 'admin-request-completed' : (r.status === 'Incomplete' ? 'admin-request-incomplete' : 'admin-request-default')); %>
               <tr>
-                <td><%= r.id %></td>
+                <td class="admin-request-id">#<%= r.id %></td>
                 <td><%= r.senderName || r.senderId %></td>
-                <td><a href="/requests/<%= r.id %>/view"><%= r.title %></a></td>
-                <td><%= r.message && r.message.length > 120 ? (r.message.substring(0,120) + '...') : r.message %></td>
-                <td id="status-<%= r.id %>"><span class="badge <%= r.status === 'Pending' ? 'bg-warning text-dark' : (r.status === 'Completed' ? 'bg-success' : 'bg-secondary') %>"><%= r.status %></span></td>
+                <td><a class="admin-request-title" href="/requests/<%= r.id %>/view"><%= r.title %></a></td>
+                <td class="admin-request-message"><%= r.message && r.message.length > 120 ? (r.message.substring(0,120) + '...') : r.message %></td>
+                <td id="status-<%= r.id %>"><span class="admin-request-status <%= requestStatusClass %>"><%= r.status %></span></td>
                 <td>
                   <% if (r.data && Array.isArray(r.data.attachments) && r.data.attachments.length) { %>
-                    <% r.data.attachments.forEach(a => { %>
-                      <div><a href="<%= a.path %>" target="_blank" rel="noopener noreferrer"><%= a.originalname %></a></div>
-                    <% }) %>
+                    <div class="admin-request-attachments"><% r.data.attachments.forEach(a => { %><a href="<%= a.path %>" target="_blank" rel="noopener noreferrer"><i class="fa-solid fa-paperclip" aria-hidden="true"></i> <%= a.originalname %></a><% }) %></div>
+                  <% } else { %>
+                    <span class="admin-request-none">None</span>
                   <% } %>
                 </td>
-                <td><%= new Date(r.createdAt).toLocaleString() %></td>
+                <td class="admin-request-created"><%= new Date(r.createdAt).toLocaleString() %></td>
                 <td>
-                  <select id="sel-<%= r.id %>" class="form-select form-select-sm">
-                    <option value="Pending" <%= r.status==='Pending' ? 'selected' : '' %>>Pending</option>
-                    <option value="Completed" <%= r.status==='Completed' ? 'selected' : '' %>>Completed</option>
-                    <option value="Incomplete" <%= r.status==='Incomplete' ? 'selected' : '' %>>Incomplete</option>
-                  </select>
-                  <button class="btn btn-sm btn-primary mt-1 update-btn" data-id="<%= r.id %>">Update</button>
+                  <div class="admin-request-action"><select id="sel-<%= r.id %>" class="form-select" aria-label="Update request <%= r.id %> status"><option value="Pending" <%= r.status==='Pending' ? 'selected' : '' %>>Pending</option><option value="Completed" <%= r.status==='Completed' ? 'selected' : '' %>>Completed</option><option value="Incomplete" <%= r.status==='Incomplete' ? 'selected' : '' %>>Incomplete</option></select><button class="admin-request-update update-btn" type="button" data-id="<%= r.id %>" aria-label="Save request <%= r.id %> status" title="Save status"><i class="fa-solid fa-check" aria-hidden="true"></i></button></div>
                 </td>
               </tr>
             <% }) %>
@@ -52,22 +67,39 @@
         </table>
       </div>
     <% } %>
-  </div>
+</section>
 </section>
 
 <script>
-async function updateStatus(id){
+function requestStatusClass(status) {
+  if (status === 'Pending') return 'admin-request-pending';
+  if (status === 'Completed') return 'admin-request-completed';
+  if (status === 'Incomplete') return 'admin-request-incomplete';
+  return 'admin-request-default';
+}
+
+function renderRequestStatus(status) {
+  return `<span class="admin-request-status ${requestStatusClass(status)}">${status}</span>`;
+}
+
+async function updateStatus(id, button){
   const sel = document.getElementById('sel-'+id);
   const status = sel.value;
   const token = localStorage.getItem('token');
-  const res = await fetch('/api/requests/'+id+'/status', { method: 'PUT', headers: { 'Content-Type':'application/json', Authorization: `Bearer ${token}` }, body: JSON.stringify({ status }) });
-  if (res.ok) document.getElementById('status-'+id).innerText = status;
-  else alert('Failed to update');
+  const originalContent = button ? button.innerHTML : '';
+  try {
+    if (button) { button.disabled = true; button.innerHTML = '<i class="fa-solid fa-spinner fa-spin" aria-hidden="true"></i>'; }
+    const res = await fetch('/api/requests/'+id+'/status', { method: 'PUT', headers: { 'Content-Type':'application/json', Authorization: `Bearer ${token}` }, body: JSON.stringify({ status }) });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Failed to update request');
+    document.getElementById('status-'+id).innerHTML = renderRequestStatus(status);
+  } catch (err) { alert(err.message || 'Failed to update request'); }
+  finally { if (button) { button.disabled = false; button.innerHTML = originalContent; } }
 }
 
 document.querySelectorAll('.update-btn').forEach(b => b.addEventListener('click', (e) => {
-  const id = e.currentTarget.dataset.id;
-  updateStatus(id);
+  const button = e.currentTarget;
+  updateStatus(button.dataset.id, button);
 }));
 </script>
 
