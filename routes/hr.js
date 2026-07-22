@@ -4,6 +4,7 @@ const auth = require('../middlewares/auth');
 const requireRole = require('../middlewares/roles');
 const admin = require('../controllers/adminController');
 const reqCtrl = require('../controllers/requestsController');
+const dashboardCtrl = require('../controllers/hrDashboardController');
 
 router.use(auth);
 router.use(requireRole(['Admin', 'HR']));
@@ -11,6 +12,7 @@ router.use(requireRole(['Admin', 'HR']));
 router.get('/dashboard', (req, res) => {
   res.render('hr/dashboard');
 });
+router.get('/summary', dashboardCtrl.summary);
 
 router.get('/automation', requireRole(['HR']), admin.automationPage);
 router.get('/automation/history', requireRole(['HR']), admin.reminderHistory);

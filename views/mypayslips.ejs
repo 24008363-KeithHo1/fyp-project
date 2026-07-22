@@ -1,61 +1,214 @@
 <%- include('partials/header', { title: 'My Payslips' }) %>
 <%- include('partials/navbar') %>
-  <script>const token = localStorage.getItem('token'); if (!token) location = '/login';</script>
+<script>
+const token = localStorage.getItem('token');
+if (!token) location = '/login';
+</script>
 
-  <div class="card shadow-sm">
-    <div class="card-body">
-      <h5 class="card-title">My Payslips</h5>
-      <div class="table-responsive">
-        <table class="table table-striped table-hover align-middle">
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+
+<%
+const payslipRecords = payrolls || [];
+const paidPayslips = payslipRecords.filter((payroll) => (payroll.payment_status || 'Pending') === 'Paid').length;
+const pendingPayslips = payslipRecords.filter((payroll) => (payroll.payment_status || 'Pending') !== 'Paid').length;
+const totalNetPay = payslipRecords.reduce((sum, payroll) => sum + Number(payroll.net || 0), 0);
+%>
+
+<style>
+  :root { --ps-bg:#f0fdf4; --ps-surface:#fff; --ps-border:#d1fae5; --ps-border-strong:#bbf7d0; --ps-text:#0f1c14; --ps-muted:#6b8c78; --ps-green:#15803d; --ps-blue:#2563eb; --ps-amber:#b45309; --ps-shadow-sm:0 1px 3px rgba(6,78,39,.08),0 1px 2px rgba(6,78,39,.04); --ps-shadow-md:0 4px 16px rgba(6,78,39,.1),0 2px 6px rgba(6,78,39,.06); --ps-radius:16px; --ps-radius-sm:10px; }
+  body:has(.payslips-workspace) { background:var(--ps-bg)!important; color:var(--ps-text); font-family:'Sora',sans-serif; }
+  .payslips-workspace { max-width:1280px; margin:0 auto; padding:2rem 1.5rem 4rem; animation:payslips-in .4s cubic-bezier(.22,.8,.36,1) both; }
+  @keyframes payslips-in { from { opacity:0; transform:translateY(14px); } to { opacity:1; transform:translateY(0); } }
+  .payslips-header { display:flex; align-items:flex-end; justify-content:space-between; gap:1rem; flex-wrap:wrap; margin-bottom:1.5rem; padding-bottom:1.25rem; border-bottom:1px solid var(--ps-border); }
+  .payslips-eyebrow { margin:0 0 .3rem; color:var(--ps-green); font-size:.75rem; font-weight:700; letter-spacing:0; text-transform:uppercase; }
+  .payslips-title { margin:0; color:var(--ps-text); font-size:1.75rem; font-weight:700; line-height:1.2; }
+  .payslips-subtitle { max-width:62ch; margin:.35rem 0 0; color:var(--ps-muted); font-size:.875rem; line-height:1.5; }
+  .payslips-header-meta { display:inline-flex; align-items:center; gap:.45rem; padding:.52rem .78rem; border:1px solid var(--ps-border); border-radius:999px; background:var(--ps-surface); box-shadow:var(--ps-shadow-sm); color:var(--ps-muted); font-size:.78rem; font-weight:600; }
+  .payslips-header-meta i { color:var(--ps-green); }
+  .payslips-kpis { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:1rem; margin-bottom:1.25rem; }
+  .payslip-kpi { position:relative; display:flex; flex-direction:column; gap:.45rem; min-width:0; min-height:144px; padding:1.15rem 1.25rem; overflow:hidden; border:1px solid var(--ps-border); border-radius:var(--ps-radius); background:var(--ps-surface); box-shadow:var(--ps-shadow-sm); transition:box-shadow .18s ease,transform .15s ease; }
+  .payslip-kpi:hover { transform:translateY(-2px); box-shadow:var(--ps-shadow-md); }
+  .payslip-kpi::before { position:absolute; top:0; right:0; left:0; height:3px; content:''; }
+  .payslip-kpi-records::before { background:linear-gradient(90deg,var(--ps-green),#4ade80); }
+  .payslip-kpi-paid::before { background:linear-gradient(90deg,var(--ps-blue),#60a5fa); }
+  .payslip-kpi-net::before { background:linear-gradient(90deg,var(--ps-amber),#fbbf24); }
+  .payslip-kpi-icon { display:inline-flex; align-items:center; justify-content:center; width:36px; height:36px; margin-bottom:.15rem; border-radius:var(--ps-radius-sm); font-size:.9rem; }
+  .payslip-kpi-records .payslip-kpi-icon { background:#dcfce7; color:var(--ps-green); }
+  .payslip-kpi-paid .payslip-kpi-icon { background:#dbeafe; color:#1d4ed8; }
+  .payslip-kpi-net .payslip-kpi-icon { background:#fef3c7; color:var(--ps-amber); }
+  .payslip-kpi-label { color:var(--ps-muted); font-size:.72rem; font-weight:700; letter-spacing:0; text-transform:uppercase; }
+  .payslip-kpi-value { overflow-wrap:anywhere; color:var(--ps-text); font-family:'DM Mono',monospace; font-size:1.42rem; font-weight:700; line-height:1.15; }
+  .payslip-kpi-sub { margin-top:auto; color:var(--ps-muted); font-size:.74rem; line-height:1.35; }
+  .payslips-panel { overflow:hidden; border:1px solid var(--ps-border); border-radius:var(--ps-radius); background:var(--ps-surface); box-shadow:var(--ps-shadow-sm); }
+  .payslips-panel-head { display:flex; align-items:center; justify-content:space-between; gap:1rem; padding:1.15rem 1.25rem; border-bottom:1px solid var(--ps-border); }
+  .payslips-panel-title { display:flex; align-items:center; gap:.55rem; margin:0; color:var(--ps-text); font-size:.95rem; font-weight:700; }
+  .payslips-panel-title i { display:inline-flex; align-items:center; justify-content:center; width:28px; height:28px; border-radius:8px; background:#dcfce7; color:var(--ps-green); font-size:.8rem; }
+  .payslips-panel-count { color:var(--ps-muted); font-size:.76rem; white-space:nowrap; }
+  .payslips-table-wrap { width:100%; overflow-x:auto; }
+  .payslips-table { width:100%; min-width:1010px; border-collapse:collapse; }
+  .payslips-table th,.payslips-table td { padding:.78rem .75rem; border-bottom:1px solid #f0fdf4; vertical-align:middle; }
+  .payslips-table thead { background:#f8fdf9; }
+  .payslips-table th { color:var(--ps-muted); font-size:.72rem; font-weight:700; letter-spacing:0; text-align:left; text-transform:uppercase; }
+  .payslips-table th.payslip-amount,.payslips-table td.payslip-amount { text-align:right; }
+  .payslips-table td { color:var(--ps-text); font-size:.83rem; }
+  .payslips-table tbody tr { transition:background .15s ease; }
+  .payslips-table tbody tr:hover { background:#f8fdf9; }
+  .payslips-table tbody tr:last-child td { border-bottom:0; }
+  .payslip-period { color:var(--ps-green); font-family:'DM Mono',monospace; font-size:.8rem; font-weight:600; }
+  .payslip-bank { color:var(--ps-muted); font-family:'DM Mono',monospace; font-size:.76rem; }
+  .payslip-money { color:var(--ps-text); font-family:'DM Mono',monospace; font-size:.82rem; font-weight:600; }
+  .payslip-status { display:inline-flex; align-items:center; gap:.35rem; padding:.24rem .58rem; border-radius:999px; font-size:.73rem; font-weight:600; white-space:nowrap; }
+  .payslip-status::before { width:6px; height:6px; border-radius:50%; background:currentColor; content:''; }
+  .payslip-status-paid { background:#dcfce7; color:var(--ps-green); }
+  .payslip-status-approved { background:#dbeafe; color:#1d4ed8; }
+  .payslip-status-pending { background:#fef3c7; color:var(--ps-amber); }
+  .payslip-release-title { color:var(--ps-green); font-size:.8rem; font-weight:700; }
+  .payslip-release-detail { display:block; margin-top:.13rem; color:var(--ps-muted); font-size:.73rem; line-height:1.35; }
+  .payslip-release-pending { color:var(--ps-muted); font-size:.78rem; }
+  .payslip-download { display:inline-flex; align-items:center; gap:.38rem; min-height:34px; padding:.38rem .62rem; border:1px solid var(--ps-border-strong); border-radius:8px; background:#fff; color:var(--ps-green); font-size:.76rem; font-weight:600; text-decoration:none; transition:background .15s ease,border-color .15s ease,transform .15s ease; }
+  .payslip-download:hover { transform:translateY(-1px); border-color:var(--ps-green); background:#f0fdf4; color:var(--ps-green); }
+  .payslips-empty { display:flex; align-items:center; justify-content:center; gap:.6rem; min-height:160px; margin:1.25rem; padding:1rem; border:1px dashed var(--ps-border-strong); border-radius:var(--ps-radius-sm); background:#f8fdf9; color:var(--ps-muted); font-size:.875rem; }
+  @media (max-width:720px) { .payslips-workspace { padding:1.25rem 1rem 3rem; } .payslips-header { align-items:flex-start; } .payslips-header-meta { width:100%; justify-content:center; } .payslips-kpis { grid-template-columns:1fr; } .payslips-panel-head { padding:1rem; } }
+
+  :root { --ps-bg:#f8fafc; --ps-surface:#fff; --ps-border:rgba(148,163,184,.18); --ps-border-strong:rgba(37,99,235,.28); --ps-text:#102033; --ps-muted:#64748b; --ps-green:#0b8f3e; --ps-blue:#2563eb; --ps-amber:#f59e0b; --ps-shadow-sm:0 14px 30px rgba(15,23,42,.08); --ps-shadow-md:0 22px 38px rgba(15,23,42,.16); --ps-radius:8px; --ps-radius-sm:8px; }
+  body:has(.payslips-workspace) { background:linear-gradient(135deg,#f7faf8 0%,#e8f7ee 48%,#f8fbf9 100%)!important; }
+  .payslips-workspace { max-width:1220px; padding:1.1rem; box-sizing:border-box; background:linear-gradient(135deg,rgba(255,255,255,.98),rgba(248,250,252,.94)),linear-gradient(90deg,rgba(6,182,212,.12),rgba(124,58,237,.12)); }
+  .payslips-header { position:relative; overflow:hidden; margin-bottom:1rem; padding:1.35rem; border:1px solid rgba(37,99,235,.18); border-radius:var(--ps-radius); background:linear-gradient(135deg,rgba(15,23,42,.94),rgba(37,99,235,.86) 46%,rgba(11,143,62,.82)); box-shadow:0 18px 38px rgba(15,23,42,.16); }
+  .payslips-header::after { position:absolute; right:-56px; bottom:-84px; width:260px; height:150px; background:linear-gradient(135deg,rgba(255,255,255,.18),rgba(255,255,255,.03)); content:''; transform:rotate(-18deg); }
+  .payslips-header > * { position:relative; z-index:1; }
+  .payslips-eyebrow { display:inline-flex; align-items:center; min-height:24px; padding:.25rem .58rem; border:1px solid rgba(255,255,255,.28); border-radius:999px; background:rgba(255,255,255,.12); color:#ffffff; }
+  .payslips-title,.payslips-subtitle { color:#ffffff; }
+  .payslips-subtitle { opacity:.88; }
+  .payslips-header-meta { border:0; border-radius:var(--ps-radius-sm); background:rgba(255,255,255,.14); box-shadow:none; color:#ffffff; }
+  .payslips-header-meta i { color:#ffffff; }
+  .payslips-kpis { margin-bottom:1rem; }
+  .payslip-kpi { min-height:118px; padding:1rem 1rem 1.1rem; border:0; border-radius:var(--ps-radius); color:#ffffff; box-shadow:0 16px 30px rgba(15,23,42,.13); transition:transform .16s ease,box-shadow .16s ease,filter .16s ease; }
+  .payslip-kpi:hover { transform:translateY(-4px); filter:saturate(1.04); box-shadow:var(--ps-shadow-md); }
+  .payslip-kpi::before { display:none; }
+  .payslip-kpi::after { position:absolute; right:-24px; bottom:-36px; width:150px; height:84px; background:linear-gradient(135deg,rgba(255,255,255,.18),rgba(255,255,255,.04)); content:''; transform:rotate(-18deg); }
+  .payslip-kpi > * { position:relative; z-index:1; }
+  .payslip-kpi-records { background:linear-gradient(135deg,#0f766e,#22c55e); }
+  .payslip-kpi-paid { background:linear-gradient(135deg,#4f46e5,#8b5cf6); }
+  .payslip-kpi-net { background:linear-gradient(135deg,#c2410c,#f59e0b); }
+  .payslip-kpi-icon { width:34px; height:34px; border-radius:8px; background:rgba(255,255,255,.16)!important; color:#ffffff!important; }
+  .payslip-kpi-label,.payslip-kpi-value,.payslip-kpi-sub { color:#ffffff; }
+  .payslip-kpi-label { font-size:.75rem; font-weight:800; opacity:.82; }
+  .payslip-kpi-value { font-size:1.45rem; }
+  .payslip-kpi-net .payslip-kpi-value { font-size:1.08rem; padding-top:.18rem; }
+  .payslip-kpi-sub { opacity:.82; }
+  .payslips-panel { border-color:rgba(148,163,184,.18); border-radius:var(--ps-radius); background:linear-gradient(180deg,rgba(255,255,255,.98),rgba(240,249,255,.78)); box-shadow:var(--ps-shadow-sm); transition:border-color .16s ease,box-shadow .16s ease; }
+  .payslips-panel:hover { border-color:rgba(6,182,212,.28); box-shadow:0 20px 36px rgba(15,23,42,.12); }
+  .payslips-panel-head { border-color:rgba(148,163,184,.16); }
+  .payslips-panel-title i { background:linear-gradient(135deg,#0f766e,#22c55e); color:#ffffff; }
+  .payslips-table-wrap { border:1px solid rgba(148,163,184,.16); border-radius:8px; background:#ffffff; }
+  .payslips-table thead { background:linear-gradient(135deg,#e0f2fe,#ecfdf3); }
+  .payslips-table th { color:#0f172a; }
+  .payslips-table th,.payslips-table td { border-bottom-color:rgba(148,163,184,.13); }
+  .payslips-table tbody tr { transition:background .14s ease,box-shadow .14s ease; }
+  .payslips-table tbody tr:hover { background:#f0f9ff; box-shadow:inset 4px 0 0 #06b6d4; }
+  .payslip-period { color:#1d4ed8; }
+  .payslip-status-paid { background:linear-gradient(135deg,#16a34a,#22c55e); color:#ffffff; }
+  .payslip-status-approved { background:linear-gradient(135deg,#2563eb,#7c3aed); color:#ffffff; }
+  .payslip-status-pending { background:linear-gradient(135deg,#f59e0b,#facc15); color:#ffffff; }
+  .payslip-release-title { color:#0f766e; }
+  .payslip-download { border:0; border-radius:8px; background:linear-gradient(135deg,#0b8f3e,#84cc16); box-shadow:0 12px 24px rgba(11,143,62,.22); color:#ffffff; }
+  .payslip-download:hover { border-color:transparent; background:linear-gradient(135deg,#087a34,#65a30d); color:#ffffff; transform:translateY(-2px); }
+  .payslips-empty { border-color:rgba(37,99,235,.26); border-radius:8px; background:linear-gradient(135deg,#ffffff,#f0f9ff); }
+  @media (max-width:720px) { .payslips-workspace { padding:.85rem; } .payslips-header { padding:1rem; } }
+</style>
+
+<section class="payslips-workspace">
+  <header class="payslips-header">
+    <div>
+      <p class="payslips-eyebrow">Personal payroll</p>
+      <h1 class="payslips-title">My Payslips</h1>
+      <p class="payslips-subtitle">Review payroll records, confirm salary release details, and download each payslip.</p>
+    </div>
+    <span class="payslips-header-meta"><i class="fa-solid fa-shield-halved" aria-hidden="true"></i> Secure employee records</span>
+  </header>
+
+  <div class="payslips-kpis" aria-label="Payslip summary">
+    <article class="payslip-kpi payslip-kpi-records">
+      <div class="payslip-kpi-icon" aria-hidden="true"><i class="fa-solid fa-file-invoice-dollar"></i></div>
+      <span class="payslip-kpi-label">Payslips</span>
+      <strong class="payslip-kpi-value"><%= payslipRecords.length %></strong>
+      <span class="payslip-kpi-sub">All payroll records</span>
+    </article>
+    <article class="payslip-kpi payslip-kpi-paid">
+      <div class="payslip-kpi-icon" aria-hidden="true"><i class="fa-solid fa-circle-check"></i></div>
+      <span class="payslip-kpi-label">Salary Released</span>
+      <strong class="payslip-kpi-value"><%= paidPayslips %></strong>
+      <span class="payslip-kpi-sub"><%= pendingPayslips %> awaiting release</span>
+    </article>
+    <article class="payslip-kpi payslip-kpi-net">
+      <div class="payslip-kpi-icon" aria-hidden="true"><i class="fa-solid fa-wallet"></i></div>
+      <span class="payslip-kpi-label">Total Net Pay</span>
+      <strong class="payslip-kpi-value">SGD <%= totalNetPay.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) %></strong>
+      <span class="payslip-kpi-sub">Across all records</span>
+    </article>
+  </div>
+
+  <section class="payslips-panel" aria-labelledby="payslipRegisterTitle">
+    <div class="payslips-panel-head">
+      <h2 class="payslips-panel-title" id="payslipRegisterTitle"><i class="fa-solid fa-list-check" aria-hidden="true"></i> Payslip Register</h2>
+      <span class="payslips-panel-count"><%= payslipRecords.length %> record<%= payslipRecords.length === 1 ? '' : 's' %></span>
+    </div>
+
+    <% if (!payslipRecords.length) { %>
+      <div class="payslips-empty"><i class="fa-solid fa-circle-info" aria-hidden="true"></i> No payslips are available yet.</div>
+    <% } else { %>
+      <div class="payslips-table-wrap">
+        <table class="payslips-table">
           <thead class="table-light">
             <tr>
               <th>Period</th>
               <th>Bank Number</th>
-              <th class="text-end">Gross</th>
-              <th class="text-end">Net</th>
+              <th class="payslip-amount">Gross</th>
+              <th class="payslip-amount">Net</th>
               <th>Payroll Status</th>
               <th>Salary Release</th>
-              <th class="text-center">Download</th>
+              <th>Download</th>
             </tr>
           </thead>
           <tbody>
-            <% payrolls.forEach(p => { %>
+            <% payslipRecords.forEach((p) => { %>
+              <% const status = p.payment_status || 'Pending'; %>
+              <% const release = p.data && p.data.salaryRelease; %>
               <tr>
-                <td><%= p.period %></td>
-                <td><%= p.bank_number || '-' %></td>
-                <td class="text-end">$<%= p.gross %></td>
-                <td class="text-end">$<%= p.net %></td>
+                <td class="payslip-period"><%= p.period %></td>
+                <td class="payslip-bank"><%= p.bank_number || '-' %></td>
+                <td class="payslip-amount payslip-money">SGD <%= Number(p.gross || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) %></td>
+                <td class="payslip-amount payslip-money">SGD <%= Number(p.net || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) %></td>
                 <td>
-                  <% const status = p.payment_status || 'Pending'; %>
                   <% if (status === 'Paid') { %>
-                    <span class="badge bg-success">Paid</span>
+                    <span class="payslip-status payslip-status-paid">Paid</span>
                   <% } else if (status === 'Approved') { %>
-                    <span class="badge bg-primary">Approved</span>
+                    <span class="payslip-status payslip-status-approved">Approved</span>
                   <% } else { %>
-                    <span class="badge bg-warning text-dark">Pending</span>
+                    <span class="payslip-status payslip-status-pending">Pending</span>
                   <% } %>
                 </td>
                 <td>
                   <% if (status === 'Paid') { %>
-                    <div class="fw-semibold text-success">Salary Released</div>
-                    <small class="text-muted d-block">Release Date: <%= p.paid_at ? new Date(p.paid_at).toLocaleString() : '-' %></small>
-                    <small class="text-muted d-block">Payment Method: <%= p.payment_method || 'Simulated Bank Transfer' %></small>
-                    <% const release = p.data && p.data.salaryRelease; %>
+                    <div class="payslip-release-title">Salary released</div>
+                    <span class="payslip-release-detail">Released: <%= p.paid_at ? new Date(p.paid_at).toLocaleString() : '-' %></span>
+                    <span class="payslip-release-detail">Method: <%= p.payment_method || 'Simulated Bank Transfer' %></span>
                     <% if (release) { %>
-                      <small class="text-muted d-block">Test Bank Account: <%= release.testBankAccountNumber || '-' %></small>
-                      <small class="text-muted d-block">Bank Reference: <%= release.testBankReference || '-' %></small>
+                      <span class="payslip-release-detail">Reference: <%= release.testBankReference || '-' %></span>
                     <% } %>
                   <% } else { %>
-                    <span class="text-muted">Not released yet</span>
+                    <span class="payslip-release-pending">Not released yet</span>
                   <% } %>
                 </td>
-                <td class="text-center">
-                  <a href="/api/payroll/<%= p.id %>/payslip" target="_blank" class="btn btn-sm btn-outline-primary">PDF</a>
+                <td>
+                  <a href="/api/payroll/<%= p.id %>/payslip" target="_blank" class="payslip-download" title="Download payslip PDF"><i class="fa-solid fa-file-pdf" aria-hidden="true"></i> PDF</a>
                 </td>
               </tr>
             <% }); %>
           </tbody>
         </table>
       </div>
-    </div>
-  </div>
+    <% } %>
+  </section>
+</section>
+<%- include('partials/footer') %>

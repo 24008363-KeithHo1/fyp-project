@@ -1,17 +1,505 @@
 <%- include('../partials/header', { title: 'HR Inbox' }) %>
 <%- include('../partials/navbar') %>
 
-<div class="container mt-4">
-  <h2>HR Requests Inbox</h2>
-  <div class="content-card requests-card mt-3">
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+
+<style>
+  :root {
+    --hrr-bg: #f0fdf4;
+    --hrr-surface: #ffffff;
+    --hrr-border: #d1fae5;
+    --hrr-border-strong: #bbf7d0;
+    --hrr-text: #0f1c14;
+    --hrr-muted: #6b8c78;
+    --hrr-green: #15803d;
+    --hrr-blue: #2563eb;
+    --hrr-amber: #b45309;
+    --hrr-red: #b91c1c;
+    --hrr-shadow-sm: 0 1px 3px rgba(6, 78, 39, .08), 0 1px 2px rgba(6, 78, 39, .04);
+    --hrr-shadow-md: 0 4px 16px rgba(6, 78, 39, .1), 0 2px 6px rgba(6, 78, 39, .06);
+    --hrr-radius: 16px;
+    --hrr-radius-sm: 10px;
+  }
+
+  body:has(.hr-requests-workspace) {
+    background: var(--hrr-bg) !important;
+    color: var(--hrr-text);
+    font-family: 'Sora', sans-serif;
+  }
+
+  .hr-requests-workspace {
+    max-width: 1280px;
+    margin: 0 auto;
+    padding: 2rem 1.5rem 4rem;
+    animation: hr-requests-in .4s cubic-bezier(.22, .8, .36, 1) both;
+  }
+
+  @keyframes hr-requests-in {
+    from { opacity: 0; transform: translateY(14px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .hr-requests-header {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 1rem;
+    flex-wrap: wrap;
+    margin-bottom: 1.5rem;
+    padding-bottom: 1.25rem;
+    border-bottom: 1px solid var(--hrr-border);
+  }
+
+  .hr-requests-eyebrow {
+    margin: 0 0 .3rem;
+    color: var(--hrr-green);
+    font-size: .75rem;
+    font-weight: 700;
+    letter-spacing: 0;
+    text-transform: uppercase;
+  }
+
+  .hr-requests-title {
+    margin: 0;
+    color: var(--hrr-text);
+    font-size: 1.75rem;
+    font-weight: 700;
+    line-height: 1.2;
+  }
+
+  .hr-requests-subtitle {
+    max-width: 62ch;
+    margin: .35rem 0 0;
+    color: var(--hrr-muted);
+    font-size: .875rem;
+    line-height: 1.5;
+  }
+
+  .hr-requests-count {
+    display: inline-flex;
+    align-items: center;
+    gap: .45rem;
+    padding: .52rem .78rem;
+    border: 1px solid var(--hrr-border);
+    border-radius: 999px;
+    background: var(--hrr-surface);
+    box-shadow: var(--hrr-shadow-sm);
+    color: var(--hrr-muted);
+    font-size: .78rem;
+    font-weight: 600;
+  }
+
+  .hr-requests-count strong {
+    color: var(--hrr-green);
+    font-family: 'DM Mono', monospace;
+  }
+
+  .hr-requests-panel {
+    overflow: hidden;
+    border: 1px solid var(--hrr-border);
+    border-radius: var(--hrr-radius);
+    background: var(--hrr-surface);
+    box-shadow: var(--hrr-shadow-sm);
+  }
+
+  .hr-requests-panel-head {
+    display: flex;
+    align-items: center;
+    gap: .55rem;
+    padding: 1.15rem 1.25rem;
+    border-bottom: 1px solid var(--hrr-border);
+  }
+
+  .hr-requests-panel-head i {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    border-radius: 8px;
+    background: #dcfce7;
+    color: var(--hrr-green);
+    font-size: .8rem;
+  }
+
+  .hr-requests-panel-head h2 {
+    margin: 0;
+    color: var(--hrr-text);
+    font-size: .95rem;
+    font-weight: 700;
+  }
+
+  .hr-requests-table-wrap {
+    width: 100%;
+    overflow-x: auto;
+  }
+
+  .hr-requests-table {
+    width: 100%;
+    min-width: 1050px;
+    border-collapse: collapse;
+  }
+
+  .hr-requests-table th,
+  .hr-requests-table td {
+    padding: .78rem .75rem;
+    border-bottom: 1px solid #f0fdf4;
+    vertical-align: middle;
+  }
+
+  .hr-requests-table thead { background: #f8fdf9; }
+
+  .hr-requests-table th {
+    color: var(--hrr-muted);
+    font-size: .72rem;
+    font-weight: 700;
+    letter-spacing: 0;
+    text-align: left;
+    text-transform: uppercase;
+  }
+
+  .hr-requests-table td {
+    color: var(--hrr-text);
+    font-size: .83rem;
+  }
+
+  .hr-requests-table tbody tr { transition: background .15s ease; }
+  .hr-requests-table tbody tr:hover { background: #f8fdf9; }
+  .hr-requests-table tbody tr:last-child td { border-bottom: 0; }
+
+  .hr-request-id {
+    color: var(--hrr-green);
+    font-family: 'DM Mono', monospace;
+    font-size: .78rem;
+  }
+
+  .hr-request-title {
+    color: var(--hrr-text);
+    font-weight: 700;
+    text-decoration: none;
+  }
+
+  .hr-request-title:hover { color: var(--hrr-green); }
+  .hr-request-message { max-width: 260px; color: var(--hrr-muted); line-height: 1.45; }
+  .hr-request-created { color: var(--hrr-muted); font-family: 'DM Mono', monospace; font-size: .72rem; white-space: nowrap; }
+
+  .hr-request-status {
+    display: inline-flex;
+    align-items: center;
+    gap: .35rem;
+    padding: .24rem .58rem;
+    border-radius: 999px;
+    font-size: .73rem;
+    font-weight: 600;
+    white-space: nowrap;
+  }
+
+  .hr-request-status::before {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: currentColor;
+    content: '';
+  }
+
+  .hr-request-pending { background: #fef3c7; color: var(--hrr-amber); }
+  .hr-request-completed,
+  .hr-request-approved { background: #dcfce7; color: var(--hrr-green); }
+  .hr-request-incomplete,
+  .hr-request-denied { background: #fee2e2; color: var(--hrr-red); }
+  .hr-request-default { background: #f1f5f9; color: #64748b; }
+
+  .hr-request-attachments {
+    display: grid;
+    gap: .28rem;
+  }
+
+  .hr-request-attachments a {
+    display: inline-flex;
+    align-items: center;
+    gap: .3rem;
+    color: var(--hrr-blue);
+    font-size: .78rem;
+    text-decoration: none;
+  }
+
+  .hr-request-attachments a:hover { text-decoration: underline; }
+  .hr-request-none { color: var(--hrr-muted); font-size: .78rem; }
+
+  .hr-request-action {
+    display: flex;
+    align-items: center;
+    gap: .45rem;
+    min-width: 190px;
+  }
+
+  .hr-request-action .form-select {
+    min-height: 36px;
+    margin: 0;
+    padding: .36rem .55rem;
+    border: 1px solid var(--hrr-border);
+    border-radius: 8px;
+    background-color: #f8fdf9;
+    box-shadow: none;
+    color: var(--hrr-text);
+    font-size: .78rem;
+  }
+
+  .hr-request-update {
+    display: inline-flex;
+    flex: 0 0 auto;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    padding: 0;
+    border: 1px solid var(--hrr-green);
+    border-radius: 8px;
+    background: var(--hrr-green);
+    color: #fff;
+    transition: background .15s ease, transform .15s ease;
+  }
+
+  .hr-request-update:hover { transform: translateY(-1px); background: #166534; }
+  .hr-request-update:disabled { cursor: not-allowed; opacity: .6; transform: none; }
+
+  .hr-requests-empty {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: .6rem;
+    min-height: 160px;
+    margin: 1.25rem;
+    padding: 1rem;
+    border: 1px dashed var(--hrr-border-strong);
+    border-radius: var(--hrr-radius-sm);
+    background: #f8fdf9;
+    color: var(--hrr-muted);
+    font-size: .875rem;
+  }
+
+  @media (max-width: 720px) {
+    .hr-requests-workspace { padding: 1.25rem 1rem 3rem; }
+    .hr-requests-header { align-items: flex-start; }
+    .hr-requests-count { width: 100%; justify-content: center; }
+    .hr-requests-panel-head { padding: 1rem; }
+  }
+
+  :root {
+    --hrr-bg: #f8fafc;
+    --hrr-surface: #ffffff;
+    --hrr-border: rgba(148, 163, 184, .18);
+    --hrr-border-strong: rgba(37, 99, 235, .28);
+    --hrr-text: #102033;
+    --hrr-muted: #64748b;
+    --hrr-green: #0b8f3e;
+    --hrr-blue: #2563eb;
+    --hrr-amber: #f59e0b;
+    --hrr-red: #ef4444;
+    --hrr-shadow-sm: 0 14px 30px rgba(15, 23, 42, .08);
+    --hrr-shadow-md: 0 22px 38px rgba(15, 23, 42, .16);
+    --hrr-radius: 8px;
+    --hrr-radius-sm: 8px;
+  }
+
+  body:has(.hr-requests-workspace) {
+    background: linear-gradient(135deg, #f7faf8 0%, #e8f7ee 48%, #f8fbf9 100%) !important;
+  }
+
+  .hr-requests-workspace {
+    max-width: 1220px;
+    padding: 1.1rem;
+    box-sizing: border-box;
+    background:
+      linear-gradient(135deg, rgba(255, 255, 255, .98), rgba(248, 250, 252, .94)),
+      linear-gradient(90deg, rgba(6, 182, 212, .12), rgba(124, 58, 237, .12));
+  }
+
+  .hr-requests-header {
+    position: relative;
+    overflow: hidden;
+    margin-bottom: 1rem;
+    padding: 1.35rem;
+    border: 1px solid rgba(37, 99, 235, .18);
+    border-radius: var(--hrr-radius);
+    background: linear-gradient(135deg, rgba(15, 23, 42, .94), rgba(37, 99, 235, .86) 46%, rgba(11, 143, 62, .82));
+    box-shadow: 0 18px 38px rgba(15, 23, 42, .16);
+  }
+
+  .hr-requests-header::after {
+    position: absolute;
+    right: -56px;
+    bottom: -84px;
+    width: 260px;
+    height: 150px;
+    background: linear-gradient(135deg, rgba(255, 255, 255, .18), rgba(255, 255, 255, .03));
+    content: '';
+    transform: rotate(-18deg);
+  }
+
+  .hr-requests-header > * {
+    position: relative;
+    z-index: 1;
+  }
+
+  .hr-requests-eyebrow {
+    display: inline-flex;
+    align-items: center;
+    min-height: 24px;
+    padding: .25rem .58rem;
+    border: 1px solid rgba(255, 255, 255, .28);
+    border-radius: 999px;
+    background: rgba(255, 255, 255, .12);
+    color: #ffffff;
+  }
+
+  .hr-requests-title,
+  .hr-requests-subtitle {
+    color: #ffffff;
+  }
+
+  .hr-requests-subtitle { opacity: .88; }
+
+  .hr-requests-count {
+    border: 0;
+    border-radius: var(--hrr-radius-sm);
+    background: #ffffff;
+    box-shadow: 0 14px 28px rgba(15, 23, 42, .24);
+    color: #1d4ed8;
+  }
+
+  .hr-requests-count strong { color: #1d4ed8; }
+
+  .hr-requests-panel {
+    border-color: rgba(148, 163, 184, .18);
+    border-radius: var(--hrr-radius);
+    background: linear-gradient(180deg, rgba(255, 255, 255, .98), rgba(240, 249, 255, .78));
+    box-shadow: var(--hrr-shadow-sm);
+    transition: border-color .16s ease, box-shadow .16s ease;
+  }
+
+  .hr-requests-panel:hover {
+    border-color: rgba(6, 182, 212, .28);
+    box-shadow: 0 20px 36px rgba(15, 23, 42, .12);
+  }
+
+  .hr-requests-panel-head {
+    border-color: rgba(148, 163, 184, .16);
+  }
+
+  .hr-requests-panel-head i {
+    background: linear-gradient(135deg, #0f766e, #22c55e);
+    color: #ffffff;
+  }
+
+  .hr-requests-table thead {
+    background: linear-gradient(135deg, #e0f2fe, #ecfdf3);
+  }
+
+  .hr-requests-table th {
+    color: #0f172a;
+  }
+
+  .hr-requests-table th,
+  .hr-requests-table td {
+    border-bottom-color: rgba(148, 163, 184, .13);
+  }
+
+  .hr-requests-table tbody tr {
+    transition: background .14s ease, box-shadow .14s ease;
+  }
+
+  .hr-requests-table tbody tr:hover {
+    background: #f0f9ff;
+    box-shadow: inset 4px 0 0 #06b6d4;
+  }
+
+  .hr-request-id,
+  .hr-request-title:hover {
+    color: #1d4ed8;
+  }
+
+  .hr-request-pending {
+    background: linear-gradient(135deg, #f59e0b, #facc15);
+    color: #ffffff;
+  }
+
+  .hr-request-completed,
+  .hr-request-approved {
+    background: linear-gradient(135deg, #16a34a, #22c55e);
+    color: #ffffff;
+  }
+
+  .hr-request-incomplete,
+  .hr-request-denied {
+    background: linear-gradient(135deg, #dc2626, #fb7185);
+    color: #ffffff;
+  }
+
+  .hr-request-default {
+    background: #e2e8f0;
+    color: #475569;
+  }
+
+  .hr-request-attachments a { color: #1d4ed8; }
+
+  .hr-request-action .form-select {
+    border-color: rgba(148, 163, 184, .28);
+    border-radius: 8px;
+    background-color: #ffffff;
+  }
+
+  .hr-request-action .form-select:focus {
+    border-color: #06b6d4;
+    box-shadow: 0 0 0 .2rem rgba(6, 182, 212, .16);
+  }
+
+  .hr-request-update {
+    border: 0;
+    background: linear-gradient(135deg, #0b8f3e, #84cc16);
+    box-shadow: 0 12px 24px rgba(11, 143, 62, .22);
+  }
+
+  .hr-request-update:hover {
+    background: linear-gradient(135deg, #087a34, #65a30d);
+    transform: translateY(-2px);
+  }
+
+  .hr-requests-empty {
+    border-color: rgba(37, 99, 235, .26);
+    border-radius: 8px;
+    background: linear-gradient(135deg, #ffffff, #f0f9ff);
+  }
+
+  @media (max-width: 720px) {
+    .hr-requests-workspace { padding: .85rem; }
+    .hr-requests-header { padding: 1rem; }
+  }
+</style>
+
+<section class="hr-requests-workspace">
+  <header class="hr-requests-header">
+    <div>
+      <p class="hr-requests-eyebrow">HR operations</p>
+      <h1 class="hr-requests-title">Requests Inbox</h1>
+      <p class="hr-requests-subtitle">Review incoming HR requests, open supporting files, and keep each request moving.</p>
+    </div>
+    <span class="hr-requests-count"><i class="fa-solid fa-inbox" aria-hidden="true"></i> <strong><%= requests ? requests.length : 0 %></strong> total requests</span>
+  </header>
+
+  <section class="hr-requests-panel" aria-labelledby="requestQueueTitle">
+    <div class="hr-requests-panel-head">
+      <i class="fa-solid fa-list-check" aria-hidden="true"></i>
+      <h2 id="requestQueueTitle">Request Queue</h2>
+    </div>
     <% if (!requests || !requests.length) { %>
-      <div class="alert alert-info">No requests.</div>
+      <div class="hr-requests-empty"><i class="fa-solid fa-circle-check" aria-hidden="true"></i> No requests are waiting in this inbox.</div>
     <% } else { %>
-      <div class="table-responsive mt-2">
-        <table class="table table-striped table-hover table-bordered align-middle table-sm">
+      <div class="hr-requests-table-wrap">
+        <table class="hr-requests-table">
           <thead>
             <tr>
-              <th>#</th>
+              <th>Request</th>
               <th>From</th>
               <th>Title</th>
               <th>Message</th>
@@ -23,28 +511,36 @@
           </thead>
           <tbody>
             <% requests.forEach(r => { %>
+              <% const requestStatusClass = r.status === 'Pending' ? 'hr-request-pending' : (r.status === 'Completed' || r.status === 'Approved' ? 'hr-request-completed' : (r.status === 'Incomplete' || r.status === 'Denied' ? 'hr-request-incomplete' : 'hr-request-default')); %>
               <tr>
-                <td><%= r.id %></td>
+                <td class="hr-request-id">#<%= r.id %></td>
                 <td><%= r.senderName || r.senderId %></td>
-                <td><a href="/requests/<%= r.id %>/view"><%= r.title %></a></td>
-                <td><%= r.message && r.message.length > 120 ? (r.message.substring(0,120) + '...') : r.message %></td>
+                <td><a class="hr-request-title" href="/requests/<%= r.id %>/view"><%= r.title %></a></td>
+                <td class="hr-request-message"><%= r.message && r.message.length > 120 ? (r.message.substring(0,120) + '...') : r.message %></td>
                 <td id="status-<%= r.id %>">
-                    <span class="badge <%= r.status === 'Pending' ? 'bg-warning text-dark' : (r.status === 'Completed' || r.status === 'Approved' ? 'bg-success' : (r.status === 'Denied' ? 'bg-danger' : 'bg-secondary')) %>"><%= r.status %></span>
-                  </td><td>
+                  <span class="hr-request-status <%= requestStatusClass %>"><%= r.status %></span>
+                </td>
+                <td>
                   <% if (r.data && Array.isArray(r.data.attachments) && r.data.attachments.length) { %>
-                    <% r.data.attachments.forEach(a => { %>
-                      <div><a href="<%= a.path %>" target="_blank" rel="noopener noreferrer"><%= a.originalname %></a></div>
-                    <% }) %>
+                    <div class="hr-request-attachments">
+                      <% r.data.attachments.forEach(a => { %>
+                        <a href="<%= a.path %>" target="_blank" rel="noopener noreferrer"><i class="fa-solid fa-paperclip" aria-hidden="true"></i> <%= a.originalname %></a>
+                      <% }) %>
+                    </div>
+                  <% } else { %>
+                    <span class="hr-request-none">None</span>
                   <% } %>
                 </td>
-                <td><%= new Date(r.createdAt).toLocaleString() %></td>
+                <td class="hr-request-created"><%= new Date(r.createdAt).toLocaleString() %></td>
                 <td>
-                  <select id="sel-<%= r.id %>" class="form-select form-select-sm">
-                    <option value="Pending" <%= r.status==='Pending' ? 'selected' : '' %>>Pending</option>
-                    <option value="Completed" <%= r.status==='Completed' ? 'selected' : '' %>>Completed</option>
-                    <option value="Incomplete" <%= r.status==='Incomplete' ? 'selected' : '' %>>Incomplete</option>
-                  </select>
-                  <button class="btn btn-sm btn-primary mt-1 update-btn" data-id="<%= r.id %>">Update</button>
+                  <div class="hr-request-action">
+                    <select id="sel-<%= r.id %>" class="form-select" aria-label="Update request <%= r.id %> status">
+                      <option value="Pending" <%= r.status==='Pending' ? 'selected' : '' %>>Pending</option>
+                      <option value="Completed" <%= r.status==='Completed' ? 'selected' : '' %>>Completed</option>
+                      <option value="Incomplete" <%= r.status==='Incomplete' ? 'selected' : '' %>>Incomplete</option>
+                    </select>
+                    <button class="hr-request-update update-btn" type="button" data-id="<%= r.id %>" aria-label="Save request <%= r.id %> status" title="Save status"><i class="fa-solid fa-check" aria-hidden="true"></i></button>
+                  </div>
                 </td>
               </tr>
             <% }) %>
@@ -52,22 +548,48 @@
         </table>
       </div>
     <% } %>
-  </div>
-</div>
+  </section>
+</section>
 
 <script>
-async function updateStatus(id){
+function requestStatusClass(status) {
+  if (status === 'Pending') return 'hr-request-pending';
+  if (status === 'Completed' || status === 'Approved') return 'hr-request-completed';
+  if (status === 'Incomplete' || status === 'Denied') return 'hr-request-incomplete';
+  return 'hr-request-default';
+}
+
+function renderRequestStatus(status) {
+  return `<span class="hr-request-status ${requestStatusClass(status)}">${status}</span>`;
+}
+
+async function updateStatus(id, button) {
   const sel = document.getElementById('sel-'+id);
   const status = sel.value;
   const token = localStorage.getItem('token');
-  const res = await fetch('/api/requests/'+id+'/status', { method: 'PUT', headers: { 'Content-Type':'application/json', Authorization: `Bearer ${token}` }, body: JSON.stringify({ status }) });
-  if (res.ok) document.getElementById('status-'+id).innerText = status;
-  else alert('Failed to update');
+  const originalContent = button ? button.innerHTML : '';
+  try {
+    if (button) {
+      button.disabled = true;
+      button.innerHTML = '<i class="fa-solid fa-spinner fa-spin" aria-hidden="true"></i>';
+    }
+    const res = await fetch('/api/requests/'+id+'/status', { method: 'PUT', headers: { 'Content-Type':'application/json', Authorization: `Bearer ${token}` }, body: JSON.stringify({ status }) });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Failed to update request');
+    document.getElementById('status-'+id).innerHTML = renderRequestStatus(status);
+  } catch (err) {
+    alert(err.message || 'Failed to update request');
+  } finally {
+    if (button) {
+      button.disabled = false;
+      button.innerHTML = originalContent;
+    }
+  }
 }
 
 document.querySelectorAll('.update-btn').forEach(b => b.addEventListener('click', (e) => {
-  const id = e.currentTarget.dataset.id;
-  updateStatus(id);
+  const button = e.currentTarget;
+  updateStatus(button.dataset.id, button);
 }));
 </script>
 

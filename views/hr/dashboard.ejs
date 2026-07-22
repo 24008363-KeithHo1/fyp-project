@@ -14,34 +14,38 @@ try{
 
 <style>
 :root {
-  --hr-bg: #f0fdf4;
+  --hr-bg: #f8fafc;
   --hr-surface: #ffffff;
-  --hr-surface2: #f8fdf9;
-  --hr-border: #d1fae5;
-  --hr-border2: #bbf7d0;
-  --hr-text: #0f1c14;
-  --hr-muted: #6b8c78;
-  --hr-accent: #16a34a;
-  --hr-accent2: #22c55e;
+  --hr-surface2: #f8fafc;
+  --hr-border: rgba(148, 163, 184, .18);
+  --hr-border2: rgba(37, 99, 235, .28);
+  --hr-text: #102033;
+  --hr-muted: #64748b;
+  --hr-accent: #0b8f3e;
+  --hr-accent2: #84cc16;
   --hr-blue: #2563eb;
-  --hr-amber: #d97706;
-  --hr-red: #dc2626;
-  --hr-shadow-sm: 0 1px 3px rgba(6,78,39,.08), 0 1px 2px rgba(6,78,39,.04);
-  --hr-shadow-md: 0 4px 16px rgba(6,78,39,.1), 0 2px 6px rgba(6,78,39,.06);
-  --hr-radius: 18px;
-  --hr-radius-sm: 12px;
+  --hr-amber: #f59e0b;
+  --hr-red: #ef4444;
+  --hr-shadow-sm: 0 14px 30px rgba(15, 23, 42, .08);
+  --hr-shadow-md: 0 22px 38px rgba(15, 23, 42, .16);
+  --hr-radius: 8px;
+  --hr-radius-sm: 8px;
 }
 
 body {
-  background: var(--hr-bg) !important;
+  background: linear-gradient(135deg, #f7faf8 0%, #e8f7ee 48%, #f8fbf9 100%) !important;
   color: var(--hr-text);
   font-family: 'Sora', sans-serif;
 }
 
 .hr-page {
-  max-width: 1280px;
+  max-width: 1220px;
   margin: 0 auto;
-  padding: 2rem 1.5rem 4rem;
+  padding: 1.1rem;
+  box-sizing: border-box;
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, .98), rgba(248, 250, 252, .94)),
+    linear-gradient(90deg, rgba(6, 182, 212, .12), rgba(124, 58, 237, .12));
   animation: hr-in .45s cubic-bezier(.22,.8,.36,1) both;
 }
 
@@ -51,14 +55,36 @@ body {
 }
 
 .hr-hero {
+  position: relative;
+  overflow: hidden;
   display: flex;
   align-items: flex-end;
   justify-content: space-between;
   gap: 1rem;
   flex-wrap: wrap;
-  margin-bottom: 1.5rem;
-  padding-bottom: 1.25rem;
-  border-bottom: 1px solid var(--hr-border);
+  margin-bottom: 1rem;
+  padding: 1.35rem;
+  border: 1px solid rgba(37, 99, 235, .18);
+  border-radius: var(--hr-radius);
+  background: linear-gradient(135deg, rgba(15, 23, 42, .94), rgba(37, 99, 235, .86) 46%, rgba(11, 143, 62, .82));
+  box-shadow: 0 18px 38px rgba(15, 23, 42, .16);
+}
+
+.hr-hero::after {
+  position: absolute;
+  right: -56px;
+  bottom: -84px;
+  width: 260px;
+  height: 150px;
+  background: linear-gradient(135deg, rgba(255, 255, 255, .18), rgba(255, 255, 255, .03));
+  content: '';
+  transform: rotate(-18deg);
+}
+
+.hr-hero-left,
+.hr-hero-actions {
+  position: relative;
+  z-index: 1;
 }
 
 .hr-hero-left {
@@ -74,18 +100,18 @@ body {
   width: fit-content;
   padding: .35rem .7rem;
   border-radius: 999px;
-  background: #dcfce7;
-  color: #15803d;
-  border: 1px solid var(--hr-border2);
+  border: 1px solid rgba(255, 255, 255, .28);
+  background: rgba(255, 255, 255, .12);
+  color: #ffffff;
   font-size: .72rem;
   font-weight: 700;
-  letter-spacing: .08em;
+  letter-spacing: 0;
   text-transform: uppercase;
 }
 
 .hr-title {
   margin: 0;
-  color: var(--hr-text);
+  color: #ffffff;
   font-size: 1.8rem;
   font-weight: 700;
   line-height: 1.15;
@@ -93,9 +119,17 @@ body {
 
 .hr-subtitle {
   margin: 0;
-  color: var(--hr-muted);
+  color: #ffffff;
   font-size: .92rem;
   max-width: 60ch;
+  opacity: .88;
+}
+
+.hr-hero-actions {
+  display: flex;
+  align-items: center;
+  gap: .65rem;
+  flex-wrap: wrap;
 }
 
 .hr-meta {
@@ -104,94 +138,284 @@ body {
   gap: .45rem;
   padding: .5rem .8rem;
   border-radius: 999px;
-  border: 1px solid var(--hr-border);
-  background: var(--hr-surface);
-  color: var(--hr-muted);
+  border: 0;
+  background: rgba(255, 255, 255, .14);
+  color: #ffffff;
+  font-family: 'Sora', sans-serif;
   font-size: .8rem;
   font-weight: 500;
-  box-shadow: var(--hr-shadow-sm);
 }
 
-.dashboard-cards {
+.hr-refresh-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: .45rem;
+  min-height: 36px;
+  padding: .5rem .8rem;
+  border: 0;
+  border-radius: var(--hr-radius-sm);
+  background: #ffffff;
+  box-shadow: 0 14px 28px rgba(15, 23, 42, .24);
+  color: #1d4ed8;
+  font-family: 'Sora', sans-serif;
+  font-size: .78rem;
+  font-weight: 700;
+  transition: background .16s ease, color .16s ease, transform .16s ease;
+}
+
+.hr-refresh-btn:hover,
+.hr-refresh-btn:focus {
+  transform: translateY(-2px) scale(1.02);
+  background: #e0f2fe;
+  color: #075985;
+  box-shadow: 0 16px 30px rgba(15, 23, 42, .25);
+}
+
+.hr-refresh-btn:disabled {
+  cursor: wait;
+  opacity: .72;
+  transform: none;
+}
+
+.hr-kpis {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(5, minmax(0, 1fr));
   gap: 1rem;
+  margin-bottom: 1rem;
 }
 
-.card-link {
-  display: block;
-  text-decoration: none;
-  height: 100%;
-}
-
-.card-link .card {
-  height: 100%;
-  border: 1px solid var(--hr-border);
-  border-radius: var(--hr-radius);
-  background: var(--hr-surface);
-  box-shadow: var(--hr-shadow-sm);
-  overflow: hidden;
-  transition: transform .16s ease, box-shadow .16s ease, border-color .16s ease, background .16s ease;
-}
-
-.card-link .card::before {
-  content: '';
-  display: block;
-  height: 3px;
-  background: linear-gradient(90deg, var(--hr-accent), rgba(34,197,94,.2));
-}
-
-.card-link:hover .card {
-  transform: translateY(-3px);
-  box-shadow: var(--hr-shadow-md);
-  border-color: var(--hr-border2);
-  background: var(--hr-surface2);
-}
-
-.card-body {
+.hr-kpi {
+  position: relative;
   display: flex;
-  align-items: flex-start;
-  gap: .95rem;
-  padding: 1.2rem;
-  text-align: left;
+  flex-direction: column;
+  gap: .45rem;
+  min-width: 0;
+  min-height: 118px;
+  padding: 1rem 1rem 1.1rem;
+  overflow: hidden;
+  border: 0;
+  border-radius: var(--hr-radius);
+  color: #ffffff;
+  box-shadow: 0 16px 30px rgba(15, 23, 42, .13);
+  transition: transform .16s ease, box-shadow .16s ease, filter .16s ease;
 }
 
-.card-icon {
-  width: 44px;
-  height: 44px;
-  border-radius: 12px;
+.hr-kpi:hover {
+  transform: translateY(-4px);
+  filter: saturate(1.04);
+  box-shadow: var(--hr-shadow-md);
+}
+
+.hr-kpi::before {
+  display: none;
+}
+
+.hr-kpi::after {
+  position: absolute;
+  right: -24px;
+  bottom: -36px;
+  width: 150px;
+  height: 84px;
+  background: linear-gradient(135deg, rgba(255, 255, 255, .18), rgba(255, 255, 255, .04));
+  content: '';
+  transform: rotate(-18deg);
+}
+
+.hr-kpi > * {
+  position: relative;
+  z-index: 1;
+}
+
+.hr-kpi-employees { background: linear-gradient(135deg, #0f766e, #22c55e); }
+.hr-kpi-hires { background: linear-gradient(135deg, #4f46e5, #8b5cf6); }
+.hr-kpi-leave { background: linear-gradient(135deg, #0369a1, #06b6d4); }
+.hr-kpi-pending { background: linear-gradient(135deg, #c2410c, #f59e0b); }
+.hr-kpi-payroll { background: linear-gradient(135deg, #be123c, #f43f5e); }
+
+.hr-kpi-icon {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  font-size: 1.15rem;
-  background: #dcfce7;
-  color: #15803d;
-  flex-shrink: 0;
-  box-shadow: inset 0 0 0 1px rgba(21,128,61,.08);
+  width: 34px;
+  height: 34px;
+  margin-bottom: .15rem;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, .16) !important;
+  color: #ffffff !important;
+  font-size: .9rem;
 }
 
-.card-title {
-  margin: 0 0 .35rem;
+.hr-kpi-label {
+  color: #ffffff;
+  font-size: .75rem;
+  font-weight: 800;
+  letter-spacing: 0;
+  text-transform: uppercase;
+  opacity: .82;
+}
+
+.hr-kpi-value {
+  overflow-wrap: anywhere;
+  color: #ffffff;
+  font-family: 'DM Mono', monospace;
+  font-size: 1.45rem;
+  font-weight: 700;
+  line-height: 1.15;
+}
+
+.hr-kpi-payroll .hr-kpi-value {
+  font-size: 1.12rem;
+  padding-top: .17rem;
+}
+
+.hr-kpi-sub {
+  margin-top: auto;
+  color: #ffffff;
+  font-size: .74rem;
+  line-height: 1.35;
+  opacity: .82;
+}
+
+.hr-actions-panel {
+  overflow: hidden;
+  border: 1px solid rgba(148, 163, 184, .18);
+  border-radius: var(--hr-radius);
+  background: linear-gradient(180deg, rgba(255, 255, 255, .98), rgba(240, 249, 255, .78));
+  box-shadow: var(--hr-shadow-sm);
+  transition: border-color .16s ease, box-shadow .16s ease, transform .16s ease;
+}
+
+.hr-actions-panel:hover {
+  border-color: rgba(6, 182, 212, .28);
+  box-shadow: 0 20px 36px rgba(15, 23, 42, .12);
+}
+
+.hr-actions-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1.15rem 1.25rem;
+  border-bottom: 1px solid rgba(148, 163, 184, .16);
+}
+
+.hr-actions-title {
+  display: flex;
+  align-items: center;
+  gap: .55rem;
+  margin: 0;
   color: var(--hr-text);
-  font-size: .98rem;
+  font-size: .95rem;
   font-weight: 700;
 }
 
-.card-text {
+.hr-actions-title i {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  background: linear-gradient(135deg, #0f766e, #22c55e);
+  color: #ffffff;
+  font-size: .8rem;
+}
+
+.hr-actions-caption {
+  color: var(--hr-muted);
+  font-size: .76rem;
+}
+
+.hr-actions-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 1rem;
+  padding: 1.25rem;
+}
+
+.hr-action-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: .65rem;
+  min-width: 0;
+  min-height: 148px;
+  padding: 1.15rem .85rem 1rem;
+  border: 1px solid rgba(148, 163, 184, .18);
+  border-radius: 8px;
+  background: linear-gradient(180deg, #ffffff, #f8fafc);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .9);
+  color: inherit;
+  text-decoration: none;
+  text-align: center;
+  transition: border-color .16s ease, background .16s ease, box-shadow .16s ease, transform .16s ease;
+}
+
+.hr-action-card:hover {
+  transform: translateY(-2px);
+  border-color: rgba(37, 99, 235, .24);
+  background: #ffffff;
+  box-shadow: 0 14px 28px rgba(15, 23, 42, .09);
+}
+
+.hr-action-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 8px;
+  background: #dcfce7;
+  color: #15803d;
+  font-size: 1.05rem;
+  transition: background .16s ease, color .16s ease;
+}
+
+.hr-action-card:hover .hr-action-icon {
+  background: linear-gradient(135deg, #2563eb, #7c3aed);
+  color: #fff;
+}
+
+.hr-action-card.is-blue .hr-action-icon { background: #dbeafe; color: #1d4ed8; }
+.hr-action-card.is-amber .hr-action-icon { background: #fef3c7; color: #b45309; }
+.hr-action-card.is-teal .hr-action-icon { background: #ccfbf1; color: #0f766e; }
+
+.hr-action-name {
+  margin: 0;
+  color: var(--hr-text);
+  font-size: .82rem;
+  font-weight: 700;
+}
+
+.hr-action-desc {
   margin: 0;
   color: var(--hr-muted);
-  font-size: .82rem;
+  font-size: .72rem;
   line-height: 1.45;
 }
 
 @media (max-width: 1100px) {
-  .dashboard-cards { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .hr-kpis { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .hr-actions-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+@media (max-width: 720px) {
+  .hr-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 
 @media (max-width: 640px) {
-  .hr-page { padding: 1.25rem 1rem 3rem; }
-  .dashboard-cards { grid-template-columns: 1fr; }
+  .hr-page { padding: .85rem; }
+  .hr-actions-grid { grid-template-columns: 1fr; padding: 1rem; }
   .hr-title { font-size: 1.45rem; }
+  .hr-actions-head { padding: 1rem; }
+  .hr-actions-caption { display: none; }
+  .hr-hero { align-items: flex-start; padding: 1rem; }
+  .hr-hero-actions { width: 100%; }
+  .hr-refresh-btn { flex: 1; justify-content: center; }
+}
+
+@media (max-width: 420px) {
+  .hr-kpis { grid-template-columns: 1fr; }
 }
 </style>
 
@@ -199,125 +423,141 @@ body {
   <div class="hr-hero">
     <div class="hr-hero-left">
       <span class="hr-kicker"><i class="fa-solid fa-people-group"></i> HR Workspace</span>
-      <h2 class="hr-title">HR Dashboard</h2>
+      <h1 class="hr-title">HR Dashboard</h1>
       <p class="hr-subtitle">Payroll, employees, and HR actions in one streamlined workspace.</p>
     </div>
-    <div class="hr-meta"><i class="fa-solid fa-circle-check"></i> Team operations center</div>
-  </div>
-
-  <div class="dashboard-cards">
-    <div class="col">
-      <a href="/hr/automation" class="card-link">
-        <div class="card h-100 text-center shadow-sm">
-          <div class="card-body">
-            <div class="card-icon" aria-hidden="true"><i class="fa-solid fa-bell"></i></div>
-            <div>
-              <h5 class="card-title">Payroll Reminder Settings</h5>
-              <p class="card-text">Manage payroll reminder deadlines and trigger reminder runs.</p>
-            </div>
-          </div>
-        </div>
-      </a>
-    </div>
-
-    <div class="col">
-      <a href="/hr/employees" class="card-link">
-        <div class="card h-100 text-center shadow-sm">
-          <div class="card-body">
-            <div class="card-icon" aria-hidden="true"><i class="fa-solid fa-users"></i></div>
-            <div>
-              <h5 class="card-title">Employees</h5>
-              <p class="card-text">View employee records grouped by role.</p>
-            </div>
-          </div>
-        </div>
-      </a>
-    </div>
-
-    <div class="col">
-      <a href="/hr/requests" class="card-link">
-        <div class="card h-100 text-center shadow-sm">
-          <div class="card-body">
-            <div class="card-icon" aria-hidden="true"><i class="fa-solid fa-envelope"></i></div>
-            <div>
-              <h5 class="card-title">Requests</h5>
-              <p class="card-text">Submit HR or finance requests.</p>
-            </div>
-          </div>
-        </div>
-      </a>
-    </div>
-
-    <div class="col">
-      <a href="/mypayslips" class="card-link">
-        <div class="card h-100 text-center shadow-sm">
-          <div class="card-body">
-            <div class="card-icon" aria-hidden="true"><i class="fa-solid fa-file-invoice-dollar"></i></div>
-            <div>
-              <h5 class="card-title">Payslips</h5>
-              <p class="card-text">Access past payslips and downloads.</p>
-            </div>
-          </div>
-        </div>
-      </a>
-    </div>
-    
-    <div class="col">
-      <a href="/leave-requests" class="card-link">
-        <div class="card h-100 text-center shadow-sm">
-          <div class="card-body">
-            <div class="card-icon" aria-hidden="true"><i class="fa-solid fa-clock"></i></div>
-            <div>
-              <h5 class="card-title">Leave Requests</h5>
-              <p class="card-text">Review pending leave requests.</p>
-            </div>
-          </div>
-        </div>
-      </a>
-    </div>
-
-    <div class="col">
-      <a href="/onboarding" class="card-link">
-        <div class="card h-100 text-center shadow-sm">
-          <div class="card-body">
-            <div class="card-icon" aria-hidden="true"><i class="fa-solid fa-clipboard-list"></i></div>
-            <div>
-              <h5 class="card-title">Onboarding</h5>
-              <p class="card-text">Track new hires and onboarding tasks.</p>
-            </div>
-          </div>
-        </div>
-      </a>
-    </div>
-
-    <div class="col">
-      <a href="/contracts" class="card-link">
-        <div class="card h-100 text-center shadow-sm">
-          <div class="card-body">
-            <div class="card-icon" aria-hidden="true"><i class="fa-solid fa-folder-open"></i></div>
-            <div>
-              <h5 class="card-title">Contracts & Docs</h5>
-              <p class="card-text">Manage employment contracts and documents.</p>
-            </div>
-          </div>
-        </div>
-      </a>
-    </div>
-
-    <div class="col">
-      <a href="/time-attendance" class="card-link">
-        <div class="card h-100 text-center shadow-sm">
-          <div class="card-body">
-            <div class="card-icon" aria-hidden="true"><i class="fa-solid fa-stopwatch"></i></div>
-            <div>
-              <h5 class="card-title">Time & Attendance</h5>
-              <p class="card-text">Timesheets and attendance logs.</p>
-            </div>
-          </div>
-        </div>
-      </a>
+    <div class="hr-hero-actions">
+      <div class="hr-meta"><i class="fa-solid fa-calendar-day" aria-hidden="true"></i> <span id="hrDashboardDate">Team operations center</span></div>
+      <button class="hr-refresh-btn" type="button" onclick="refreshHrDashboard(this)" aria-label="Refresh workforce summary">
+        <i class="fa-solid fa-rotate-right" aria-hidden="true"></i>
+        <span>Refresh</span>
+      </button>
     </div>
   </div>
+
+  <div class="hr-kpis" aria-label="Workforce summary">
+    <article class="hr-kpi hr-kpi-employees">
+      <div class="hr-kpi-icon" aria-hidden="true"><i class="fa-solid fa-users"></i></div>
+      <span class="hr-kpi-label">Total Employees</span>
+      <strong class="hr-kpi-value" id="totalEmployees">--</strong>
+      <span class="hr-kpi-sub">Active employee accounts</span>
+    </article>
+
+    <article class="hr-kpi hr-kpi-hires">
+      <div class="hr-kpi-icon" aria-hidden="true"><i class="fa-solid fa-user-plus"></i></div>
+      <span class="hr-kpi-label">New Hires</span>
+      <strong class="hr-kpi-value" id="newHires">--</strong>
+      <span class="hr-kpi-sub">This month</span>
+    </article>
+
+    <article class="hr-kpi hr-kpi-leave">
+      <div class="hr-kpi-icon" aria-hidden="true"><i class="fa-solid fa-calendar-minus"></i></div>
+      <span class="hr-kpi-label">Employees on Leave</span>
+      <strong class="hr-kpi-value" id="employeesOnLeave">--</strong>
+      <span class="hr-kpi-sub">Approved leave today</span>
+    </article>
+
+    <article class="hr-kpi hr-kpi-pending">
+      <div class="hr-kpi-icon" aria-hidden="true"><i class="fa-solid fa-clock"></i></div>
+      <span class="hr-kpi-label">Pending Leave Requests</span>
+      <strong class="hr-kpi-value" id="pendingLeaveRequests">--</strong>
+      <span class="hr-kpi-sub">Awaiting HR review</span>
+    </article>
+
+    <article class="hr-kpi hr-kpi-payroll">
+      <div class="hr-kpi-icon" aria-hidden="true"><i class="fa-solid fa-money-check-dollar"></i></div>
+      <span class="hr-kpi-label">Payroll Status</span>
+      <strong class="hr-kpi-value" id="payrollStatus">Loading...</strong>
+      <span class="hr-kpi-sub" id="payrollStatusMeta">Current month</span>
+    </article>
+  </div>
+
+  <section class="hr-actions-panel" aria-labelledby="hrActionsTitle">
+    <div class="hr-actions-head">
+      <h2 class="hr-actions-title" id="hrActionsTitle"><i class="fa-solid fa-bolt" aria-hidden="true"></i> HR Actions</h2>
+      <span class="hr-actions-caption">Operational shortcuts</span>
+    </div>
+    <div class="hr-actions-grid">
+      <a href="/hr/automation" class="hr-action-card">
+        <div class="hr-action-icon" aria-hidden="true"><i class="fa-solid fa-bell"></i></div>
+        <div>
+          <p class="hr-action-name">Payroll Automation</p>
+          <p class="hr-action-desc">Manage deadlines and reminder runs.</p>
+        </div>
+      </a>
+
+      <a href="/hr/employees" class="hr-action-card is-blue">
+        <div class="hr-action-icon" aria-hidden="true"><i class="fa-solid fa-users"></i></div>
+        <div>
+          <p class="hr-action-name">Employees</p>
+          <p class="hr-action-desc">Review employee records by role.</p>
+        </div>
+      </a>
+
+      <a href="/hr/requests" class="hr-action-card is-amber">
+        <div class="hr-action-icon" aria-hidden="true"><i class="fa-solid fa-inbox"></i></div>
+        <div>
+          <p class="hr-action-name">Requests</p>
+          <p class="hr-action-desc">Review and update HR requests.</p>
+        </div>
+      </a>
+
+      <a href="/mypayslips" class="hr-action-card is-teal">
+        <div class="hr-action-icon" aria-hidden="true"><i class="fa-solid fa-file-invoice-dollar"></i></div>
+        <div>
+          <p class="hr-action-name">Payslips</p>
+          <p class="hr-action-desc">Access payroll history and downloads.</p>
+        </div>
+      </a>
+    </div>
+  </section>
 </section>
+
+<script>
+document.getElementById('hrDashboardDate').textContent = new Date().toLocaleDateString(undefined, {
+  weekday: 'short', year: 'numeric', month: 'short', day: 'numeric'
+});
+
+function setDashboardMetric(id, value) {
+  document.getElementById(id).textContent = value;
+}
+
+async function refreshHrDashboard(button) {
+  const originalMarkup = button.innerHTML;
+  button.disabled = true;
+  button.innerHTML = '<i class="fa-solid fa-spinner fa-spin" aria-hidden="true"></i><span>Refreshing</span>';
+  await loadHrDashboardSummary();
+  button.disabled = false;
+  button.innerHTML = originalMarkup;
+}
+
+async function loadHrDashboardSummary() {
+  try {
+    const response = await fetch('/hr/summary', {
+      headers: { authorization: `Bearer ${token}` }
+    });
+    const summary = await response.json();
+    if (!response.ok) throw new Error(summary.error || 'Unable to load workforce summary');
+
+    const workforce = summary.workforce || {};
+    const payroll = summary.payroll || {};
+    setDashboardMetric('totalEmployees', workforce.totalEmployees ?? 0);
+    setDashboardMetric('newHires', workforce.newHires ?? 0);
+    setDashboardMetric('employeesOnLeave', workforce.employeesOnLeave ?? 0);
+    setDashboardMetric('pendingLeaveRequests', workforce.pendingLeaveRequests ?? 0);
+    setDashboardMetric('payrollStatus', payroll.status || 'No payroll run');
+    setDashboardMetric('payrollStatusMeta', payroll.detail || 'No current-month records');
+  } catch (err) {
+    ['totalEmployees', 'newHires', 'employeesOnLeave', 'pendingLeaveRequests'].forEach((id) => setDashboardMetric(id, '--'));
+    setDashboardMetric('payrollStatus', 'Unavailable');
+    setDashboardMetric('payrollStatusMeta', 'Unable to load summary');
+  }
+}
+
+loadHrDashboardSummary();
+</script>
+
+
+
 
 <%- include('../partials/footer') %>

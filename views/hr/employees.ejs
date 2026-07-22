@@ -1,164 +1,454 @@
 <%- include('../partials/header', { title: 'Employees by Role' }) %>
 <%- include('../partials/navbar') %>
 
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+
 <style>
-  .hr-employees-page {
-    max-width: 1080px;
-    margin: 2.5rem auto;
-    padding: 0 1rem;
+  :root {
+    --hre-bg: #f0fdf4;
+    --hre-surface: #ffffff;
+    --hre-border: #d1fae5;
+    --hre-border-strong: #bbf7d0;
+    --hre-text: #0f1c14;
+    --hre-muted: #6b8c78;
+    --hre-green: #15803d;
+    --hre-blue: #2563eb;
+    --hre-shadow-sm: 0 1px 3px rgba(6, 78, 39, .08), 0 1px 2px rgba(6, 78, 39, .04);
+    --hre-shadow-md: 0 4px 16px rgba(6, 78, 39, .1), 0 2px 6px rgba(6, 78, 39, .06);
+    --hre-radius: 16px;
+    --hre-radius-sm: 10px;
   }
 
-  .hr-employees-card {
-    background: #ffffff;
-    border: 1px solid #d9e8df;
-    border-radius: 24px;
-    box-shadow: 0 18px 45px rgba(18, 78, 46, 0.06);
-    padding: 2rem;
+  body:has(.hr-employees-workspace) {
+    background: var(--hre-bg) !important;
+    color: var(--hre-text);
+    font-family: 'Sora', sans-serif;
+  }
+
+  .hr-employees-workspace {
+    max-width: 1280px;
+    margin: 0 auto;
+    padding: 2rem 1.5rem 4rem;
+    animation: hr-employees-in .4s cubic-bezier(.22, .8, .36, 1) both;
+  }
+
+  @keyframes hr-employees-in {
+    from { opacity: 0; transform: translateY(14px); }
+    to { opacity: 1; transform: translateY(0); }
   }
 
   .hr-employees-header {
     display: flex;
     flex-wrap: wrap;
-    align-items: center;
+    align-items: flex-end;
     justify-content: space-between;
     gap: 1rem;
-    margin-bottom: 1.75rem;
+    margin-bottom: 1.5rem;
+    padding-bottom: 1.25rem;
+    border-bottom: 1px solid var(--hre-border);
+  }
+
+  .hr-employees-eyebrow {
+    margin: 0 0 .3rem;
+    color: var(--hre-green);
+    font-size: .75rem;
+    font-weight: 700;
+    letter-spacing: 0;
+    text-transform: uppercase;
   }
 
   .hr-employees-title {
     margin: 0;
-    font-size: 2rem;
+    color: var(--hre-text);
+    font-size: 1.75rem;
     font-weight: 700;
-    color: #124e2e;
+    line-height: 1.2;
   }
 
   .hr-employees-subtitle {
-    margin: 0.35rem 0 0;
-    color: #4f6f5c;
-    line-height: 1.6;
+    max-width: 62ch;
+    margin: .35rem 0 0;
+    color: var(--hre-muted);
+    font-size: .875rem;
+    line-height: 1.5;
   }
 
   .hr-employees-back {
-    color: #166534;
+    display: inline-flex;
+    align-items: center;
+    gap: .45rem;
+    padding: .55rem .9rem;
+    border: 1px solid var(--hre-border-strong);
+    border-radius: 999px;
+    background: var(--hre-surface);
+    box-shadow: var(--hre-shadow-sm);
+    color: var(--hre-green);
+    font-size: .82rem;
     font-weight: 600;
     text-decoration: none;
+    transition: background .15s ease, border-color .15s ease, color .15s ease, transform .15s ease;
   }
 
   .hr-employees-back:hover {
-    text-decoration: underline;
+    transform: translateY(-1px);
+    border-color: var(--hre-green);
+    background: #f0fdf4;
+    color: #166534;
+  }
+
+  .hr-employees-panel {
+    overflow: hidden;
+    border: 1px solid var(--hre-border);
+    border-radius: var(--hre-radius);
+    background: var(--hre-surface);
+    box-shadow: var(--hre-shadow-sm);
+  }
+
+  .hr-employees-panel-head {
+    display: flex;
+    align-items: center;
+    gap: .55rem;
+    padding: 1.15rem 1.25rem;
+    border-bottom: 1px solid var(--hre-border);
+  }
+
+  .hr-employees-panel-head i {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    border-radius: 8px;
+    background: #dcfce7;
+    color: var(--hre-green);
+    font-size: .8rem;
+  }
+
+  .hr-employees-panel-head h2 {
+    margin: 0;
+    color: var(--hre-text);
+    font-size: .95rem;
+    font-weight: 700;
   }
 
   .hr-category-section {
-    margin-bottom: 2.25rem;
+    padding: 1.25rem;
+    border-bottom: 1px solid var(--hre-border);
+  }
+
+  .hr-category-section:last-child {
+    border-bottom: 0;
   }
 
   .hr-category-heading {
     display: flex;
     align-items: center;
-    gap: 0.85rem;
-    margin-bottom: 1rem;
-    font-size: 1.1rem;
+    gap: .75rem;
+    margin-bottom: .85rem;
+    color: var(--hre-text);
+    font-size: .95rem;
     font-weight: 700;
-    color: #0f3d2c;
   }
 
   .hr-category-pill {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    min-width: 2.5rem;
-    padding: 0.35rem 0.75rem;
+    min-width: 2rem;
+    padding: .22rem .55rem;
     border-radius: 999px;
-    background: #d1fae5;
-    color: #166534;
-    font-size: 0.9rem;
+    background: #dcfce7;
+    color: var(--hre-green);
+    font-family: 'DM Mono', monospace;
+    font-size: .72rem;
     font-weight: 700;
   }
 
   .hr-table-wrapper {
-    overflow: hidden;
-    border-radius: 18px;
-    border: 1px solid #e2f2e8;
+    width: 100%;
+    overflow-x: auto;
+    border: 1px solid var(--hre-border);
+    border-radius: var(--hre-radius-sm);
   }
 
   .hr-table {
     width: 100%;
     border-collapse: collapse;
-    min-width: 720px;
+    min-width: 760px;
   }
 
   .hr-table th,
   .hr-table td {
-    padding: 0.95rem 1rem;
+    padding: .75rem;
     text-align: left;
     vertical-align: middle;
-    border-bottom: 1px solid #edf5f0;
+    border-bottom: 1px solid #f0fdf4;
   }
 
   .hr-table thead {
-    background: #f3fbf5;
+    background: #f8fdf9;
   }
 
   .hr-table th {
-    color: #165c37;
-    font-size: 0.92rem;
-    letter-spacing: 0.01em;
+    color: var(--hre-muted);
+    font-size: .72rem;
+    letter-spacing: 0;
     font-weight: 700;
+    text-transform: uppercase;
   }
 
   .hr-table tbody tr {
-    transition: background 0.2s ease;
+    transition: background .15s ease;
   }
 
   .hr-table tbody tr:hover {
-    background: #f7fcf7;
+    background: #f0fdf4;
   }
 
-  .hr-table td:last-child {
+  .hr-table tbody tr:last-child td {
+    border-bottom: 0;
+  }
+
+  .hr-employee-id {
+    color: var(--hre-green);
+    font-family: 'DM Mono', monospace;
+    font-size: .8rem;
+  }
+
+  .hr-employee-name {
+    color: var(--hre-text);
+    font-weight: 600;
+  }
+
+  .hr-status-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: .35rem;
+    padding: .24rem .58rem;
+    border-radius: 999px;
+    font-size: .73rem;
+    font-weight: 600;
     white-space: nowrap;
   }
 
+  .hr-status-pill::before {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: currentColor;
+    content: '';
+  }
+
+  .hr-status-active { background: #dcfce7; color: #15803d; }
+  .hr-status-inactive { background: #f1f5f9; color: #64748b; }
+
+  .hr-empty-state {
+    display: flex;
+    align-items: center;
+    gap: .65rem;
+    margin: 1.25rem;
+    padding: 1rem;
+    border: 1px dashed var(--hre-border-strong);
+    border-radius: var(--hre-radius-sm);
+    background: #f8fdf9;
+    color: var(--hre-muted);
+    font-size: .875rem;
+  }
+
+  @media (max-width: 720px) {
+    .hr-employees-workspace { padding: 1.25rem 1rem 3rem; }
+    .hr-employees-header { align-items: flex-start; }
+    .hr-employees-back { width: 100%; justify-content: center; }
+    .hr-category-section { padding: 1rem; }
+    .hr-employees-title { font-size: 1.45rem; }
+  }
+
+  :root {
+    --hre-bg: #f8fafc;
+    --hre-surface: #ffffff;
+    --hre-border: rgba(148, 163, 184, .18);
+    --hre-border-strong: rgba(37, 99, 235, .28);
+    --hre-text: #102033;
+    --hre-muted: #64748b;
+    --hre-green: #0b8f3e;
+    --hre-blue: #2563eb;
+    --hre-shadow-sm: 0 14px 30px rgba(15, 23, 42, .08);
+    --hre-shadow-md: 0 22px 38px rgba(15, 23, 42, .16);
+    --hre-radius: 8px;
+    --hre-radius-sm: 8px;
+  }
+
+  body:has(.hr-employees-workspace) {
+    background: linear-gradient(135deg, #f7faf8 0%, #e8f7ee 48%, #f8fbf9 100%) !important;
+  }
+
+  .hr-employees-workspace {
+    max-width: 1220px;
+    padding: 1.1rem;
+    box-sizing: border-box;
+    background:
+      linear-gradient(135deg, rgba(255, 255, 255, .98), rgba(248, 250, 252, .94)),
+      linear-gradient(90deg, rgba(6, 182, 212, .12), rgba(124, 58, 237, .12));
+  }
+
+  .hr-employees-header {
+    position: relative;
+    overflow: hidden;
+    margin-bottom: 1rem;
+    padding: 1.35rem;
+    border: 1px solid rgba(37, 99, 235, .18);
+    border-radius: var(--hre-radius);
+    background: linear-gradient(135deg, rgba(15, 23, 42, .94), rgba(37, 99, 235, .86) 46%, rgba(11, 143, 62, .82));
+    box-shadow: 0 18px 38px rgba(15, 23, 42, .16);
+  }
+
+  .hr-employees-header::after {
+    position: absolute;
+    right: -56px;
+    bottom: -84px;
+    width: 260px;
+    height: 150px;
+    background: linear-gradient(135deg, rgba(255, 255, 255, .18), rgba(255, 255, 255, .03));
+    content: '';
+    transform: rotate(-18deg);
+  }
+
+  .hr-employees-header > * {
+    position: relative;
+    z-index: 1;
+  }
+
+  .hr-employees-eyebrow {
+    display: inline-flex;
+    align-items: center;
+    min-height: 24px;
+    padding: .25rem .58rem;
+    border: 1px solid rgba(255, 255, 255, .28);
+    border-radius: 999px;
+    background: rgba(255, 255, 255, .12);
+    color: #ffffff;
+  }
+
+  .hr-employees-title,
+  .hr-employees-subtitle {
+    color: #ffffff;
+  }
+
+  .hr-employees-subtitle { opacity: .88; }
+
+  .hr-employees-back {
+    border: 0;
+    border-radius: var(--hre-radius-sm);
+    background: #ffffff;
+    box-shadow: 0 14px 28px rgba(15, 23, 42, .24);
+    color: #1d4ed8;
+  }
+
+  .hr-employees-back:hover {
+    border-color: transparent;
+    background: #e0f2fe;
+    color: #075985;
+    transform: translateY(-2px) scale(1.02);
+  }
+
+  .hr-employees-panel {
+    border-color: rgba(148, 163, 184, .18);
+    border-radius: var(--hre-radius);
+    background: linear-gradient(180deg, rgba(255, 255, 255, .98), rgba(240, 249, 255, .78));
+    box-shadow: var(--hre-shadow-sm);
+    transition: border-color .16s ease, box-shadow .16s ease;
+  }
+
+  .hr-employees-panel:hover {
+    border-color: rgba(6, 182, 212, .28);
+    box-shadow: 0 20px 36px rgba(15, 23, 42, .12);
+  }
+
+  .hr-employees-panel-head,
+  .hr-category-section {
+    border-color: rgba(148, 163, 184, .16);
+  }
+
+  .hr-employees-panel-head i {
+    background: linear-gradient(135deg, #0f766e, #22c55e);
+    color: #ffffff;
+  }
+
+  .hr-category-pill {
+    background: linear-gradient(135deg, #0f766e, #22c55e);
+    color: #ffffff;
+    box-shadow: 0 6px 14px rgba(15, 23, 42, .12);
+  }
+
+  .hr-table-wrapper {
+    border-color: rgba(148, 163, 184, .16);
+    border-radius: 8px;
+    background: #ffffff;
+  }
+
+  .hr-table thead {
+    background: linear-gradient(135deg, #e0f2fe, #ecfdf3);
+  }
+
+  .hr-table th {
+    color: #0f172a;
+  }
+
+  .hr-table th,
+  .hr-table td {
+    border-bottom-color: rgba(148, 163, 184, .13);
+  }
+
+  .hr-table tbody tr {
+    transition: background .14s ease, box-shadow .14s ease;
+  }
+
+  .hr-table tbody tr:hover {
+    background: #f0f9ff;
+    box-shadow: inset 4px 0 0 #06b6d4;
+  }
+
+  .hr-employee-id { color: #1d4ed8; }
+
   .hr-status-active {
-    color: #166534;
-    font-weight: 700;
+    background: linear-gradient(135deg, #16a34a, #22c55e);
+    color: #ffffff;
   }
 
   .hr-status-inactive {
-    color: #9ca79d;
+    background: #e2e8f0;
+    color: #475569;
   }
 
   .hr-empty-state {
-    padding: 1.5rem;
-    border-radius: 18px;
-    background: #f0f9f4;
-    color: #344a3f;
-    border: 1px dashed #9cccb6;
-    font-size: 0.98rem;
+    border-color: rgba(37, 99, 235, .26);
+    border-radius: 8px;
+    background: linear-gradient(135deg, #ffffff, #f0f9ff);
   }
 
-  @media (max-width: 860px) {
-    .hr-employees-card {
-      padding: 1.5rem;
-    }
-
-    .hr-table {
-      min-width: 0;
-    }
+  @media (max-width: 720px) {
+    .hr-employees-workspace { padding: .85rem; }
+    .hr-employees-header { padding: 1rem; }
   }
 </style>
 
-<div class="hr-employees-page">
-  <div class="hr-employees-card">
-    <div class="hr-employees-header">
-      <div>
-        <h1 class="hr-employees-title">Employees by Role</h1>
-        <p class="hr-employees-subtitle">HR can view all employee accounts grouped by role, with each team shown in its own section.</p>
-      </div>
-      <a href="/hr/dashboard" class="hr-employees-back">← Back to HR Dashboard</a>
+<section class="hr-employees-workspace">
+  <header class="hr-employees-header">
+    <div>
+      <p class="hr-employees-eyebrow">People directory</p>
+      <h1 class="hr-employees-title">Employees by Role</h1>
+      <p class="hr-employees-subtitle">Review active and inactive employee accounts, organized into their operational teams.</p>
     </div>
+    <a href="/hr/dashboard" class="hr-employees-back"><i class="fa-solid fa-arrow-left" aria-hidden="true"></i> HR Dashboard</a>
+  </header>
 
+  <section class="hr-employees-panel" aria-labelledby="employeeDirectoryTitle">
+    <div class="hr-employees-panel-head">
+      <i class="fa-solid fa-people-group" aria-hidden="true"></i>
+      <h2 id="employeeDirectoryTitle">Employee Directory</h2>
+    </div>
     <% if (!categories || !categories.length) { %>
-      <div class="hr-empty-state">No employee records found.</div>
+      <div class="hr-empty-state"><i class="fa-solid fa-circle-info" aria-hidden="true"></i> No employee records found.</div>
     <% } else { %>
       <% categories.forEach((category) => { %>
         <section class="hr-category-section">
@@ -182,12 +472,12 @@
               <tbody>
                 <% grouped[category].forEach((user) => { %>
                   <tr>
-                    <td><%= user.id %></td>
-                    <td><%= user.name %></td>
+                    <td class="hr-employee-id">#<%= user.id %></td>
+                    <td class="hr-employee-name"><%= user.name %></td>
                     <td><%= user.email %></td>
                     <td><%= user.department || 'General Office' %></td>
                     <td><%= user.title || '—' %></td>
-                    <td class="<%= user.isActive ? 'hr-status-active' : 'hr-status-inactive' %>"><%= user.isActive ? 'Active' : 'Inactive' %></td>
+                    <td><span class="hr-status-pill <%= user.isActive ? 'hr-status-active' : 'hr-status-inactive' %>"><%= user.isActive ? 'Active' : 'Inactive' %></span></td>
                   </tr>
                 <% }) %>
               </tbody>
@@ -196,7 +486,7 @@
         </section>
       <% }) %>
     <% } %>
-  </div>
-</div>
+  </section>
+</section>
 
 <%- include('../partials/footer') %>

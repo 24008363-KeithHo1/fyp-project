@@ -4,6 +4,18 @@ const { logAction } = require('../utils/audit');
 exports.create = async (req, res) => {
   try {
     const { title, message, recipient } = req.body;
+    let requestData = {};
+    if (req.body.data) {
+      try {
+        const parsedData = typeof req.body.data === 'string' ? JSON.parse(req.body.data) : req.body.data;
+        if (!parsedData || typeof parsedData !== 'object' || Array.isArray(parsedData)) {
+          return res.status(400).json({ error: 'Request data must be an object' });
+        }
+        requestData = parsedData;
+      } catch (err) {
+        return res.status(400).json({ error: 'Request data must be valid JSON' });
+      }
+    }
     const errors = [];
     if (!title || !title.trim()) errors.push({ field: 'title', message: 'Title is required' });
     if (!message || !message.trim()) errors.push({ field: 'message', message: 'Message is required' });
@@ -26,7 +38,7 @@ exports.create = async (req, res) => {
       senderName: req.user.name,
       recipient: normalizedRecipient,
       status: 'Pending',
-      data: { attachments }
+      data: { ...requestData, attachments }
     });
 
     await logAction(req, 'create', 'Request', rec.id, { recipient: normalizedRecipient, title: rec.title });
