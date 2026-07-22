@@ -62,6 +62,24 @@ header .btn-outline-primary{border-radius:20px;padding:.35rem .6rem}
 
 /* Header stays in normal flow above content */
 
+/* Finance pages use a route-only navigation bar in place of the app brand. */
+.finance-site-header{background:rgba(247,252,249,.94);border-bottom:1px solid rgba(11,94,58,.14);box-shadow:0 3px 14px rgba(11,94,58,.06)}
+.finance-brand-row{display:flex;align-items:center;max-width:1220px;min-height:52px;margin-inline:auto;padding-inline:1.1rem;border-bottom:1px solid rgba(11,94,58,.09)}
+.finance-brand{font-size:1rem!important}
+.finance-nav-shell{display:flex;align-items:center;justify-content:space-between;gap:1rem;max-width:1220px;min-height:52px;margin-inline:auto;padding-inline:1.1rem}
+.finance-nav{flex:1;min-width:0;padding:0;overflow-x:auto;scrollbar-width:thin}
+.finance-nav-list{display:flex;align-items:center;gap:.4rem;min-width:max-content;margin:0;padding:0;list-style:none}
+.finance-nav-link{display:flex;align-items:center;gap:.45rem!important;min-height:34px;padding:.38rem .68rem!important;border:1px solid rgba(11,94,58,.13);border-radius:999px;background:#fff;color:#315c49!important;box-shadow:0 5px 12px rgba(15,23,42,.05);font-size:.78rem;font-weight:700;white-space:nowrap;text-decoration:none;transition:background-color .15s ease,color .15s ease,border-color .15s ease}
+.finance-nav-link:hover,.finance-nav-link:focus{background:#e4f5eb;color:#074d2f!important}
+.finance-nav-link.active{border-color:#0b5e3a;background:#0b5e3a;color:#fff!important;box-shadow:0 5px 12px rgba(11,94,58,.18)}
+.finance-nav-link i{width:1rem;text-align:center;font-size:.85rem}
+.header-session-actions{flex:0 0 auto;margin-left:auto}
+
+@media(max-width:767.98px){
+  .finance-nav-shell{gap:.55rem;min-height:48px;padding-block:.35rem}
+  .finance-nav-link{min-height:32px;padding:.34rem .58rem!important;font-size:.74rem}
+}
+
 /* Floating brand styles removed (no longer used) */
 
 /* Dashboard cards: equal spacing and centered content */
@@ -1417,6 +1435,13 @@ main .form-select:hover{
 .automation-btn-secondary:hover{background:#effaf4!important;color:#066d3a!important}
 .automation-btn-ghost{background:transparent!important;color:#61756b!important;border-color:#d4e1db!important}
 .automation-run-card{display:flex!important;flex-direction:row!important;align-items:center;justify-content:space-between;gap:1.5rem}
+.automation-submit-card .automation-card-heading{margin-bottom:1.15rem!important}
+.automation-submit-notes{margin-bottom:1rem}
+.automation-submit-notes .form-control{height:auto!important;min-height:96px!important;resize:vertical}
+.automation-workflow-notice{display:flex!important;align-items:center;gap:1rem}
+.automation-workflow-notice>div:nth-child(2){flex:1}
+.automation-workflow-notice h3{margin:0 0 .25rem;color:#143d30;font-size:1.05rem}
+.automation-workflow-notice p{margin:0;color:#687a72;font-size:.9rem}
 .automation-preview-card ul{margin:0;padding-left:1.2rem;color:#315446}
 .automation-preview-card li+li{margin-top:.55rem}
 .automation-filter-grid{display:grid;grid-template-columns:1fr 1fr auto;align-items:end;gap:1rem}
@@ -1440,6 +1465,7 @@ main .form-select:hover{
   .automation-form-grid,.automation-filter-grid{grid-template-columns:1fr}
   .automation-field-wide{grid-column:auto}
   .automation-run-card{align-items:flex-start;flex-direction:column!important}
+  .automation-workflow-notice{align-items:flex-start;flex-direction:column!important}
   .automation-filter-actions{flex-wrap:wrap}
   .automation-card{padding:1.1rem!important;border-radius:14px!important}
 }
@@ -2285,3 +2311,30 @@ main.app-container .invoice-badge-overdue{background:#fee2e2;color:#b91c1c}
   .payroll-edit-modal-title p{font-size:.72rem}
   .payroll-edit-modal-footer .btn{flex:1 1 0}
 }
+/* Finance payroll approval workspace --------------------------------------- */
+.payroll-approval-page{max-width:1220px;margin:0 auto;padding:2.2rem 1rem 3rem}
+.approval-hero{display:flex;align-items:flex-end;justify-content:space-between;gap:1.5rem;margin-bottom:1.4rem}
+.approval-hero h1{margin:.35rem 0 .35rem;color:#123e30;font-size:clamp(1.8rem,3vw,2.35rem);letter-spacing:-.035em}
+.approval-hero p{margin:0;color:#687b73}
+.approval-eyebrow{color:#087b47;font-size:.75rem;font-weight:800;letter-spacing:.11em;text-transform:uppercase}
+.approval-eyebrow i{margin-right:.4rem}
+.approval-card{margin-bottom:1.25rem;padding:1.35rem;border:1px solid #dceae3;border-radius:16px;background:#fff;box-shadow:0 12px 30px rgba(17,73,50,.07)}
+.approval-card-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem}
+.approval-card h2,.approval-card-header h2{margin:0 0 .2rem;color:#173f32;font-size:1.05rem}
+.approval-card-header p,.approval-card p{margin:0;color:#6a7d75;font-size:.88rem}
+.approval-table{width:100%;margin:0!important}
+.approval-table th{padding:.78rem!important;background:#f1f8f4!important;color:#426257!important;font-size:.7rem!important;font-weight:800!important;letter-spacing:.055em;text-transform:uppercase;white-space:nowrap}
+.approval-table td{padding:.9rem .78rem!important;vertical-align:middle;border-color:#edf3f0!important;color:#385248;font-size:.84rem}
+.approval-table td small{display:block;margin-top:.2rem;color:#84938d}
+.approval-status{display:inline-flex;align-items:center;padding:.4rem .65rem;border-radius:999px;background:#eef3f1;color:#53665e;font-size:.72rem;font-weight:800;white-space:nowrap}
+.approval-status-pendingapproval{background:#fff2cf;color:#8b5d00}.approval-status-approved{background:#dcf7e8;color:#087843}.approval-status-released{background:#dff6f5;color:#08706d}.approval-status-closed{background:#e8ecea;color:#4f5f58}.approval-status-payrolluploaded{background:#e8f0ff;color:#315da8}
+.approval-btn{width:auto!important;display:inline-flex!important;align-items:center;justify-content:center;gap:.45rem;padding:.62rem .85rem!important;border:1px solid transparent!important;border-radius:10px!important;font-size:.82rem!important;font-weight:800!important;text-decoration:none!important;white-space:nowrap}
+.approval-btn-primary{background:#087f47!important;color:#fff!important}.approval-btn-secondary{border-color:#b9d9c8!important;background:#fff!important;color:#087646!important}.approval-btn-danger{background:#b42318!important;color:#fff!important}
+.approval-empty{min-height:150px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:.35rem;color:#788b83}.approval-empty i{font-size:1.6rem;color:#75bb98}.approval-empty span{font-size:.8rem}
+.approval-back{display:inline-flex;align-items:center;gap:.4rem;margin-bottom:1.2rem;color:#277054;text-decoration:none;font-size:.85rem;font-weight:700}
+.approval-detail-hero{align-items:center}.approval-summary-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:1rem;margin-bottom:1.25rem}.approval-summary-grid>div{padding:1.15rem;border:1px solid #dceae3;border-radius:14px;background:#fff;box-shadow:0 8px 22px rgba(17,73,50,.05)}.approval-summary-grid span{display:block;margin-bottom:.35rem;color:#71837b;font-size:.76rem;font-weight:700}.approval-summary-grid strong{color:#153e31;font-size:1.1rem}
+.approval-notes{border-left:4px solid #438a68}.approval-rejection{border-left:4px solid #d14343;background:#fffafa}.approval-rejection p{white-space:pre-wrap}
+.approval-release-progress{display:flex;align-items:center;justify-content:space-between;gap:1rem;border-left:4px solid #0b8f4d}.approval-release-complete{border-left:4px solid #0a8b87;background:#f3fcfb}.approval-release-complete h2 i{margin-right:.4rem;color:#0a8b87}
+.approval-decision-grid{display:grid;grid-template-columns:1fr 1fr;gap:1.25rem}.approval-decision-card{display:flex;flex-direction:column;align-items:flex-start;gap:.75rem}.approval-decision-card h2 i{margin-right:.4rem;color:#0a8950}.approval-change-card h2 i{color:#b42318}.approval-change-card label{color:#315347;font-size:.82rem;font-weight:800}.approval-change-card textarea{width:100%;padding:.75rem;border:1px solid #cbded5;border-radius:10px;resize:vertical}.approval-change-card textarea:focus{outline:0;border-color:#0b8f4d;box-shadow:0 0 0 3px rgba(11,143,77,.12)}
+@media(max-width:800px){.approval-summary-grid,.approval-decision-grid{grid-template-columns:1fr 1fr}.approval-hero{align-items:flex-start;flex-direction:column}.approval-release-progress{align-items:flex-start;flex-direction:column}}
+@media(max-width:540px){.payroll-approval-page{padding-top:1.25rem}.approval-summary-grid,.approval-decision-grid{grid-template-columns:1fr}}

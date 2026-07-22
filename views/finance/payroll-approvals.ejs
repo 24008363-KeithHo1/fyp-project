@@ -1,0 +1,32 @@
+<%- include('../partials/header', { title }) %>
+
+<main class="payroll-approval-page">
+  <section class="approval-hero">
+    <div><span class="approval-eyebrow"><i class="fa-solid fa-clipboard-check"></i> Finance review</span><h1>Payroll Approvals</h1><p>Review payroll batches submitted by HR and track recent decisions.</p></div>
+  </section>
+  <% if (message) { %><div class="alert alert-success"><%= message %></div><% } %>
+  <% if (error) { %><div class="alert alert-danger"><%= error %></div><% } %>
+
+  <section class="approval-card">
+    <div class="approval-card-header"><div><h2>Submitted payroll periods</h2><p>Pending batches require a Finance decision.</p></div></div>
+    <div class="table-responsive">
+      <table class="table approval-table">
+        <thead><tr><th>Payroll period</th><th>Employees</th><th>Total gross</th><th>Total net</th><th>Status</th><th>Submitted</th><th></th></tr></thead>
+        <tbody>
+          <% if (!periods.length) { %><tr><td colspan="7"><div class="approval-empty"><i class="fa-solid fa-circle-check"></i><strong>No payroll approvals found</strong><span>New HR submissions will appear here.</span></div></td></tr><% } %>
+          <% periods.forEach((period) => { const summary = summaries[period.id]; %>
+            <tr>
+              <td><strong><%= period.name %></strong><small><%= period.periodStart %> – <%= period.periodEnd %></small></td>
+              <td><%= summary.employeeCount %><% if (summary.paidCount) { %><small><%= summary.paidCount %> paid</small><% } %></td><td>SGD <%= summary.gross.toFixed(2) %></td><td>SGD <%= summary.net.toFixed(2) %></td>
+              <td><span class="approval-status approval-status-<%= period.status.toLowerCase() %>"><%= period.status.replace(/([a-z])([A-Z])/g, '$1 $2') %></span></td>
+              <td><%= period.submittedAt ? new Date(period.submittedAt).toLocaleString('en-SG', { timeZone: 'Asia/Singapore' }) : '—' %></td>
+              <td><a class="approval-btn approval-btn-secondary" href="/finance/payroll-approvals/<%= period.id %>">Review</a></td>
+            </tr>
+          <% }) %>
+        </tbody>
+      </table>
+    </div>
+  </section>
+</main>
+
+<%- include('../partials/footer') %>

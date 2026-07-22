@@ -1,15 +1,27 @@
 const User = require('../models/User');
+const { Op } = require('sequelize');
 const AuditLog = require('../models/AuditLog');
 const ReminderDelivery = require('../models/ReminderDelivery');
 const PayrollPeriod = require('../models/PayrollPeriod');
 const { reconcileReminderBounces } = require('../services/emailBounceReconciliation');
-const { WORKFLOW, advancePayrollPeriod, saveActivePayrollPeriod } = require('../services/payrollPeriod');
+const { closePayrollPeriod, WORKFLOW, saveActivePayrollPeriod, submitPayrollPeriod } = require('../services/payrollPeriod');
+const { sendEmail } = require('../utils/email');
+const { logAction } = require('../utils/audit');
 const {
   getAutomationSettings,
   saveAutomationSettings,
   runPayrollReminderAutomation,
   evaluatePayrollReminders
 } = require('../services/payrollAutomation');
+
+function escapeHtml(value) {
+  return String(value == null ? '' : value)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+}
 
 exports.listUsers = async (req, res) => {
   try {
@@ -207,11 +219,53 @@ exports.savePayrollPeriod = async (req, res) => {
   }
 };
 
-exports.advancePayrollPeriod = async (req, res) => {
+exports.submitPayrollPeriod = async (req, res) => {
   const automationBasePath = req.user.role === 'HR' ? '/hr/automation' : '/admin/automation';
   try {
-    const period = await advancePayrollPeriod(req.params.id);
-    res.redirect(`${automationBasePath}?message=${encodeURIComponent(`Payroll period moved to ${period.status}`)}`);
+    const { period, totals } = await submitPayrollPeriod(req.params.id, req.user.id, req.body.notes);
+    await logAction(req, 'payroll_submitted_for_approval', 'PayrollPeriod', period.id, totals);
+
+    const financeUsers = await User.findAll({
+      where: { isActive: true, role: { [Op.in]: ['Finance'] } }
+    });
+    let notified = 0;
+    let notificationFailures = 0;
+    const financeUrl = `${process.env.APP_URL || `http://localhost:${process.env.PORT || 3000}`}/payroll`;
+    for (const user of financeUsers) {
+      if (!user.email) continue;
+      try {
+        const result = await sendEmail(
+          user.email,
+          `Payroll approval required: ${period.name}`,
+          `<h3>Payroll approval required</h3>
+           <p><strong>${escapeHtml(period.name)}</strong> has been submitted by HR for Finance approval.</p>
+           <ul><li>Employees: ${totals.employeeCount}</li><li>Total gross: SGD ${totals.gross.toFixed(2)}</li><li>Total net: SGD ${totals.net.toFixed(2)}</li></ul>
+           <p><a href="${financeUrl}">Review payroll</a></p>`
+        );
+        if (result && !result.skipped) notified += 1;
+        else notificationFailures += 1;
+      } catch (emailError) {
+        notificationFailures += 1;
+        console.error('Finance payroll submission notification failed:', emailError.message);
+      }
+    }
+
+    const message = `Payroll submitted to Finance. ${totals.employeeCount} employee record(s), ` +
+      `${notified} Finance notification(s) sent` +
+      (notificationFailures ? `, ${notificationFailures} notification(s) not sent.` : '.');
+    res.redirect(`${automationBasePath}?message=${encodeURIComponent(message)}`);
+  } catch (err) {
+    console.error(err);
+    res.redirect(`${automationBasePath}?error=${encodeURIComponent(err.message)}`);
+  }
+};
+
+exports.closePayrollPeriod = async (req, res) => {
+  const automationBasePath = req.user.role === 'HR' ? '/hr/automation' : '/admin/automation';
+  try {
+    const { period, total } = await closePayrollPeriod(req.params.id, req.user.id);
+    await logAction(req, 'payroll_period_closed', 'PayrollPeriod', period.id, { employeeCount: total });
+    res.redirect(`${automationBasePath}?message=${encodeURIComponent(`${period.name} closed successfully. You can now create the next payroll period.`)}`);
   } catch (err) {
     console.error(err);
     res.redirect(`${automationBasePath}?error=${encodeURIComponent(err.message)}`);

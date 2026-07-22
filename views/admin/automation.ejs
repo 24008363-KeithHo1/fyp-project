@@ -575,14 +575,42 @@
     <% } %>
   </form>
 
-  <% if (period && period.status !== 'Closed') { %>
-    <% const currentIndex = workflow.indexOf(period.status); %>
-    <form method="post" action="<%= automationBasePath %>/period/<%= period.id %>/advance" class="automation-card automation-run-card">
+  <% if (period && period.status === 'PayrollUploaded') { %>
+    <form method="post" action="<%= automationBasePath %>/period/<%= period.id %>/submit" class="automation-card automation-submit-card">
       <div class="automation-card-heading mb-0">
-        <span class="automation-icon"><i class="fa-solid fa-arrow-right"></i></span>
-        <div><h3>Advance payroll workflow</h3><p>Current: <strong><%= period.status.replace(/([a-z])([A-Z])/g, '$1 $2') %></strong>. Next: <strong><%= workflow[currentIndex + 1].replace(/([a-z])([A-Z])/g, '$1 $2') %></strong>.</p></div>
+        <span class="automation-icon"><i class="fa-solid fa-paper-plane"></i></span>
+        <div><h3>Submit payroll to Finance</h3><p>The imported records will be validated and locked while Finance reviews the payroll batch.</p></div>
       </div>
-      <button class="automation-btn automation-btn-secondary" type="submit">Advance Stage</button>
+      <% if (period.rejectionReason) { %>
+        <div class="alert alert-danger"><strong>Finance requested changes:</strong> <%= period.rejectionReason %></div>
+      <% } %>
+      <div class="automation-field automation-submit-notes">
+        <label class="form-label" for="submissionNotes">Notes for Finance (optional)</label>
+        <textarea class="form-control" id="submissionNotes" name="notes" rows="3" maxlength="2000" placeholder="Add any context Finance should know before reviewing this payroll."></textarea>
+      </div>
+      <button class="automation-btn automation-btn-primary" type="submit"><i class="fa-solid fa-paper-plane"></i> Submit to Finance</button>
+    </form>
+  <% } else if (period && period.status === 'Draft') { %>
+    <div class="automation-card automation-workflow-notice">
+      <span class="automation-icon"><i class="fa-solid fa-file-arrow-up"></i></span>
+      <div><h3>Import payroll records</h3><p>Upload the prepared payroll spreadsheet from Payroll Management. A successful import will move this period to <strong>Payroll Uploaded</strong>.</p></div>
+      <a class="automation-btn automation-btn-secondary" href="/payroll">Open Payroll Management</a>
+    </div>
+  <% } else if (period && period.status === 'PendingApproval') { %>
+    <div class="automation-card automation-workflow-notice">
+      <span class="automation-icon"><i class="fa-solid fa-hourglass-half"></i></span>
+      <div><h3>Awaiting Finance approval</h3><p>This payroll was submitted on <%= period.submittedAt ? new Date(period.submittedAt).toLocaleString('en-SG', { timeZone: 'Asia/Singapore' }) : '—' %>. Payroll records are locked until Finance approves or requests changes.</p></div>
+    </div>
+  <% } else if (period && period.status === 'Approved') { %>
+    <div class="automation-card automation-workflow-notice">
+      <span class="automation-icon"><i class="fa-solid fa-money-check-dollar"></i></span>
+      <div><h3>Approved for salary release</h3><p>Finance approved this payroll. The period will move to Released automatically after every linked salary is paid.</p></div>
+    </div>
+  <% } else if (period && period.status === 'Released') { %>
+    <form method="post" action="<%= automationBasePath %>/period/<%= period.id %>/close" class="automation-card automation-workflow-notice">
+      <span class="automation-icon"><i class="fa-solid fa-circle-check"></i></span>
+      <div><h3>Payroll cycle completed</h3><p>All linked salaries have been released. Close this period to archive it and create the next payroll cycle.</p></div>
+      <button class="automation-btn automation-btn-primary" type="submit" onclick="return confirm('Close this payroll period? This action cannot be reversed from the normal workflow.')"><i class="fa-solid fa-lock"></i> Close Period</button>
     </form>
   <% } %>
 

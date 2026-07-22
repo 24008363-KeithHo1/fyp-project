@@ -3,6 +3,7 @@ const { sequelize } = require('../config/db');
 
 const Payroll = sequelize.define('Payroll', {
   id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
+  payrollPeriodId: { type: DataTypes.INTEGER, allowNull: true },
   name: { type: DataTypes.STRING, allowNull: false },
   email: { type: DataTypes.STRING, allowNull: false },
   bank_number: { type: DataTypes.STRING },

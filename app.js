@@ -22,6 +22,13 @@ app.post('/payment/webhook', express.raw({ type: 'application/json' }), require(
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 
+// Make the requested page available to shared view partials (for example,
+// highlighting the active item in the finance navigation).
+app.use((req, res, next) => {
+  res.locals.currentPath = req.path;
+  next();
+});
+
 // static frontend (assets)
 app.use(express.static(path.join(__dirname, 'public')));
 
@@ -102,6 +109,45 @@ async function ensureReminderPayrollPeriodColumn() {
   }
 }
 
+async function ensurePayrollWorkflowColumns() {
+  const payrollColumns = [
+    ['payrollPeriodId', 'INTEGER NULL AFTER `id`']
+  ];
+  const periodColumns = [
+    ['uploadedBy', 'INTEGER NULL'],
+    ['uploadedAt', 'DATETIME NULL'],
+    ['submittedBy', 'INTEGER NULL'],
+    ['submittedAt', 'DATETIME NULL'],
+    ['submissionNotes', 'TEXT NULL'],
+    ['approvedBy', 'INTEGER NULL'],
+    ['approvedAt', 'DATETIME NULL'],
+    ['rejectedBy', 'INTEGER NULL'],
+    ['rejectedAt', 'DATETIME NULL'],
+    ['rejectionReason', 'TEXT NULL'],
+    ['releasedAt', 'DATETIME NULL'],
+    ['closedBy', 'INTEGER NULL'],
+    ['closedAt', 'DATETIME NULL']
+  ];
+
+  for (const [name, definition] of payrollColumns) {
+    const [columns] = await sequelize.query(`SHOW COLUMNS FROM \`Payrolls\` LIKE '${name}'`);
+    if (columns.length === 0) {
+      await sequelize.query(`ALTER TABLE \`Payrolls\` ADD COLUMN \`${name}\` ${definition}`);
+    }
+  }
+  for (const [name, definition] of periodColumns) {
+    const [columns] = await sequelize.query(`SHOW COLUMNS FROM \`PayrollPeriods\` LIKE '${name}'`);
+    if (columns.length === 0) {
+      await sequelize.query(`ALTER TABLE \`PayrollPeriods\` ADD COLUMN \`${name}\` ${definition}`);
+    }
+  }
+
+  const [payrollPeriodIndex] = await sequelize.query("SHOW INDEX FROM `Payrolls` WHERE `Key_name` = 'payrolls_payroll_period_id'");
+  if (payrollPeriodIndex.length === 0) {
+    await sequelize.query("CREATE INDEX `payrolls_payroll_period_id` ON `Payrolls` (`payrollPeriodId`)");
+  }
+}
+
 async function start() {
   try {
     await sequelize.authenticate();
@@ -110,6 +156,7 @@ async function start() {
     await sequelize.sync({ alter: shouldAlterSchema });
     await ensurePayrollBankNumberColumn();
     await ensureReminderPayrollPeriodColumn();
+    await ensurePayrollWorkflowColumns();
     startPayrollAutomationScheduler();
     app.listen(PORT, () => {
       console.log(`Server running at http://localhost:${PORT}`);

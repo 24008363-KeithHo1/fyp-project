@@ -18,7 +18,8 @@ router.get('/automation', requireRole(['HR']), admin.automationPage);
 router.get('/automation/history', requireRole(['HR']), admin.reminderHistory);
 router.post('/automation/settings', requireRole(['HR']), admin.saveAutomationSettings);
 router.post('/automation/period', requireRole(['HR']), admin.savePayrollPeriod);
-router.post('/automation/period/:id/advance', requireRole(['HR']), admin.advancePayrollPeriod);
+router.post('/automation/period/:id/submit', requireRole(['HR']), admin.submitPayrollPeriod);
+router.post('/automation/period/:id/close', requireRole(['HR']), admin.closePayrollPeriod);
 router.post('/automation/run', requireRole(['HR']), admin.triggerAutomation);
 
 router.get('/employees', admin.listUsersByDepartment);

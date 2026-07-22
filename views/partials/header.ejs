@@ -11,22 +11,65 @@
 <%
   const pageTitle = typeof title !== 'undefined' ? title : '';
   const isAuthPage = pageTitle === 'Login';
+  const requestPath = typeof currentPath !== 'undefined' ? currentPath : '';
+  const isFinancePage = requestPath.startsWith('/finance') ||
+    requestPath === '/invoices' || requestPath.startsWith('/invoices/') ||
+    requestPath === '/payroll' || requestPath === '/reports';
+  const financeLinks = [
+    { label: 'Dashboard', href: '/finance/dashboard', icon: 'fa-chart-line', active: requestPath === '/finance/dashboard' },
+    { label: 'Invoices', href: '/invoices', icon: 'fa-file-invoice-dollar', active: requestPath.startsWith('/invoices') },
+    { label: 'Payments', href: '/finance/payments', icon: 'fa-credit-card', active: requestPath === '/finance/payments' },
+    { label: 'Bank Reconciliation', href: '/finance/bank-reconcile', icon: 'fa-building-columns', active: requestPath === '/finance/bank-reconcile' },
+    { label: 'Payroll', href: '/payroll', icon: 'fa-money-check-dollar', active: requestPath === '/payroll' },
+    { label: 'Approvals', href: '/finance/payroll-approvals', icon: 'fa-clipboard-check', active: requestPath.startsWith('/finance/payroll-approvals') },
+    { label: 'Reports', href: '/reports', icon: 'fa-chart-column', active: requestPath === '/reports' },
+    { label: 'Requests', href: '/finance/requests', icon: 'fa-inbox', active: requestPath === '/finance/requests' }
+  ];
 %>
 <body class="<%= isAuthPage ? 'auth-body' : '' %>">
   <% if (!isAuthPage) { %>
-    <header class="site-header py-3">
-      <div class="container d-flex justify-content-between align-items-center">
-        <a class="navbar-brand app-brand mb-0 h4" href="/dashboard">
-          <span class="app-brand-mark" aria-hidden="true"></span>
-          <span class="app-brand-text">
-            <span class="app-brand-name">Automated Invoicing & Payroll</span>
-            <span class="app-brand-subtitle">Unified finance and HR workspace</span>
-          </span>
-        </a>
-        <div>
-          <button id="logout" class="btn btn-sm btn-danger d-none">Logout</button>
+    <header class="site-header <%= isFinancePage ? 'finance-site-header' : 'py-3' %>">
+      <% if (isFinancePage) { %>
+        <div class="container finance-brand-row">
+          <a class="navbar-brand app-brand finance-brand mb-0" href="/finance/dashboard">
+            <span class="app-brand-mark" aria-hidden="true"></span>
+            <span class="app-brand-text">
+              <span class="app-brand-name">Automated Invoicing &amp; Payroll System</span>
+              <span class="app-brand-subtitle">Finance workspace</span>
+            </span>
+          </a>
         </div>
-      </div>
+        <div class="container finance-nav-shell">
+          <nav class="finance-nav" aria-label="Finance navigation">
+            <ul class="finance-nav-list">
+              <% financeLinks.forEach(link => { %>
+                <li>
+                  <a class="finance-nav-link <%= link.active ? 'active' : '' %>" href="<%= link.href %>" <% if (link.active) { %>aria-current="page"<% } %>>
+                    <i class="fa-solid <%= link.icon %>" aria-hidden="true"></i>
+                    <span><%= link.label %></span>
+                  </a>
+                </li>
+              <% }); %>
+            </ul>
+          </nav>
+          <div class="header-session-actions">
+            <button id="logout" class="btn btn-sm btn-danger d-none">Logout</button>
+          </div>
+        </div>
+      <% } else { %>
+        <div class="container d-flex justify-content-between align-items-center">
+          <a class="navbar-brand app-brand mb-0 h4" href="/dashboard">
+            <span class="app-brand-mark" aria-hidden="true"></span>
+            <span class="app-brand-text">
+              <span class="app-brand-name">Automated Invoicing & Payroll</span>
+              <span class="app-brand-subtitle">Unified finance and HR workspace</span>
+            </span>
+          </a>
+          <div class="header-session-actions">
+            <button id="logout" class="btn btn-sm btn-danger d-none">Logout</button>
+          </div>
+        </div>
+      <% } %>
     </header>
 
     <script>

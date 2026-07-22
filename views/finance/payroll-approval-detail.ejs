@@ -1,0 +1,55 @@
+<%- include('../partials/header', { title }) %>
+
+<main class="payroll-approval-page">
+  <a class="approval-back" href="/finance/payroll-approvals"><i class="fa-solid fa-arrow-left"></i> All payroll approvals</a>
+  <section class="approval-hero approval-detail-hero">
+    <div><span class="approval-eyebrow"><i class="fa-solid fa-file-invoice-dollar"></i> Payroll batch</span><h1><%= period.name %></h1><p><%= period.periodStart %> to <%= period.periodEnd %> · Submitted <%= period.submittedAt ? new Date(period.submittedAt).toLocaleString('en-SG', { timeZone: 'Asia/Singapore' }) : '—' %></p></div>
+    <span class="approval-status approval-status-<%= period.status.toLowerCase() %>"><%= period.status.replace(/([a-z])([A-Z])/g, '$1 $2') %></span>
+  </section>
+  <% if (message) { %><div class="alert alert-success"><%= message %></div><% } %>
+  <% if (error) { %><div class="alert alert-danger"><%= error %></div><% } %>
+
+  <section class="approval-summary-grid">
+    <div><span>Employees</span><strong><%= summary.employeeCount %></strong></div>
+    <div><span>Total gross</span><strong>SGD <%= summary.gross.toFixed(2) %></strong></div>
+    <div><span>Deductions</span><strong>SGD <%= summary.deductions.toFixed(2) %></strong></div>
+    <div><span>Total net</span><strong>SGD <%= summary.net.toFixed(2) %></strong></div>
+  </section>
+
+  <% if (period.status === 'Approved') { %>
+    <section class="approval-card approval-release-progress">
+      <div><h2><i class="fa-solid fa-money-check-dollar"></i> Salary release progress</h2><p><strong><%= summary.paidCount %> of <%= summary.employeeCount %></strong> employee salaries have been released. The period becomes Released after every payment succeeds.</p></div>
+      <a class="approval-btn approval-btn-primary" href="/payroll">Release Salaries</a>
+    </section>
+  <% } else if (period.status === 'Released' || period.status === 'Closed') { %>
+    <section class="approval-card approval-release-complete"><h2><i class="fa-solid fa-circle-check"></i> All salaries released</h2><p>Every employee payroll in this period has been paid successfully.</p></section>
+  <% } %>
+
+  <% if (period.submissionNotes) { %><section class="approval-card approval-notes"><h2>HR submission notes</h2><p><%= period.submissionNotes %></p></section><% } %>
+  <% if (period.rejectionReason) { %><section class="approval-card approval-rejection"><h2>Requested changes</h2><p><%= period.rejectionReason %></p></section><% } %>
+
+  <section class="approval-card">
+    <div class="approval-card-header"><div><h2>Employee payroll records</h2><p>Confirm compensation and bank details before approving.</p></div></div>
+    <div class="table-responsive"><table class="table approval-table"><thead><tr><th>Employee</th><th>Bank number</th><th>Gross</th><th>Deductions</th><th>Net</th><th>Status</th></tr></thead><tbody>
+      <% records.forEach((record) => { const deduction = record.deductions && typeof record.deductions === 'object' ? Object.values(record.deductions).reduce((sum, value) => sum + (Number(value) || 0), 0) : Number(record.deductions || 0); %>
+        <tr><td><strong><%= record.name %></strong><small><%= record.email %></small></td><td><%= record.bank_number || '—' %></td><td>SGD <%= Number(record.gross || 0).toFixed(2) %></td><td>SGD <%= deduction.toFixed(2) %></td><td><strong>SGD <%= Number(record.net || 0).toFixed(2) %></strong></td><td><%= record.payment_status %></td></tr>
+      <% }) %>
+    </tbody></table></div>
+  </section>
+
+  <% if (period.status === 'PendingApproval') { %>
+    <section class="approval-decision-grid">
+      <form method="post" action="/finance/payroll-approvals/<%= period.id %>/approve" class="approval-card approval-decision-card">
+        <h2><i class="fa-solid fa-circle-check"></i> Approve payroll</h2><p>Approve all <%= summary.employeeCount %> employee records for salary release.</p>
+        <button class="approval-btn approval-btn-primary" type="submit" onclick="return confirm('Approve this complete payroll batch?')">Approve Payroll</button>
+      </form>
+      <form method="post" action="/finance/payroll-approvals/<%= period.id %>/reject" class="approval-card approval-decision-card approval-change-card">
+        <h2><i class="fa-solid fa-rotate-left"></i> Request changes</h2><p>Return the batch to HR and unlock its payroll records.</p>
+        <label for="reason">Reason for changes</label><textarea id="reason" name="reason" required maxlength="2000" rows="4" placeholder="Explain what HR needs to correct."></textarea>
+        <button class="approval-btn approval-btn-danger" type="submit">Return to HR</button>
+      </form>
+    </section>
+  <% } %>
+</main>
+
+<%- include('../partials/footer') %>
