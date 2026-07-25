@@ -23,6 +23,7 @@ test('subscription draft generation API is separate and restricted to Finance', 
   assert.doesNotMatch(routes, /requireRole\(\['Admin'\]\)/);
   assert.match(routes, /generation-preview/);
   assert.match(routes, /generate-drafts/);
+  assert.match(routes, /automation-runs/);
   assert.doesNotMatch(routes, /invoiceController/);
 });
 

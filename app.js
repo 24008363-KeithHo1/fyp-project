@@ -10,7 +10,9 @@ const { startPayrollAutomationScheduler } = require('./services/payrollAutomatio
 const SubscriptionPlan = require('./models/SubscriptionPlan');
 const PartnerCustomer = require('./models/PartnerCustomer');
 require('./models/SubscriptionInvoiceItem');
+require('./models/SubscriptionAutomationRun');
 const { seedSubscriptionPlans } = require('./services/partnerCustomerDemoData');
+const { startSubscriptionInvoiceScheduler } = require('./services/subscriptionInvoiceAutomation');
 
 // Register the separate Partner Subscription Billing master-data model with
 // Sequelize. It intentionally has no relationship to the existing invoices.
@@ -201,6 +203,7 @@ async function start() {
     await ensurePayrollWorkflowColumns();
     await ensurePartnerCustomerSubscriptionSchema();
     startPayrollAutomationScheduler();
+    startSubscriptionInvoiceScheduler();
     app.listen(PORT, () => {
       console.log(`Server running at http://localhost:${PORT}`);
     });

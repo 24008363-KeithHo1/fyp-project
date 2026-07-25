@@ -163,6 +163,31 @@ CREATE TABLE IF NOT EXISTS SubscriptionInvoiceItems (
   UNIQUE KEY subscription_invoice_item_line_unique (subscriptionInvoiceId, lineNumber)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
+CREATE TABLE IF NOT EXISTS SubscriptionAutomationRuns (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  runKey VARCHAR(100) NOT NULL UNIQUE,
+  type ENUM('MonthlyInvoiceGeneration') NOT NULL DEFAULT 'MonthlyInvoiceGeneration',
+  billingPeriod VARCHAR(7) NOT NULL,
+  triggerSource ENUM('Scheduler','FinanceRecovery') NOT NULL,
+  triggeredBy INT,
+  status ENUM('Running','Success','Partial','Failed') NOT NULL DEFAULT 'Running',
+  scheduledFor DATETIME,
+  startedAt DATETIME NOT NULL,
+  completedAt DATETIME,
+  eligibleCount INT UNSIGNED NOT NULL DEFAULT 0,
+  generatedCount INT UNSIGNED NOT NULL DEFAULT 0,
+  skippedCount INT UNSIGNED NOT NULL DEFAULT 0,
+  failedCount INT UNSIGNED NOT NULL DEFAULT 0,
+  totalAmount DECIMAL(12,2) NOT NULL DEFAULT 0,
+  currency VARCHAR(10) NOT NULL DEFAULT 'SGD',
+  errorMessage TEXT,
+  data JSON,
+  createdAt DATETIME DEFAULT CURRENT_TIMESTAMP,
+  updatedAt DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  INDEX idx_subscription_runs_period (type, billingPeriod),
+  INDEX idx_subscription_runs_status (status, startedAt)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
 -- Payrolls
 CREATE TABLE IF NOT EXISTS Payrolls (
   id INT AUTO_INCREMENT PRIMARY KEY,

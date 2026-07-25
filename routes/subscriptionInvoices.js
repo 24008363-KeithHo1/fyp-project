@@ -9,5 +9,6 @@ router.use(requireRole(['Finance']));
 
 router.get('/generation-preview', controller.previewGeneration);
 router.post('/generate-drafts', controller.generateDrafts);
+router.get('/automation-runs', controller.automationHistory);
 
 module.exports = router;
