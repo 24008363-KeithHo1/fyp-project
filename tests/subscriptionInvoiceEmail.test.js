@@ -97,6 +97,28 @@ test('records a Failed delivery when transport throws', async () => {
   assert.match(repository.records[0].errorMessage, /SMTP unavailable/);
 });
 
+test('uses an existing Pending delivery claim without creating a duplicate', async () => {
+  let creates = 0;
+  const delivery = {
+    id: 44,
+    subscriptionInvoiceId: 1,
+    status: 'Pending',
+    async update(values) { Object.assign(this, values); }
+  };
+  const outcome = await sendSubscriptionInvoiceEmail({
+    invoice: approvedInvoice(),
+    items: [],
+    publicUrl: 'https://example.test/subscription-invoice/token',
+    triggeredBy: 7,
+    delivery,
+    deliveryModel: { async create() { creates += 1; } },
+    sendEmailFn: async () => ({ messageId: 'claimed-send' })
+  });
+  assert.equal(creates, 0);
+  assert.equal(outcome.delivery.status, 'Sent');
+  assert.equal(outcome.delivery.messageId, 'claimed-send');
+});
+
 test('email service remains separate from legacy invoice models', () => {
   const source = fs.readFileSync(path.join(__dirname, '..', 'services', 'subscriptionInvoiceEmail.js'), 'utf8');
   assert.doesNotMatch(source, /require\(['"]\.\.\/models\/Invoice['"]\)/);

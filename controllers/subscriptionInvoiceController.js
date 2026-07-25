@@ -1,4 +1,5 @@
 const { Op } = require('sequelize');
+const crypto = require('crypto');
 const { sequelize } = require('../config/db');
 const {
   previewSubscriptionInvoiceGeneration,
@@ -10,12 +11,14 @@ const {
 const SubscriptionAutomationRun = require('../models/SubscriptionAutomationRun');
 const SubscriptionInvoice = require('../models/SubscriptionInvoice');
 const SubscriptionInvoiceItem = require('../models/SubscriptionInvoiceItem');
+const SubscriptionEmailDelivery = require('../models/SubscriptionEmailDelivery');
 const {
   SUBSCRIPTION_INVOICE_STATUSES,
   assertSubscriptionInvoiceTransition
 } = require('../services/subscriptionInvoiceLifecycle');
 const { logAction } = require('../utils/audit');
 const { generateSubscriptionInvoicePDF } = require('../utils/subscriptionInvoicePdf');
+const { sendSubscriptionInvoiceEmail } = require('../services/subscriptionInvoiceEmail');
 
 exports.reviewPage = (req, res) => res.render('finance/subscription-invoices', {
   title: 'Subscription Invoices',
@@ -63,6 +66,11 @@ exports.get = async (req, res) => {
         as: 'items',
         separate: true,
         order: [['lineNumber', 'ASC']]
+      }, {
+        model: SubscriptionEmailDelivery,
+        as: 'emailDeliveries',
+        separate: true,
+        order: [['attemptedAt', 'DESC'], ['id', 'DESC']]
       }]
     });
     if (!invoice) return res.status(404).json({ error: 'Subscription invoice not found' });
@@ -256,6 +264,146 @@ exports.approveDraft = async (req, res) => {
   }
 };
 
+exports.sendApproved = async (req, res) => {
+  let transaction = await sequelize.transaction();
+  let invoice;
+  let delivery;
+  try {
+    invoice = await SubscriptionInvoice.findByPk(req.params.id, {
+      include: [{
+        model: SubscriptionInvoiceItem,
+        as: 'items',
+        separate: true,
+        order: [['lineNumber', 'ASC']]
+      }],
+      transaction,
+      lock: transaction.LOCK.UPDATE
+    });
+    if (!invoice) {
+      await transaction.rollback();
+      return res.status(404).json({ error: 'Subscription invoice not found' });
+    }
+    assertSubscriptionInvoiceTransition(invoice.status, 'Sent');
+
+    const pendingDelivery = await SubscriptionEmailDelivery.findOne({
+      where: {
+        subscriptionInvoiceId: invoice.id,
+        emailType: 'Invoice',
+        status: 'Pending'
+      },
+      transaction,
+      lock: transaction.LOCK.UPDATE
+    });
+    if (pendingDelivery) {
+      await transaction.rollback();
+      return res.status(409).json({ error: 'This subscription invoice is already being sent.' });
+    }
+
+    if (!invoice.publicToken) {
+      await invoice.update({ publicToken: crypto.randomBytes(32).toString('hex') }, { transaction });
+    }
+    const appUrl = process.env.APP_URL || `${req.protocol}://${req.get('host')}`;
+    const publicUrl = `${appUrl}/subscription-invoices/view/${encodeURIComponent(invoice.publicToken)}`;
+    delivery = await SubscriptionEmailDelivery.create({
+      subscriptionInvoiceId: invoice.id,
+      emailType: 'Invoice',
+      recipient: invoice.billingEmailSnapshot,
+      subject: `Vaniday subscription invoice ${invoice.number}`,
+      status: 'Pending',
+      attemptedAt: new Date(),
+      triggeredBy: req.user.id,
+      data: { invoiceNumber: invoice.number }
+    }, { transaction });
+    await transaction.commit();
+
+    const outcome = await sendSubscriptionInvoiceEmail({
+      invoice,
+      items: invoice.items || [],
+      publicUrl,
+      triggeredBy: req.user.id,
+      delivery
+    });
+    if (outcome.delivery.status !== 'Sent') {
+      await logAction(req, 'send_skipped', 'SubscriptionInvoice', invoice.id, {
+        number: invoice.number,
+        deliveryId: outcome.delivery.id,
+        reason: outcome.delivery.errorMessage
+      });
+      return res.status(503).json({
+        error: 'Email delivery was not confirmed. The invoice remains Approved and can be retried.',
+        delivery: outcome.delivery
+      });
+    }
+
+    transaction = await sequelize.transaction();
+    const lockedInvoice = await SubscriptionInvoice.findByPk(invoice.id, {
+      transaction,
+      lock: transaction.LOCK.UPDATE
+    });
+    assertSubscriptionInvoiceTransition(lockedInvoice.status, 'Sent');
+    await lockedInvoice.update({ status: 'Sent', sentAt: new Date() }, { transaction });
+    await transaction.commit();
+
+    await logAction(req, 'send', 'SubscriptionInvoice', invoice.id, {
+      number: invoice.number,
+      recipient: invoice.billingEmailSnapshot,
+      deliveryId: outcome.delivery.id,
+      messageId: outcome.delivery.messageId
+    });
+    res.json({
+      invoice: lockedInvoice,
+      delivery: outcome.delivery,
+      message: `Subscription invoice sent to ${invoice.billingEmailSnapshot}.`
+    });
+  } catch (error) {
+    if (transaction && !transaction.finished) await transaction.rollback();
+    if (invoice) {
+      await logAction(req, 'send_failed', 'SubscriptionInvoice', invoice.id, {
+        number: invoice.number,
+        deliveryId: error.subscriptionDeliveryId || (delivery && delivery.id) || null,
+        reason: error.message
+      });
+    }
+    const status = error.code === 'INVALID_SUBSCRIPTION_INVOICE_TRANSITION' ? 409 : 502;
+    res.status(status).json({
+      error: status === 409
+        ? error.message
+        : 'Email delivery failed. The invoice remains Approved and can be retried.'
+    });
+  }
+};
+
+exports.publicView = async (req, res) => {
+  try {
+    const invoice = await SubscriptionInvoice.findOne({
+      where: { publicToken: req.params.token },
+      include: [{
+        model: SubscriptionInvoiceItem,
+        as: 'items',
+        separate: true,
+        order: [['lineNumber', 'ASC']]
+      }]
+    });
+    if (!invoice || !['Sent', 'Viewed', 'PendingPayment', 'Paid', 'PaymentFailed', 'Overdue', 'Refunded'].includes(invoice.status)) {
+      return res.status(404).render('subscription-invoices/not-found', {
+        title: 'Subscription Invoice Not Found'
+      });
+    }
+    if (invoice.status === 'Sent') {
+      await invoice.update({ status: 'Viewed', viewedAt: new Date() });
+      await logAction(req, 'first_public_view', 'SubscriptionInvoice', invoice.id, {
+        number: invoice.number
+      });
+    }
+    res.render('subscription-invoices/view', {
+      title: `Subscription Invoice ${invoice.number}`,
+      invoice
+    });
+  } catch (error) {
+    res.status(500).send('Unable to display this subscription invoice.');
+  }
+};
+
 exports.pdf = async (req, res) => {
   try {
     const invoice = await SubscriptionInvoice.findByPk(req.params.id, {
@@ -267,7 +415,7 @@ exports.pdf = async (req, res) => {
       }]
     });
     if (!invoice) return res.status(404).json({ error: 'Subscription invoice not found' });
-    if (invoice.status !== 'Approved') {
+    if (['Draft', 'Rejected'].includes(invoice.status)) {
       return res.status(409).json({ error: 'PDF preview is available only after Finance approval.' });
     }
 

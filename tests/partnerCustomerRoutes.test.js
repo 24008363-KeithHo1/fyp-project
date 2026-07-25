@@ -45,21 +45,34 @@ test('subscription invoice review page is explicitly Finance-only', () => {
   );
 });
 
-test('subscription invoice review UI exposes edit, rejection and approval but not sending', () => {
+test('subscription invoice review UI exposes the Finance approval and sending workflow', () => {
   const view = fs.readFileSync(path.join(root, 'views', 'finance', 'subscription-invoices.ejs'), 'utf8');
   const routes = fs.readFileSync(path.join(root, 'routes', 'subscriptionInvoices.js'), 'utf8');
   const controller = fs.readFileSync(path.join(root, 'controllers', 'subscriptionInvoiceController.js'), 'utf8');
-  assert.match(view, /Draft review stage/);
+  assert.match(view, /Review, approve and send/);
   assert.match(view, /saveDraftChanges/);
   assert.match(view, /confirmRejectDraft/);
   assert.match(view, /approveDraft/);
   assert.match(routes, /router\.patch\('\/:id\/draft'/);
   assert.match(routes, /router\.post\('\/:id\/reject'/);
   assert.match(routes, /router\.post\('\/:id\/approve'/);
+  assert.match(routes, /router\.post\('\/:id\/send'/);
   assert.match(routes, /router\.get\('\/:id\/pdf'/);
   assert.match(controller, /approvedBy:\s*req\.user\.id/);
   assert.match(controller, /No email has been sent yet/);
   assert.match(controller, /PDF preview is available only after Finance approval/);
   assert.match(view, /downloadSubscriptionPdf/);
-  assert.doesNotMatch(view, /data-send-id|sendInvoice|approveAndSend/);
+  assert.match(view, /sendSubscriptionInvoice/);
+  assert.match(controller, /sendSubscriptionInvoiceEmail/);
+  assert.match(controller, /status:\s*'Sent',\s*sentAt:/);
+  assert.match(controller, /invoice remains Approved and can be retried/);
+});
+
+test('subscription customer view uses its own secure token route', () => {
+  const app = fs.readFileSync(path.join(root, 'app.js'), 'utf8');
+  const controller = fs.readFileSync(path.join(root, 'controllers', 'subscriptionInvoiceController.js'), 'utf8');
+  assert.match(app, /\/subscription-invoices\/view\/:token/);
+  assert.match(controller, /where:\s*\{\s*publicToken:\s*req\.params\.token\s*\}/);
+  assert.match(controller, /invoice\.status === 'Sent'/);
+  assert.doesNotMatch(controller, /models\/Invoice|models\/Payment/);
 });

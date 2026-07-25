@@ -40,22 +40,26 @@ async function sendSubscriptionInvoiceEmail({
   publicUrl,
   triggeredBy = null,
   sendEmailFn = sendEmail,
-  deliveryModel = SubscriptionEmailDelivery
+  deliveryModel = SubscriptionEmailDelivery,
+  delivery: suppliedDelivery = null
 }) {
   if (!invoice || invoice.status !== 'Approved') {
     throw new Error('Only an Approved subscription invoice can be prepared for sending.');
   }
   const { subject, html } = composeSubscriptionInvoiceEmail(invoice, publicUrl);
-  const delivery = await deliveryModel.create({
-    subscriptionInvoiceId: invoice.id,
-    emailType: 'Invoice',
-    recipient: invoice.billingEmailSnapshot,
-    subject,
-    status: 'Pending',
-    attemptedAt: new Date(),
-    triggeredBy,
-    data: { invoiceNumber: invoice.number }
-  });
+  const delivery = suppliedDelivery || await deliveryModel.create({
+      subscriptionInvoiceId: invoice.id,
+      emailType: 'Invoice',
+      recipient: invoice.billingEmailSnapshot,
+      subject,
+      status: 'Pending',
+      attemptedAt: new Date(),
+      triggeredBy,
+      data: { invoiceNumber: invoice.number }
+    });
+  if (delivery.subscriptionInvoiceId !== invoice.id || delivery.status !== 'Pending') {
+    throw new Error('A matching Pending subscription email delivery is required.');
+  }
 
   try {
     const pdfBuffer = await collectStream(generateSubscriptionInvoicePDF(invoice, items));
