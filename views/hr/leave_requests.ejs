@@ -1,0 +1,98 @@
+<%- include('../partials/header', { title: 'HR Leave Requests' }) %>
+<%- include('../partials/navbar') %>
+
+<script>
+const token = localStorage.getItem('token');
+if (!token) location = '/login';
+try {
+  const payload = JSON.parse(atob(token.split('.')[1]));
+  if (payload.role !== 'HR' && payload.role !== 'Admin') location = '/dashboard';
+} catch (e) {
+  location = '/login';
+}
+</script>
+
+<style>
+.leave-inbox{max-width:1220px;margin:0 auto;padding:1.1rem;font-family:'Sora',sans-serif}
+.leave-hero{display:flex;align-items:flex-end;justify-content:space-between;gap:1rem;flex-wrap:wrap;padding:1.35rem;border-radius:8px;background:linear-gradient(135deg,#0f172a,#2563eb 52%,#0b8f3e);box-shadow:0 18px 38px rgba(15,23,42,.16);color:#fff}
+.leave-eyebrow{margin:0 0 .35rem;font-size:.72rem;font-weight:800;text-transform:uppercase;opacity:.8}
+.leave-hero h1{margin:0;font-size:1.8rem;font-weight:700}.leave-hero p{margin:.35rem 0 0;opacity:.86}
+.leave-count{padding:.5rem .8rem;border-radius:999px;background:rgba(255,255,255,.14);font-size:.8rem;font-weight:700}
+.leave-panel{margin-top:1rem;overflow:hidden;border:1px solid rgba(148,163,184,.2);border-radius:8px;background:#fff;box-shadow:0 14px 30px rgba(15,23,42,.08)}
+.leave-table-wrap{overflow-x:auto}.leave-table{width:100%;border-collapse:collapse}.leave-table th,.leave-table td{padding:.8rem;border-bottom:1px solid #e2e8f0;text-align:left;vertical-align:middle}
+.leave-table th{background:#f8fafc;color:#475569;font-size:.74rem;text-transform:uppercase}.leave-table td{font-size:.84rem}.leave-table tbody tr:last-child td{border-bottom:0}
+.leave-status{display:inline-flex;padding:.3rem .55rem;border-radius:999px;font-size:.72rem;font-weight:800}.leave-status-Pending{background:#fff7ed;color:#c2410c}.leave-status-Completed{background:#ecfdf5;color:#047857}.leave-status-Incomplete{background:#fef2f2;color:#b91c1c}
+.leave-actions{display:flex;gap:.45rem;min-width:210px}.leave-actions select{font-size:.78rem}.leave-save{border:0;border-radius:7px;padding:.4rem .65rem;background:#0b8f3e;color:#fff;font-weight:700}.leave-save:disabled{opacity:.65}
+.leave-empty{padding:2rem;text-align:center;color:#64748b}
+</style>
+
+<section class="leave-inbox">
+  <header class="leave-hero">
+    <div>
+      <p class="leave-eyebrow">HR operations</p>
+      <h1>Leave Requests</h1>
+      <p>Review employee time-off dates, reasons, and approval status.</p>
+    </div>
+    <span class="leave-count"><i class="fa-solid fa-calendar-check"></i> <strong><%= requests.length %></strong> requests</span>
+  </header>
+
+  <section class="leave-panel">
+    <% if (!requests.length) { %>
+      <div class="leave-empty"><i class="fa-solid fa-circle-check"></i> No leave requests are waiting.</div>
+    <% } else { %>
+      <div class="leave-table-wrap">
+        <table class="leave-table">
+          <thead><tr><th>Employee</th><th>Dates</th><th>Half day</th><th>Reason</th><th>Status</th><th>Action</th></tr></thead>
+          <tbody>
+            <% requests.forEach(r => { const details = r.data || {}; %>
+              <tr>
+                <td><strong><%= r.senderName || ('Employee #' + r.senderId) %></strong></td>
+                <td><%= details.startDate || '—' %> to <%= details.endDate || '—' %></td>
+                <td><%= details.halfDay && details.halfDay !== 'none' ? details.halfDay : 'No' %></td>
+                <td><a href="/requests/<%= r.id %>/view"><%= r.message %></a></td>
+                <td id="leave-status-<%= r.id %>"><span class="leave-status leave-status-<%= r.status %>"><%= r.status %></span></td>
+                <td>
+                  <div class="leave-actions">
+                    <select id="leave-select-<%= r.id %>" class="form-select">
+                      <option value="Pending" <%= r.status === 'Pending' ? 'selected' : '' %>>Pending</option>
+                      <option value="Completed" <%= r.status === 'Completed' ? 'selected' : '' %>>Completed</option>
+                      <option value="Incomplete" <%= r.status === 'Incomplete' ? 'selected' : '' %>>Incomplete</option>
+                    </select>
+                    <button class="leave-save" type="button" data-id="<%= r.id %>">Save</button>
+                  </div>
+                </td>
+              </tr>
+            <% }); %>
+          </tbody>
+        </table>
+      </div>
+    <% } %>
+  </section>
+</section>
+
+<script>
+document.querySelectorAll('.leave-save').forEach((button) => {
+  button.addEventListener('click', async () => {
+    const id = button.dataset.id;
+    const status = document.getElementById('leave-select-' + id).value;
+    button.disabled = true;
+    try {
+      const response = await fetch('/api/requests/' + id + '/status', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ status })
+      });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error || 'Unable to update leave request');
+      document.getElementById('leave-status-' + id).innerHTML =
+        `<span class="leave-status leave-status-${status}">${status}</span>`;
+    } catch (error) {
+      alert(error.message);
+    } finally {
+      button.disabled = false;
+    }
+  });
+});
+</script>
+
+<%- include('../partials/footer') %>

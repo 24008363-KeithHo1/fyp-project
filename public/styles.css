@@ -73,11 +73,25 @@ header .btn-outline-primary{border-radius:20px;padding:.35rem .6rem}
 .finance-nav-link:hover,.finance-nav-link:focus{background:#e4f5eb;color:#074d2f!important}
 .finance-nav-link.active{border-color:#0b5e3a;background:#0b5e3a;color:#fff!important;box-shadow:0 5px 12px rgba(11,94,58,.18)}
 .finance-nav-link i{width:1rem;text-align:center;font-size:.85rem}
+
+/* HR pages mirror the Finance workspace navigation with HR-specific routes. */
+.hr-site-header{background:rgba(247,252,249,.94);border-bottom:1px solid rgba(11,94,58,.14);box-shadow:0 3px 14px rgba(11,94,58,.06)}
+.hr-brand-row{display:flex;align-items:center;max-width:1220px;min-height:52px;margin-inline:auto;padding-inline:1.1rem;border-bottom:1px solid rgba(11,94,58,.09)}
+.hr-brand{font-size:1rem!important}
+.hr-nav-shell{display:flex;align-items:center;justify-content:space-between;gap:1rem;max-width:1220px;min-height:52px;margin-inline:auto;padding-inline:1.1rem}
+.hr-nav{flex:1;min-width:0;padding:0;overflow-x:auto;scrollbar-width:thin}
+.hr-nav-list{display:flex;align-items:center;gap:.4rem;min-width:max-content;margin:0;padding:0;list-style:none}
+.hr-nav-link{display:flex;align-items:center;gap:.45rem!important;min-height:34px;padding:.38rem .68rem!important;border:1px solid rgba(11,94,58,.13);border-radius:999px;background:#fff;color:#315c49!important;box-shadow:0 5px 12px rgba(15,23,42,.05);font-size:.78rem;font-weight:700;white-space:nowrap;text-decoration:none;transition:background-color .15s ease,color .15s ease,border-color .15s ease}
+.hr-nav-link:hover,.hr-nav-link:focus{background:#e4f5eb;color:#074d2f!important}
+.hr-nav-link.active{border-color:#0b5e3a;background:#0b5e3a;color:#fff!important;box-shadow:0 5px 12px rgba(11,94,58,.18)}
+.hr-nav-link i{width:1rem;text-align:center;font-size:.85rem}
 .header-session-actions{flex:0 0 auto;margin-left:auto}
 
 @media(max-width:767.98px){
   .finance-nav-shell{gap:.55rem;min-height:48px;padding-block:.35rem}
   .finance-nav-link{min-height:32px;padding:.34rem .58rem!important;font-size:.74rem}
+  .hr-nav-shell{gap:.55rem;min-height:48px;padding-block:.35rem}
+  .hr-nav-link{min-height:32px;padding:.34rem .58rem!important;font-size:.74rem}
 }
 
 /* Floating brand styles removed (no longer used) */
