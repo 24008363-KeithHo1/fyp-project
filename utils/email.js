@@ -14,13 +14,19 @@ if (SMTP_HOST) {
   });
 }
 
-async function sendEmail(to, subject, html) {
+async function sendEmail(to, subject, html, options = {}) {
   if (!transporter) {
     console.warn('SMTP not configured; skipping email to', to);
     return { skipped: true, reason: 'SMTP not configured' };
   }
   try {
-    const info = await transporter.sendMail({ from: defaultFromEmail || smtpUser, to, subject, html });
+    const info = await transporter.sendMail({
+      from: defaultFromEmail || smtpUser,
+      to,
+      subject,
+      html,
+      attachments: Array.isArray(options.attachments) ? options.attachments : undefined
+    });
     const accepted = Array.isArray(info.accepted) ? info.accepted.map(String) : [];
     const rejected = Array.isArray(info.rejected) ? info.rejected.map(String) : [];
 

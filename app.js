@@ -11,6 +11,7 @@ const SubscriptionPlan = require('./models/SubscriptionPlan');
 const PartnerCustomer = require('./models/PartnerCustomer');
 require('./models/SubscriptionInvoiceItem');
 require('./models/SubscriptionAutomationRun');
+require('./models/SubscriptionEmailDelivery');
 const { seedSubscriptionPlans } = require('./services/partnerCustomerDemoData');
 const { startSubscriptionInvoiceScheduler } = require('./services/subscriptionInvoiceAutomation');
 

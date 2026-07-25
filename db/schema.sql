@@ -188,6 +188,29 @@ CREATE TABLE IF NOT EXISTS SubscriptionAutomationRuns (
   INDEX idx_subscription_runs_status (status, startedAt)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
+CREATE TABLE IF NOT EXISTS SubscriptionEmailDeliveries (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  subscriptionInvoiceId INT NOT NULL,
+  emailType ENUM('Invoice','Reminder') NOT NULL DEFAULT 'Invoice',
+  recipient VARCHAR(255) NOT NULL,
+  subject VARCHAR(255) NOT NULL,
+  status ENUM('Pending','Sent','Delivered','Failed','Skipped') NOT NULL DEFAULT 'Pending',
+  messageId VARCHAR(255),
+  attemptedAt DATETIME NOT NULL,
+  sentAt DATETIME,
+  deliveredAt DATETIME,
+  failedAt DATETIME,
+  errorMessage TEXT,
+  triggeredBy INT,
+  data JSON,
+  createdAt DATETIME DEFAULT CURRENT_TIMESTAMP,
+  updatedAt DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  CONSTRAINT fk_subscription_delivery_invoice FOREIGN KEY (subscriptionInvoiceId) REFERENCES SubscriptionInvoices(id) ON DELETE CASCADE,
+  INDEX idx_subscription_delivery_invoice_type (subscriptionInvoiceId, emailType),
+  INDEX idx_subscription_delivery_status (status, attemptedAt),
+  INDEX idx_subscription_delivery_recipient (recipient)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
 -- Payrolls
 CREATE TABLE IF NOT EXISTS Payrolls (
   id INT AUTO_INCREMENT PRIMARY KEY,
