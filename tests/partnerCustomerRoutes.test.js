@@ -45,13 +45,18 @@ test('subscription invoice review page is explicitly Finance-only', () => {
   );
 });
 
-test('subscription invoice review UI exposes draft edit and rejection but not approval or sending', () => {
+test('subscription invoice review UI exposes edit, rejection and approval but not sending', () => {
   const view = fs.readFileSync(path.join(root, 'views', 'finance', 'subscription-invoices.ejs'), 'utf8');
   const routes = fs.readFileSync(path.join(root, 'routes', 'subscriptionInvoices.js'), 'utf8');
+  const controller = fs.readFileSync(path.join(root, 'controllers', 'subscriptionInvoiceController.js'), 'utf8');
   assert.match(view, /Draft review stage/);
   assert.match(view, /saveDraftChanges/);
   assert.match(view, /confirmRejectDraft/);
+  assert.match(view, /approveDraft/);
   assert.match(routes, /router\.patch\('\/:id\/draft'/);
   assert.match(routes, /router\.post\('\/:id\/reject'/);
-  assert.doesNotMatch(view, /data-approve-id|data-send-id|approveDraft|sendInvoice/);
+  assert.match(routes, /router\.post\('\/:id\/approve'/);
+  assert.match(controller, /approvedBy:\s*req\.user\.id/);
+  assert.match(controller, /No email has been sent yet/);
+  assert.doesNotMatch(view, /data-send-id|sendInvoice|approveAndSend/);
 });

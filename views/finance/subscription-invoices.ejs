@@ -133,7 +133,8 @@ async function reviewSubscriptionInvoice(id) {
         <div><label class="form-label" for="editSubtotal">Subtotal (${escapeSubscriptionHtml(invoice.currency)})</label><input class="form-control" id="editSubtotal" type="number" min="0" step="0.01" value="${Number(invoice.subtotal).toFixed(2)}"></div>
         <div><label class="form-label" for="editTaxAmount">Tax (${escapeSubscriptionHtml(invoice.currency)})</label><input class="form-control" id="editTaxAmount" type="number" min="0" step="0.01" value="${Number(invoice.taxAmount).toFixed(2)}"></div>
       </div>
-      <div class="si-dialog-actions mt-3"><button class="btn btn-outline-danger" id="showRejectDraft" type="button"><i class="fa-solid fa-ban me-1"></i>Reject draft</button><button class="btn btn-primary" id="saveDraftChanges" type="button"><i class="fa-solid fa-floppy-disk me-1"></i>Save changes</button></div>
+      <div class="alert alert-warning py-2 mt-3 mb-2"><i class="fa-solid fa-triangle-exclamation me-1"></i>Approval locks draft editing. PDF generation and email sending happen in a later step.</div>
+      <div class="si-dialog-actions"><button class="btn btn-outline-danger" id="showRejectDraft" type="button"><i class="fa-solid fa-ban me-1"></i>Reject draft</button><button class="btn btn-primary" id="saveDraftChanges" type="button"><i class="fa-solid fa-floppy-disk me-1"></i>Save changes</button><button class="btn btn-success" id="approveDraft" type="button"><i class="fa-solid fa-circle-check me-1"></i>Approve draft</button></div>
       <div class="si-reject-box d-none mt-3" id="rejectDraftBox"><label class="form-label fw-bold" for="rejectDraftReason">Rejection reason</label><textarea class="form-control" id="rejectDraftReason" rows="3" placeholder="Explain why this draft is rejected"></textarea><div class="si-dialog-actions mt-2"><button class="btn btn-outline-secondary" id="cancelRejectDraft" type="button">Cancel</button><button class="btn btn-danger" id="confirmRejectDraft" type="button">Confirm rejection</button></div></div>
     </section>` : invoice.status === 'Rejected' ? `<div class="si-rejected-note mt-3"><strong>Rejection reason:</strong> ${escapeSubscriptionHtml(invoice.rejectionReason || 'No reason recorded')}</div>` : '';
   document.getElementById('invoiceDetails').innerHTML = `
@@ -179,6 +180,17 @@ async function rejectSubscriptionDraft(id) {
   await loadSubscriptionInvoices();
   document.getElementById('subscriptionAlerts').innerHTML = '<div class="alert alert-success">Draft invoice rejected.</div>';
 }
+async function approveSubscriptionDraft(id) {
+  if (!confirm('Approve this subscription invoice? It will become locked for editing, but no email will be sent yet.')) return;
+  const response = await subscriptionApi(`/api/subscription-invoices/${id}/approve`, {
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body:'{}'
+  });
+  document.getElementById('invoiceDialog').close();
+  await loadSubscriptionInvoices();
+  document.getElementById('subscriptionAlerts').innerHTML = `<div class="alert alert-success">${escapeSubscriptionHtml(response.message || 'Subscription invoice approved.')}</div>`;
+}
 async function loadSubscriptionRuns() {
   const runs = (await subscriptionApi('/api/subscription-invoices/automation-runs')).slice(0,5);
   const container = document.getElementById('automationRuns');
@@ -195,6 +207,7 @@ document.getElementById('invoiceDetails').addEventListener('click', event => {
   if (event.target.closest('#showRejectDraft')) document.getElementById('rejectDraftBox').classList.remove('d-none');
   if (event.target.closest('#cancelRejectDraft')) document.getElementById('rejectDraftBox').classList.add('d-none');
   if (event.target.closest('#confirmRejectDraft')) rejectSubscriptionDraft(id).catch(showSubscriptionError);
+  if (event.target.closest('#approveDraft')) approveSubscriptionDraft(id).catch(showSubscriptionError);
 });
 document.getElementById('closeInvoiceDialog').addEventListener('click', () => document.getElementById('invoiceDialog').close());
 Promise.all([loadSubscriptionInvoices(), loadSubscriptionRuns()]).catch(showSubscriptionError);

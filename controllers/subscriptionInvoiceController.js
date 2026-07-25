@@ -206,6 +206,55 @@ exports.rejectDraft = async (req, res) => {
   }
 };
 
+exports.approveDraft = async (req, res) => {
+  const transaction = await sequelize.transaction();
+  try {
+    const invoice = await SubscriptionInvoice.findByPk(req.params.id, {
+      transaction,
+      lock: transaction.LOCK.UPDATE
+    });
+    if (!invoice) {
+      await transaction.rollback();
+      return res.status(404).json({ error: 'Subscription invoice not found' });
+    }
+
+    assertSubscriptionInvoiceTransition(invoice.status, 'Approved');
+    const itemCount = await SubscriptionInvoiceItem.count({
+      where: { subscriptionInvoiceId: invoice.id },
+      transaction
+    });
+    if (itemCount === 0) {
+      await transaction.rollback();
+      return res.status(409).json({ error: 'Invoice cannot be approved without at least one line item.' });
+    }
+    if (Number(invoice.totalAmount) < 0) {
+      await transaction.rollback();
+      return res.status(409).json({ error: 'Invoice cannot be approved with an invalid total.' });
+    }
+
+    await invoice.update({
+      status: 'Approved',
+      approvedBy: req.user.id,
+      approvedAt: new Date()
+    }, { transaction });
+    await transaction.commit();
+
+    await logAction(req, 'approve', 'SubscriptionInvoice', invoice.id, {
+      number: invoice.number,
+      totalAmount: invoice.totalAmount,
+      currency: invoice.currency
+    });
+    res.json({
+      invoice,
+      message: 'Subscription invoice approved. No email has been sent yet.'
+    });
+  } catch (error) {
+    if (!transaction.finished) await transaction.rollback();
+    const status = error.code === 'INVALID_SUBSCRIPTION_INVOICE_TRANSITION' ? 409 : 400;
+    res.status(status).json({ error: error.message });
+  }
+};
+
 exports.previewGeneration = async (req, res) => {
   try {
     res.json(await previewSubscriptionInvoiceGeneration(req.query.period));

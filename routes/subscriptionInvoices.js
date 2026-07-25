@@ -13,6 +13,7 @@ router.get('/automation-runs', controller.automationHistory);
 router.get('/', controller.list);
 router.patch('/:id/draft', controller.updateDraft);
 router.post('/:id/reject', controller.rejectDraft);
+router.post('/:id/approve', controller.approveDraft);
 router.get('/:id', controller.get);
 
 module.exports = router;
