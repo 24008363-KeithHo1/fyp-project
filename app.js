@@ -9,6 +9,7 @@ const { sequelize } = require('./config/db');
 const { startPayrollAutomationScheduler } = require('./services/payrollAutomation');
 const SubscriptionPlan = require('./models/SubscriptionPlan');
 const PartnerCustomer = require('./models/PartnerCustomer');
+require('./models/SubscriptionInvoiceItem');
 const { seedSubscriptionPlans } = require('./services/partnerCustomerDemoData');
 
 // Register the separate Partner Subscription Billing master-data model with

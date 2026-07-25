@@ -97,6 +97,72 @@ CREATE TABLE IF NOT EXISTS PartnerCustomers (
   CONSTRAINT fk_partner_customer_subscription_plan FOREIGN KEY (subscriptionPlanId) REFERENCES SubscriptionPlans(id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
+-- Monthly subscription invoices. These tables are intentionally separate
+-- from the legacy Invoices, InvoiceItems and Payments tables.
+CREATE TABLE IF NOT EXISTS SubscriptionInvoices (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  number VARCHAR(40) NOT NULL UNIQUE,
+  partnerCustomerId INT NOT NULL,
+  subscriptionPlanId INT NOT NULL,
+  customerCodeSnapshot VARCHAR(30) NOT NULL,
+  businessNameSnapshot VARCHAR(255) NOT NULL,
+  billingEmailSnapshot VARCHAR(255) NOT NULL,
+  planCodeSnapshot VARCHAR(30) NOT NULL,
+  planNameSnapshot VARCHAR(100) NOT NULL,
+  planFeaturesSnapshot JSON NOT NULL,
+  description VARCHAR(255) NOT NULL DEFAULT 'Monthly Subscription Fee',
+  subtotal DECIMAL(10,2) NOT NULL,
+  taxAmount DECIMAL(10,2) NOT NULL DEFAULT 0,
+  totalAmount DECIMAL(10,2) NOT NULL,
+  currency VARCHAR(10) NOT NULL DEFAULT 'SGD',
+  billingPeriodStart DATE NOT NULL,
+  billingPeriodEnd DATE NOT NULL,
+  invoiceDate DATE NOT NULL,
+  dueDate DATE NOT NULL,
+  paymentTermsDaysSnapshot INT UNSIGNED NOT NULL,
+  status ENUM(
+    'Draft','Approved','Sent','Viewed','PendingPayment','Paid',
+    'PaymentFailed','Overdue','Rejected','Refunded'
+  ) NOT NULL DEFAULT 'Draft',
+  publicToken VARCHAR(128) UNIQUE,
+  approvedBy INT,
+  approvedAt DATETIME,
+  rejectedBy INT,
+  rejectedAt DATETIME,
+  rejectionReason TEXT,
+  sentAt DATETIME,
+  viewedAt DATETIME,
+  paymentPendingAt DATETIME,
+  paidAt DATETIME,
+  paymentFailedAt DATETIME,
+  overdueAt DATETIME,
+  refundedAt DATETIME,
+  data JSON,
+  createdAt DATETIME DEFAULT CURRENT_TIMESTAMP,
+  updatedAt DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  CONSTRAINT fk_subscription_invoice_customer FOREIGN KEY (partnerCustomerId) REFERENCES PartnerCustomers(id),
+  CONSTRAINT fk_subscription_invoice_plan FOREIGN KEY (subscriptionPlanId) REFERENCES SubscriptionPlans(id),
+  UNIQUE KEY subscription_invoice_customer_period_unique (partnerCustomerId, billingPeriodStart, billingPeriodEnd),
+  INDEX idx_subscription_invoices_status (status),
+  INDEX idx_subscription_invoices_due_date (dueDate),
+  INDEX idx_subscription_invoices_customer (partnerCustomerId)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS SubscriptionInvoiceItems (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  subscriptionInvoiceId INT NOT NULL,
+  lineNumber INT UNSIGNED NOT NULL DEFAULT 1,
+  description VARCHAR(255) NOT NULL,
+  quantity DECIMAL(10,2) NOT NULL DEFAULT 1,
+  unitPrice DECIMAL(10,2) NOT NULL,
+  lineAmount DECIMAL(10,2) NOT NULL,
+  data JSON,
+  createdAt DATETIME DEFAULT CURRENT_TIMESTAMP,
+  updatedAt DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  CONSTRAINT fk_subscription_invoice_item_invoice FOREIGN KEY (subscriptionInvoiceId) REFERENCES SubscriptionInvoices(id) ON DELETE CASCADE,
+  UNIQUE KEY subscription_invoice_item_line_unique (subscriptionInvoiceId, lineNumber)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
 -- Payrolls
 CREATE TABLE IF NOT EXISTS Payrolls (
   id INT AUTO_INCREMENT PRIMARY KEY,
