@@ -19,6 +19,7 @@
   const isAdminPage = requestPath.startsWith('/admin') || requestPath === '/partner-customers';
   const financeLinks = [
     { label: 'Dashboard', href: '/finance/dashboard', icon: 'fa-chart-line', active: requestPath === '/finance/dashboard' },
+    { label: 'Subscription Invoices', href: '/finance/subscription-invoices', icon: 'fa-file-contract', active: requestPath.startsWith('/finance/subscription-invoices') },
     { label: 'Invoices', href: '/invoices', icon: 'fa-file-invoice-dollar', active: requestPath.startsWith('/invoices') },
     { label: 'Payments', href: '/finance/payments', icon: 'fa-credit-card', active: requestPath === '/finance/payments' },
     { label: 'Bank Reconciliation', href: '/finance/bank-reconcile', icon: 'fa-building-columns', active: requestPath === '/finance/bank-reconcile' },

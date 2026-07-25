@@ -36,3 +36,17 @@ test('Finance partner access is limited to billing routes', () => {
   assert.match(controller, /Finance can edit billing settings only/);
   assert.match(controller, /const allowedFields = \[[\s\S]*?'subscriptionPlanId'[\s\S]*?'paymentTermsDays'[\s\S]*?'autoBillingEnabled'[\s\S]*?'nextBillingDate'/);
 });
+
+test('subscription invoice review page is explicitly Finance-only', () => {
+  const routes = fs.readFileSync(path.join(root, 'routes', 'finance.js'), 'utf8');
+  assert.match(
+    routes,
+    /router\.get\('\/subscription-invoices', requireRole\(\['Finance'\]\), subscriptionInvoices\.reviewPage\)/
+  );
+});
+
+test('subscription invoice review UI is read-only at this stage', () => {
+  const view = fs.readFileSync(path.join(root, 'views', 'finance', 'subscription-invoices.ejs'), 'utf8');
+  assert.match(view, /Review-only stage/);
+  assert.doesNotMatch(view, /data-approve-id|data-reject-id|data-send-id/);
+});

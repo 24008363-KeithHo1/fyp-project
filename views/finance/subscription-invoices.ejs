@@ -1,0 +1,152 @@
+<%- include('../partials/header', { title }) %>
+
+<style>
+  :root{--si-ink:#102033;--si-muted:#64748b;--si-line:#dce8e1;--si-green:#0b8f3e;--si-navy:#0f2942}
+  body:has(.subscription-review){background:linear-gradient(135deg,#f7faf8,#ebf8f0 52%,#f8fafc)!important}
+  .subscription-review{max-width:1380px;margin:auto;color:var(--si-ink)}
+  .si-hero{display:flex;align-items:center;justify-content:space-between;gap:1rem;padding:1.5rem;border-radius:18px;color:#fff;background:linear-gradient(125deg,#0f2942,#0f766e 56%,#22a85a);box-shadow:0 18px 38px rgba(15,41,66,.18)}
+  .si-eyebrow{font-size:.72rem;font-weight:800;letter-spacing:.1em;text-transform:uppercase;opacity:.72}.si-hero h1{font-weight:800;letter-spacing:-.025em}.si-readonly{display:inline-flex;align-items:center;gap:.45rem;padding:.5rem .75rem;border:1px solid rgba(255,255,255,.28);border-radius:999px;background:rgba(255,255,255,.12);font-size:.76rem;font-weight:700}
+  .si-kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:.85rem}.si-kpi{padding:1rem;border:1px solid var(--si-line);border-radius:14px;background:#fff;box-shadow:0 8px 22px rgba(15,23,42,.05)}.si-kpi span{display:block;color:var(--si-muted);font-size:.72rem;font-weight:800;text-transform:uppercase}.si-kpi strong{display:block;margin-top:.3rem;color:var(--si-navy);font-size:1.5rem}
+  .si-panel{border:1px solid var(--si-line);border-radius:16px;background:#fff;box-shadow:0 10px 28px rgba(15,23,42,.055)}.si-panel-head{display:flex;align-items:center;justify-content:space-between;gap:1rem;padding:1rem 1.15rem;border-bottom:1px solid #edf3ef}.si-panel-title{margin:0;font-size:.95rem;font-weight:800}.si-panel-body{padding:1rem 1.15rem}
+  .si-filters{display:grid;grid-template-columns:minmax(220px,1fr) minmax(150px,220px) minmax(160px,220px);gap:.75rem}.si-filters label{font-size:.76rem;font-weight:700;color:#52665b}.si-filters .form-control,.si-filters .form-select{min-height:43px;border-color:#d8e5dd}
+  .si-table{margin:0}.si-table th{padding:.75rem;background:#f1f8f4;color:#53675c;font-size:.7rem;text-transform:uppercase;letter-spacing:.055em}.si-table td{padding:.85rem .75rem;vertical-align:middle;border-color:#edf3ef}.si-table tbody tr:hover>*{background:#f8fcfa}.si-number{font-family:monospace;font-weight:800}.si-muted{color:var(--si-muted);font-size:.75rem}
+  .si-status{display:inline-flex;padding:.3rem .6rem;border-radius:999px;font-size:.7rem;font-weight:800}.si-status-Draft{background:#e0f2fe;color:#075985}.si-status-Approved{background:#ede9fe;color:#5b21b6}.si-status-Sent,.si-status-Viewed{background:#dbeafe;color:#1d4ed8}.si-status-PendingPayment{background:#fef3c7;color:#92400e}.si-status-Paid{background:#dcfce7;color:#166534}.si-status-PaymentFailed,.si-status-Rejected,.si-status-Overdue{background:#fee2e2;color:#991b1b}.si-status-Refunded{background:#e2e8f0;color:#475569}
+  .si-view-btn{display:inline-flex;align-items:center;gap:.35rem;border:1px solid #bae6fd;border-radius:8px;background:#e0f2fe;color:#075985;font-size:.72rem;font-weight:800}.si-empty{padding:2.3rem!important;text-align:center;color:var(--si-muted)}.si-empty i{display:block;margin-bottom:.55rem;font-size:1.5rem;color:#0f766e}
+  .si-run-list{display:grid;gap:.65rem}.si-run{display:grid;grid-template-columns:minmax(130px,.7fr) minmax(130px,.7fr) minmax(0,1.4fr);gap:.75rem;align-items:center;padding:.75rem;border:1px solid #e6eee9;border-radius:10px;background:#fbfefc}.si-run-result{font-size:.78rem;color:#475569}.si-run-empty{color:var(--si-muted);font-size:.82rem}
+  .si-dialog{width:min(760px,calc(100% - 2rem));max-height:90vh;padding:0;border:0;border-radius:18px;box-shadow:0 28px 70px rgba(0,0,0,.28)}.si-dialog::backdrop{background:rgba(4,25,18,.58);backdrop-filter:blur(4px)}.si-dialog-head{display:flex;justify-content:space-between;gap:1rem;padding:1.2rem 1.3rem;color:#fff;background:linear-gradient(135deg,#0f2942,#0f766e)}.si-dialog-body{padding:1.2rem 1.3rem;overflow:auto}.si-detail-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:.75rem}.si-detail{padding:.75rem;border:1px solid #e3ece7;border-radius:10px;background:#f9fcfa}.si-detail span{display:block;color:var(--si-muted);font-size:.68rem;font-weight:800;text-transform:uppercase}.si-detail strong{display:block;margin-top:.2rem;font-size:.88rem}.si-dialog-close{border:1px solid rgba(255,255,255,.35);border-radius:8px;background:rgba(255,255,255,.12);color:#fff}
+  @media(max-width:900px){.si-kpis{grid-template-columns:repeat(2,1fr)}.si-filters{grid-template-columns:1fr 1fr}.si-filters>div:first-child{grid-column:1/-1}.si-run{grid-template-columns:1fr 1fr}.si-run-result{grid-column:1/-1}}
+  @media(max-width:640px){.si-hero{align-items:flex-start;flex-direction:column;padding:1.1rem}.si-kpis{grid-template-columns:1fr 1fr}.si-filters{grid-template-columns:1fr}.si-filters>div:first-child{grid-column:auto}.si-panel.table-panel{border:0;background:transparent;box-shadow:none}.si-panel.table-panel .si-panel-head{border:1px solid var(--si-line);border-radius:12px;background:#fff}.si-table thead{display:none}.si-table,.si-table tbody,.si-table tr,.si-table td{display:block;width:100%}.si-table tbody{display:grid;gap:.7rem;margin-top:.7rem}.si-table tr{padding:.85rem;border:1px solid var(--si-line);border-radius:13px;background:#fff}.si-table td{display:flex;justify-content:space-between;gap:1rem;padding:.42rem 0;border:0}.si-table td::before{content:attr(data-label);color:#687a70;font-size:.67rem;font-weight:800;text-transform:uppercase}.si-table td:last-child{padding-top:.7rem}.si-view-btn{width:100%;justify-content:center}.si-detail-grid{grid-template-columns:1fr}}
+</style>
+
+<section class="subscription-review">
+  <header class="si-hero mb-3">
+    <div><div class="si-eyebrow">Partner Subscription Billing</div><h1 class="h3 mb-1">Subscription Invoices</h1><p class="mb-0 opacity-75">Review automatically generated subscription drafts and billing history.</p></div>
+    <div class="si-readonly"><i class="fa-solid fa-eye"></i> Review-only stage</div>
+  </header>
+
+  <div id="subscriptionAlerts"></div>
+
+  <section class="si-kpis mb-3">
+    <div class="si-kpi"><span>Invoices</span><strong id="invoiceCount">0</strong></div>
+    <div class="si-kpi"><span>Drafts awaiting review</span><strong id="draftCount">0</strong></div>
+    <div class="si-kpi"><span>Invoice value</span><strong id="invoiceValue">SGD 0.00</strong></div>
+    <div class="si-kpi"><span>Overdue</span><strong id="overdueCount">0</strong></div>
+  </section>
+
+  <section class="si-panel mb-3">
+    <div class="si-panel-head"><h2 class="si-panel-title"><i class="fa-solid fa-filter me-2 text-success"></i>Review filters</h2></div>
+    <div class="si-panel-body si-filters">
+      <div><label for="invoiceSearch" class="form-label">Search invoices</label><input id="invoiceSearch" class="form-control" placeholder="Invoice number, customer, or email"></div>
+      <div><label for="periodFilter" class="form-label">Billing period</label><input id="periodFilter" class="form-control" type="month"></div>
+      <div><label for="statusFilter" class="form-label">Status</label><select id="statusFilter" class="form-select"><option value="">All statuses</option><% statuses.forEach(status => { %><option value="<%= status %>"><%= status.replace(/([a-z])([A-Z])/g, '$1 $2') %></option><% }) %></select></div>
+    </div>
+  </section>
+
+  <section class="si-panel table-panel mb-3">
+    <div class="si-panel-head"><h2 class="si-panel-title"><i class="fa-solid fa-file-invoice me-2 text-success"></i>Invoice register</h2><span class="si-muted" id="resultLabel">Loading…</span></div>
+    <div class="table-responsive">
+      <table class="table si-table"><thead><tr><th>Invoice</th><th>Customer</th><th>Period</th><th>Plan</th><th>Amount</th><th>Due</th><th>Status</th><th>Review</th></tr></thead><tbody id="invoiceRows"><tr><td colspan="8" class="si-empty">Loading subscription invoices…</td></tr></tbody></table>
+    </div>
+  </section>
+
+  <section class="si-panel">
+    <div class="si-panel-head"><h2 class="si-panel-title"><i class="fa-solid fa-gears me-2 text-success"></i>Recent automation runs</h2><span class="si-muted">Latest 5</span></div>
+    <div class="si-panel-body si-run-list" id="automationRuns"><div class="si-run-empty">Loading automation history…</div></div>
+  </section>
+</section>
+
+<dialog class="si-dialog" id="invoiceDialog">
+  <div class="si-dialog-head"><div><div class="small opacity-75">Subscription invoice review</div><h2 class="h5 mb-0" id="dialogTitle">Invoice</h2></div><button class="si-dialog-close" id="closeInvoiceDialog" type="button"><i class="fa-solid fa-xmark"></i> Close</button></div>
+  <div class="si-dialog-body" id="invoiceDetails"></div>
+</dialog>
+
+<script>
+const subscriptionToken = localStorage.getItem('token');
+if (!subscriptionToken) location.href = '/login';
+let subscriptionInvoices = [];
+const escapeSubscriptionHtml = value => String(value ?? '').replace(/[&<>'"]/g, char => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[char]));
+const subscriptionMoney = (value, currency='SGD') => `${currency} ${Number(value || 0).toFixed(2)}`;
+const subscriptionStatusLabel = value => String(value || '').replace(/([a-z])([A-Z])/g, '$1 $2');
+const subscriptionDate = value => value ? new Date(`${String(value).slice(0,10)}T00:00:00`).toLocaleDateString('en-SG') : '—';
+
+async function subscriptionApi(url) {
+  const response = await fetch(url, {headers:{Authorization:`Bearer ${subscriptionToken}`}});
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) throw new Error(data.error || 'Unable to load subscription invoices');
+  return data;
+}
+function showSubscriptionError(error) {
+  document.getElementById('subscriptionAlerts').innerHTML = `<div class="alert alert-danger">${escapeSubscriptionHtml(error.message || error)}</div>`;
+}
+function updateSubscriptionSummary() {
+  document.getElementById('invoiceCount').textContent = subscriptionInvoices.length;
+  document.getElementById('draftCount').textContent = subscriptionInvoices.filter(invoice => invoice.status === 'Draft').length;
+  document.getElementById('overdueCount').textContent = subscriptionInvoices.filter(invoice => invoice.status === 'Overdue').length;
+  const currency = subscriptionInvoices[0]?.currency || 'SGD';
+  const total = subscriptionInvoices.reduce((sum, invoice) => sum + Number(invoice.totalAmount || 0), 0);
+  document.getElementById('invoiceValue').textContent = subscriptionMoney(total, currency);
+}
+function renderSubscriptionInvoices() {
+  const rows = document.getElementById('invoiceRows');
+  document.getElementById('resultLabel').textContent = `${subscriptionInvoices.length} invoice${subscriptionInvoices.length === 1 ? '' : 's'}`;
+  if (!subscriptionInvoices.length) {
+    rows.innerHTML = '<tr><td colspan="8" class="si-empty"><i class="fa-regular fa-folder-open"></i>No subscription invoices match this review.</td></tr>';
+    return;
+  }
+  rows.innerHTML = subscriptionInvoices.map(invoice => `<tr>
+    <td data-label="Invoice"><span class="si-number">${escapeSubscriptionHtml(invoice.number)}</span><div class="si-muted">${subscriptionDate(invoice.invoiceDate)}</div></td>
+    <td data-label="Customer"><strong>${escapeSubscriptionHtml(invoice.businessNameSnapshot)}</strong><div class="si-muted">${escapeSubscriptionHtml(invoice.customerCodeSnapshot)}</div></td>
+    <td data-label="Period">${subscriptionDate(invoice.billingPeriodStart)}<div class="si-muted">to ${subscriptionDate(invoice.billingPeriodEnd)}</div></td>
+    <td data-label="Plan">${escapeSubscriptionHtml(invoice.planNameSnapshot)}</td>
+    <td data-label="Amount"><strong>${subscriptionMoney(invoice.totalAmount, invoice.currency)}</strong></td>
+    <td data-label="Due">${subscriptionDate(invoice.dueDate)}</td>
+    <td data-label="Status"><span class="si-status si-status-${escapeSubscriptionHtml(invoice.status)}">${escapeSubscriptionHtml(subscriptionStatusLabel(invoice.status))}</span></td>
+    <td data-label="Review"><button class="btn btn-sm si-view-btn" data-review-id="${invoice.id}"><i class="fa-solid fa-eye"></i> View</button></td>
+  </tr>`).join('');
+}
+async function loadSubscriptionInvoices() {
+  const params = new URLSearchParams();
+  const search = document.getElementById('invoiceSearch').value.trim();
+  const period = document.getElementById('periodFilter').value;
+  const status = document.getElementById('statusFilter').value;
+  if (search) params.set('search', search);
+  if (period) params.set('period', period);
+  if (status) params.set('status', status);
+  subscriptionInvoices = await subscriptionApi(`/api/subscription-invoices?${params}`);
+  updateSubscriptionSummary();
+  renderSubscriptionInvoices();
+}
+async function reviewSubscriptionInvoice(id) {
+  const invoice = await subscriptionApi(`/api/subscription-invoices/${id}`);
+  document.getElementById('dialogTitle').textContent = invoice.number;
+  const features = Array.isArray(invoice.planFeaturesSnapshot) ? invoice.planFeaturesSnapshot.join(', ') : '';
+  const itemRows = (invoice.items || []).map(item => `<tr><td>${escapeSubscriptionHtml(item.description)}</td><td class="text-end">${Number(item.quantity).toFixed(2)}</td><td class="text-end">${subscriptionMoney(item.unitPrice, invoice.currency)}</td><td class="text-end">${subscriptionMoney(item.lineAmount, invoice.currency)}</td></tr>`).join('');
+  document.getElementById('invoiceDetails').innerHTML = `
+    <div class="si-detail-grid mb-3">
+      <div class="si-detail"><span>Customer</span><strong>${escapeSubscriptionHtml(invoice.businessNameSnapshot)} (${escapeSubscriptionHtml(invoice.customerCodeSnapshot)})</strong></div>
+      <div class="si-detail"><span>Billing email</span><strong>${escapeSubscriptionHtml(invoice.billingEmailSnapshot)}</strong></div>
+      <div class="si-detail"><span>Plan snapshot</span><strong>${escapeSubscriptionHtml(invoice.planNameSnapshot)}</strong></div>
+      <div class="si-detail"><span>Status</span><strong>${escapeSubscriptionHtml(subscriptionStatusLabel(invoice.status))}</strong></div>
+      <div class="si-detail"><span>Invoice date</span><strong>${subscriptionDate(invoice.invoiceDate)}</strong></div>
+      <div class="si-detail"><span>Due date</span><strong>${subscriptionDate(invoice.dueDate)} · Net ${Number(invoice.paymentTermsDaysSnapshot)}</strong></div>
+    </div>
+    <div class="si-detail mb-3"><span>Included plan features</span><strong>${escapeSubscriptionHtml(features || 'No features recorded')}</strong></div>
+    <div class="table-responsive"><table class="table table-sm"><thead><tr><th>Description</th><th class="text-end">Qty</th><th class="text-end">Unit price</th><th class="text-end">Amount</th></tr></thead><tbody>${itemRows || '<tr><td colspan="4" class="text-muted text-center">No line items</td></tr>'}</tbody><tfoot><tr><th colspan="3" class="text-end">Total</th><th class="text-end">${subscriptionMoney(invoice.totalAmount, invoice.currency)}</th></tr></tfoot></table></div>
+    <div class="alert alert-info mb-0"><i class="fa-solid fa-circle-info me-1"></i> Approval, rejection, and editing will be enabled in the next controlled stage.</div>`;
+  document.getElementById('invoiceDialog').showModal();
+}
+async function loadSubscriptionRuns() {
+  const runs = (await subscriptionApi('/api/subscription-invoices/automation-runs')).slice(0,5);
+  const container = document.getElementById('automationRuns');
+  if (!runs.length) { container.innerHTML = '<div class="si-run-empty">No subscription automation runs recorded yet.</div>'; return; }
+  container.innerHTML = runs.map(run => `<div class="si-run"><div><strong>${escapeSubscriptionHtml(run.billingPeriod)}</strong><div class="si-muted">${escapeSubscriptionHtml(run.triggerSource)}</div></div><div><span class="si-status si-status-${run.status === 'Success' ? 'Paid' : run.status === 'Failed' ? 'Rejected' : 'Draft'}">${escapeSubscriptionHtml(run.status)}</span><div class="si-muted">${run.completedAt ? new Date(run.completedAt).toLocaleString('en-SG') : 'In progress'}</div></div><div class="si-run-result">Generated ${Number(run.generatedCount)} · Skipped ${Number(run.skippedCount)} · Failed ${Number(run.failedCount)} · ${subscriptionMoney(run.totalAmount, run.currency)}</div></div>`).join('');
+}
+let subscriptionSearchTimer;
+document.getElementById('invoiceSearch').addEventListener('input', () => { clearTimeout(subscriptionSearchTimer); subscriptionSearchTimer = setTimeout(() => loadSubscriptionInvoices().catch(showSubscriptionError), 250); });
+['periodFilter','statusFilter'].forEach(id => document.getElementById(id).addEventListener('change', () => loadSubscriptionInvoices().catch(showSubscriptionError)));
+document.getElementById('invoiceRows').addEventListener('click', event => { const button = event.target.closest('[data-review-id]'); if (button) reviewSubscriptionInvoice(button.dataset.reviewId).catch(showSubscriptionError); });
+document.getElementById('closeInvoiceDialog').addEventListener('click', () => document.getElementById('invoiceDialog').close());
+Promise.all([loadSubscriptionInvoices(), loadSubscriptionRuns()]).catch(showSubscriptionError);
+</script>
+
+<%- include('../partials/footer') %>
