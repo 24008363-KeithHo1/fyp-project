@@ -16,6 +16,7 @@
     requestPath === '/invoices' || requestPath.startsWith('/invoices/') ||
     requestPath === '/payroll' || requestPath === '/reports';
   const isHrPage = requestPath.startsWith('/hr') || requestPath === '/leave-requests';
+  const isAdminPage = requestPath.startsWith('/admin') || requestPath === '/partner-customers';
   const financeLinks = [
     { label: 'Dashboard', href: '/finance/dashboard', icon: 'fa-chart-line', active: requestPath === '/finance/dashboard' },
     { label: 'Invoices', href: '/invoices', icon: 'fa-file-invoice-dollar', active: requestPath.startsWith('/invoices') },
@@ -33,10 +34,17 @@
     { label: 'Payroll Automation', href: '/hr/automation', icon: 'fa-gears', active: requestPath.startsWith('/hr/automation') },
     { label: 'Requests', href: '/hr/requests', icon: 'fa-inbox', active: requestPath === '/hr/requests' }
   ];
+  const adminLinks = [
+    { label: 'Dashboard', href: '/admin/dashboard', icon: 'fa-chart-line', active: requestPath === '/admin/dashboard' },
+    { label: 'Partner Customers', href: '/partner-customers', icon: 'fa-handshake', active: requestPath === '/partner-customers' },
+    { label: 'Manage Users', href: '/admin/users', icon: 'fa-users-gear', active: requestPath.startsWith('/admin/users') },
+    { label: 'Audit Logs', href: '/admin/audit-logs', icon: 'fa-clock-rotate-left', active: requestPath.startsWith('/admin/audit-logs') },
+    { label: 'Requests', href: '/admin/requests', icon: 'fa-inbox', active: requestPath === '/admin/requests' }
+  ];
 %>
 <body class="<%= isAuthPage ? 'auth-body' : '' %>">
   <% if (!isAuthPage) { %>
-    <header class="site-header <%= isFinancePage ? 'finance-site-header' : (isHrPage ? 'hr-site-header' : 'py-3') %>">
+    <header class="site-header <%= isFinancePage ? 'finance-site-header' : (isHrPage ? 'hr-site-header' : (isAdminPage ? 'admin-site-header' : 'py-3')) %>">
       <% if (isFinancePage) { %>
         <div class="container finance-brand-row">
           <a class="navbar-brand app-brand finance-brand mb-0" href="/finance/dashboard">
@@ -80,6 +88,33 @@
               <% hrLinks.forEach(link => { %>
                 <li>
                   <a class="hr-nav-link <%= link.active ? 'active' : '' %>" href="<%= link.href %>" <% if (link.active) { %>aria-current="page"<% } %>>
+                    <i class="fa-solid <%= link.icon %>" aria-hidden="true"></i>
+                    <span><%= link.label %></span>
+                  </a>
+                </li>
+              <% }); %>
+            </ul>
+          </nav>
+          <div class="header-session-actions">
+            <button id="logout" class="btn btn-sm btn-danger d-none">Logout</button>
+          </div>
+        </div>
+      <% } else if (isAdminPage) { %>
+        <div class="container admin-brand-row">
+          <a class="navbar-brand app-brand admin-brand mb-0" href="/admin/dashboard">
+            <span class="app-brand-mark" aria-hidden="true"></span>
+            <span class="app-brand-text">
+              <span class="app-brand-name">Automated Invoicing &amp; Payroll System</span>
+              <span class="app-brand-subtitle">Admin workspace</span>
+            </span>
+          </a>
+        </div>
+        <div class="container admin-nav-shell">
+          <nav class="admin-nav" aria-label="Admin navigation">
+            <ul class="admin-nav-list">
+              <% adminLinks.forEach(link => { %>
+                <li>
+                  <a class="admin-nav-link <%= link.active ? 'active' : '' %>" href="<%= link.href %>" <% if (link.active) { %>aria-current="page"<% } %>>
                     <i class="fa-solid <%= link.icon %>" aria-hidden="true"></i>
                     <span><%= link.label %></span>
                   </a>
