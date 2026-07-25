@@ -15,6 +15,7 @@ const {
   assertSubscriptionInvoiceTransition
 } = require('../services/subscriptionInvoiceLifecycle');
 const { logAction } = require('../utils/audit');
+const { generateSubscriptionInvoicePDF } = require('../utils/subscriptionInvoicePdf');
 
 exports.reviewPage = (req, res) => res.render('finance/subscription-invoices', {
   title: 'Subscription Invoices',
@@ -252,6 +253,34 @@ exports.approveDraft = async (req, res) => {
     if (!transaction.finished) await transaction.rollback();
     const status = error.code === 'INVALID_SUBSCRIPTION_INVOICE_TRANSITION' ? 409 : 400;
     res.status(status).json({ error: error.message });
+  }
+};
+
+exports.pdf = async (req, res) => {
+  try {
+    const invoice = await SubscriptionInvoice.findByPk(req.params.id, {
+      include: [{
+        model: SubscriptionInvoiceItem,
+        as: 'items',
+        separate: true,
+        order: [['lineNumber', 'ASC']]
+      }]
+    });
+    if (!invoice) return res.status(404).json({ error: 'Subscription invoice not found' });
+    if (invoice.status !== 'Approved') {
+      return res.status(409).json({ error: 'PDF preview is available only after Finance approval.' });
+    }
+
+    const pdf = generateSubscriptionInvoicePDF(invoice, invoice.items || []);
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `inline; filename="${invoice.number}.pdf"`);
+    pdf.on('error', (error) => {
+      if (!res.headersSent) res.status(500).json({ error: error.message });
+      else res.destroy(error);
+    });
+    pdf.pipe(res);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
   }
 };
 

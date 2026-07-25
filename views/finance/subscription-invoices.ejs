@@ -137,6 +137,7 @@ async function reviewSubscriptionInvoice(id) {
       <div class="si-dialog-actions"><button class="btn btn-outline-danger" id="showRejectDraft" type="button"><i class="fa-solid fa-ban me-1"></i>Reject draft</button><button class="btn btn-primary" id="saveDraftChanges" type="button"><i class="fa-solid fa-floppy-disk me-1"></i>Save changes</button><button class="btn btn-success" id="approveDraft" type="button"><i class="fa-solid fa-circle-check me-1"></i>Approve draft</button></div>
       <div class="si-reject-box d-none mt-3" id="rejectDraftBox"><label class="form-label fw-bold" for="rejectDraftReason">Rejection reason</label><textarea class="form-control" id="rejectDraftReason" rows="3" placeholder="Explain why this draft is rejected"></textarea><div class="si-dialog-actions mt-2"><button class="btn btn-outline-secondary" id="cancelRejectDraft" type="button">Cancel</button><button class="btn btn-danger" id="confirmRejectDraft" type="button">Confirm rejection</button></div></div>
     </section>` : invoice.status === 'Rejected' ? `<div class="si-rejected-note mt-3"><strong>Rejection reason:</strong> ${escapeSubscriptionHtml(invoice.rejectionReason || 'No reason recorded')}</div>` : '';
+  const approvedControls = invoice.status === 'Approved' ? `<div class="alert alert-success mt-3 mb-0 d-flex align-items-center justify-content-between gap-3 flex-wrap"><span><i class="fa-solid fa-circle-check me-1"></i>Approved and ready for the later sending stage.</span><button class="btn btn-success btn-sm" id="downloadSubscriptionPdf" type="button"><i class="fa-solid fa-file-pdf me-1"></i>Preview PDF</button></div>` : '';
   document.getElementById('invoiceDetails').innerHTML = `
     <div class="si-detail-grid mb-3">
       <div class="si-detail"><span>Customer</span><strong>${escapeSubscriptionHtml(invoice.businessNameSnapshot)} (${escapeSubscriptionHtml(invoice.customerCodeSnapshot)})</strong></div>
@@ -149,6 +150,7 @@ async function reviewSubscriptionInvoice(id) {
     <div class="si-detail mb-3"><span>Included plan features</span><strong>${escapeSubscriptionHtml(features || 'No features recorded')}</strong></div>
     <div class="table-responsive"><table class="table table-sm"><thead><tr><th>Description</th><th class="text-end">Qty</th><th class="text-end">Unit price</th><th class="text-end">Amount</th></tr></thead><tbody>${itemRows || '<tr><td colspan="4" class="text-muted text-center">No line items</td></tr>'}</tbody><tfoot><tr><th colspan="3" class="text-end">Subtotal</th><th class="text-end">${subscriptionMoney(invoice.subtotal, invoice.currency)}</th></tr><tr><th colspan="3" class="text-end">Tax</th><th class="text-end">${subscriptionMoney(invoice.taxAmount, invoice.currency)}</th></tr><tr><th colspan="3" class="text-end">Total</th><th class="text-end">${subscriptionMoney(invoice.totalAmount, invoice.currency)}</th></tr></tfoot></table></div>
     ${draftControls}
+    ${approvedControls}
     ${invoice.status !== 'Draft' && invoice.status !== 'Rejected' ? '<div class="alert alert-info mb-0"><i class="fa-solid fa-lock me-1"></i>This invoice is no longer editable because it has left Draft status.</div>' : ''}`;
   document.getElementById('invoiceDialog').dataset.invoiceId = invoice.id;
   if (!document.getElementById('invoiceDialog').open) document.getElementById('invoiceDialog').showModal();
@@ -191,6 +193,31 @@ async function approveSubscriptionDraft(id) {
   await loadSubscriptionInvoices();
   document.getElementById('subscriptionAlerts').innerHTML = `<div class="alert alert-success">${escapeSubscriptionHtml(response.message || 'Subscription invoice approved.')}</div>`;
 }
+async function previewSubscriptionPdf(id) {
+  const previewWindow = window.open('about:blank', '_blank');
+  try {
+    const response = await fetch(`/api/subscription-invoices/${id}/pdf`, {
+      headers:{Authorization:`Bearer ${subscriptionToken}`}
+    });
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({}));
+      throw new Error(error.error || 'Unable to generate subscription invoice PDF');
+    }
+    const url = URL.createObjectURL(await response.blob());
+    if (previewWindow) {
+      previewWindow.location.href = url;
+    } else {
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = 'subscription-invoice.pdf';
+      link.click();
+    }
+    setTimeout(() => URL.revokeObjectURL(url), 60000);
+  } catch (error) {
+    if (previewWindow) previewWindow.close();
+    throw error;
+  }
+}
 async function loadSubscriptionRuns() {
   const runs = (await subscriptionApi('/api/subscription-invoices/automation-runs')).slice(0,5);
   const container = document.getElementById('automationRuns');
@@ -208,6 +235,7 @@ document.getElementById('invoiceDetails').addEventListener('click', event => {
   if (event.target.closest('#cancelRejectDraft')) document.getElementById('rejectDraftBox').classList.add('d-none');
   if (event.target.closest('#confirmRejectDraft')) rejectSubscriptionDraft(id).catch(showSubscriptionError);
   if (event.target.closest('#approveDraft')) approveSubscriptionDraft(id).catch(showSubscriptionError);
+  if (event.target.closest('#downloadSubscriptionPdf')) previewSubscriptionPdf(id).catch(showSubscriptionError);
 });
 document.getElementById('closeInvoiceDialog').addEventListener('click', () => document.getElementById('invoiceDialog').close());
 Promise.all([loadSubscriptionInvoices(), loadSubscriptionRuns()]).catch(showSubscriptionError);

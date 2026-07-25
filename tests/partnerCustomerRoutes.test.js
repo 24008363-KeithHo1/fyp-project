@@ -56,7 +56,10 @@ test('subscription invoice review UI exposes edit, rejection and approval but no
   assert.match(routes, /router\.patch\('\/:id\/draft'/);
   assert.match(routes, /router\.post\('\/:id\/reject'/);
   assert.match(routes, /router\.post\('\/:id\/approve'/);
+  assert.match(routes, /router\.get\('\/:id\/pdf'/);
   assert.match(controller, /approvedBy:\s*req\.user\.id/);
   assert.match(controller, /No email has been sent yet/);
+  assert.match(controller, /PDF preview is available only after Finance approval/);
+  assert.match(view, /downloadSubscriptionPdf/);
   assert.doesNotMatch(view, /data-send-id|sendInvoice|approveAndSend/);
 });
