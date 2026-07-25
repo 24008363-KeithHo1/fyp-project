@@ -1,73 +1,84 @@
 <%- include('../partials/header', { title: 'Finance Inbox' }) %>
 <%- include('../partials/navbar') %>
 
-<div class="container mt-4">
-  <h2>Finance Requests Inbox</h2>
-  <div class="content-card requests-card mt-3">
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+body{background:linear-gradient(135deg,#f7faf8 0%,#e8f7ee 48%,#f8fbf9 100%)!important}
+.finance-inbox{max-width:1220px;margin:0 auto;padding:1.1rem;box-sizing:border-box;background:linear-gradient(135deg,rgba(255,255,255,.98),rgba(248,250,252,.94)),linear-gradient(90deg,rgba(6,182,212,.12),rgba(124,58,237,.12));font-family:'Sora',sans-serif;animation:finance-inbox-enter .45s cubic-bezier(.22,.8,.36,1) both}
+@keyframes finance-inbox-enter{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+.finance-inbox-hero{position:relative;overflow:hidden;display:flex;align-items:flex-end;justify-content:space-between;gap:1rem;flex-wrap:wrap;padding:1.35rem;border:1px solid rgba(37,99,235,.18);border-radius:8px;background:linear-gradient(135deg,rgba(15,23,42,.96),rgba(37,99,235,.88) 48%,rgba(11,143,62,.84));box-shadow:0 18px 38px rgba(15,23,42,.16);color:#fff}
+.finance-inbox-hero::after{position:absolute;right:-56px;bottom:-84px;width:260px;height:150px;background:linear-gradient(135deg,rgba(255,255,255,.18),rgba(255,255,255,.03));content:'';transform:rotate(-18deg)}.finance-inbox-hero>*{position:relative;z-index:1}
+.finance-inbox-eyebrow{display:inline-flex;align-items:center;gap:.4rem;margin:0 0 .35rem;padding:.3rem .62rem;border:1px solid rgba(255,255,255,.28);border-radius:999px;background:rgba(255,255,255,.12);font-size:.72rem;font-weight:800;text-transform:uppercase}.finance-inbox-hero h1{margin:0;font-size:1.8rem;font-weight:700}.finance-inbox-hero p{margin:.35rem 0 0;opacity:.86}.finance-inbox-count{padding:.48rem .72rem;border-radius:999px;background:rgba(255,255,255,.14);font-size:.8rem;font-weight:700}
+.finance-inbox-panel{margin-top:1rem;overflow:hidden;border:1px solid rgba(148,163,184,.18);border-radius:8px;background:linear-gradient(180deg,rgba(255,255,255,.99),rgba(240,249,255,.72));box-shadow:0 14px 30px rgba(15,23,42,.08)}
+.finance-inbox-panel-head{display:flex;align-items:center;gap:.55rem;padding:1rem 1.2rem;border-bottom:1px solid rgba(148,163,184,.16)}.finance-inbox-panel-head i{display:grid;place-items:center;width:28px;height:28px;border-radius:8px;background:linear-gradient(135deg,#0f766e,#22c55e);color:#fff;font-size:.8rem}.finance-inbox-panel-head h2{margin:0;color:#102033;font-size:.95rem;font-weight:700}
+.finance-inbox-table-wrap{overflow-x:auto}.finance-inbox-table{width:100%;min-width:980px;border-collapse:collapse}.finance-inbox-table th,.finance-inbox-table td{padding:.78rem;border-bottom:1px solid rgba(148,163,184,.14);text-align:left;vertical-align:middle}.finance-inbox-table th{background:#f8fafc;color:#475569;font-size:.7rem;font-weight:800;text-transform:uppercase}.finance-inbox-table td{color:#334155;font-size:.82rem}.finance-inbox-table tbody tr:hover{background:#f0f9ff}.finance-inbox-table tbody tr:last-child td{border-bottom:0}
+.finance-request-id{color:#1d4ed8;font-family:'DM Mono',monospace}.finance-request-title{color:#0b5e3a;font-weight:700;text-decoration:none}.finance-request-message{max-width:230px;color:#64748b}.finance-attachments{display:grid;gap:.28rem}.finance-attachments a{color:#1d4ed8;font-size:.76rem;text-decoration:none}.finance-none{color:#94a3b8}
+.finance-status{display:inline-flex;padding:.3rem .56rem;border-radius:999px;font-size:.72rem;font-weight:800}.finance-status-Pending{background:#fff7ed;color:#c2410c}.finance-status-Completed{background:#ecfdf5;color:#047857}.finance-status-Incomplete{background:#fef2f2;color:#b91c1c}
+.finance-request-action{display:flex;align-items:center;gap:.45rem;min-width:205px}.finance-request-action .form-select{min-height:36px;margin:0;padding:.35rem 1.8rem .35rem .55rem;border-radius:8px;font-size:.76rem}.finance-update{min-height:36px;padding:.4rem .65rem!important;border-radius:8px!important;background:linear-gradient(135deg,#0b8f3e,#65a30d)!important;font-size:.76rem;font-weight:800}.finance-empty{padding:2.25rem;text-align:center;color:#64748b}.finance-empty i{display:block;margin-bottom:.5rem;color:#22c55e;font-size:1.5rem}
+@media(max-width:720px){.finance-inbox{padding:.85rem}.finance-inbox-hero{align-items:flex-start;padding:1rem}.finance-inbox-hero h1{font-size:1.45rem}}
+</style>
+
+<section class="finance-inbox">
+  <header class="finance-inbox-hero">
+    <div><p class="finance-inbox-eyebrow"><i class="fa-solid fa-inbox"></i> Finance operations</p><h1>Requests Inbox</h1><p>Review incoming finance requests, supporting files, and resolution status.</p></div>
+    <span class="finance-inbox-count"><i class="fa-solid fa-list-check"></i> <strong><%= requests ? requests.length : 0 %></strong> requests</span>
+  </header>
+
+  <section class="finance-inbox-panel">
+    <div class="finance-inbox-panel-head"><i class="fa-solid fa-list-check"></i><h2>Request Queue</h2></div>
     <% if (!requests || !requests.length) { %>
-      <div class="alert alert-info">No requests.</div>
+      <div class="finance-empty"><i class="fa-solid fa-circle-check"></i>No finance requests are waiting.</div>
     <% } else { %>
-      <div class="table-responsive mt-2">
-        <table class="table table-striped table-hover table-bordered align-middle table-sm">
-          <thead>
-            <tr>
-              <th>#</th>
-              <th>From</th>
-              <th>Title</th>
-              <th>Message</th>
-              <th>Status</th>
-              <th>Attachments</th>
-              <th>Created</th>
-              <th>Action</th>
-            </tr>
-          </thead>
+      <div class="finance-inbox-table-wrap">
+        <table class="finance-inbox-table">
+          <thead><tr><th>Request</th><th>From</th><th>Title</th><th>Message</th><th>Status</th><th>Attachments</th><th>Created</th><th>Action</th></tr></thead>
           <tbody>
             <% requests.forEach(r => { %>
               <tr>
-                <td><%= r.id %></td>
+                <td class="finance-request-id">#<%= r.id %></td>
                 <td><%= r.senderName || r.senderId %></td>
-                <td><a href="/requests/<%= r.id %>/view"><%= r.title %></a></td>
-                <td><%= r.message && r.message.length > 120 ? (r.message.substring(0,120) + '...') : r.message %></td>
-                <td id="status-<%= r.id %>"><span class="badge <%= r.status === 'Pending' ? 'bg-warning text-dark' : (r.status === 'Completed' ? 'bg-success' : 'bg-secondary') %>"><%= r.status %></span></td>
+                <td><a class="finance-request-title" href="/requests/<%= r.id %>/view"><%= r.title %></a></td>
+                <td class="finance-request-message"><%= r.message && r.message.length > 120 ? (r.message.substring(0,120) + '...') : r.message %></td>
+                <td id="status-<%= r.id %>"><span class="finance-status finance-status-<%= r.status %>"><%= r.status %></span></td>
                 <td>
                   <% if (r.data && Array.isArray(r.data.attachments) && r.data.attachments.length) { %>
-                    <% r.data.attachments.forEach(a => { %>
-                      <div><a href="<%= a.path %>" target="_blank" rel="noopener noreferrer"><%= a.originalname %></a></div>
-                    <% }) %>
-                  <% } %>
+                    <div class="finance-attachments"><% r.data.attachments.forEach(a => { %><a href="<%= a.path %>" target="_blank" rel="noopener noreferrer"><i class="fa-solid fa-paperclip"></i> <%= a.originalname %></a><% }) %></div>
+                  <% } else { %><span class="finance-none">None</span><% } %>
                 </td>
                 <td><%= new Date(r.createdAt).toLocaleString() %></td>
-                <td>
-                  <select id="sel-<%= r.id %>" class="form-select form-select-sm">
-                    <option value="Pending" <%= r.status==='Pending' ? 'selected' : '' %>>Pending</option>
-                    <option value="Completed" <%= r.status==='Completed' ? 'selected' : '' %>>Completed</option>
-                    <option value="Incomplete" <%= r.status==='Incomplete' ? 'selected' : '' %>>Incomplete</option>
-                  </select>
-                  <button class="btn btn-sm btn-primary mt-1 update-btn" data-id="<%= r.id %>">Update</button>
-                </td>
+                <td><div class="finance-request-action">
+                  <select id="sel-<%= r.id %>" class="form-select" aria-label="Status for request <%= r.id %>"><option value="Pending" <%= r.status==='Pending' ? 'selected' : '' %>>Pending</option><option value="Completed" <%= r.status==='Completed' ? 'selected' : '' %>>Completed</option><option value="Incomplete" <%= r.status==='Incomplete' ? 'selected' : '' %>>Incomplete</option></select>
+                  <button class="btn finance-update update-btn" type="button" data-id="<%= r.id %>">Update</button>
+                </div></td>
               </tr>
             <% }) %>
           </tbody>
         </table>
       </div>
     <% } %>
-  </div>
-</div>
+  </section>
+</section>
 
 <script>
-async function updateStatus(id){
-  const sel = document.getElementById('sel-'+id);
-  const status = sel.value;
+async function updateStatus(id, button) {
+  const status = document.getElementById('sel-' + id).value;
   const token = localStorage.getItem('token');
-  const res = await fetch('/api/requests/'+id+'/status', { method: 'PUT', headers: { 'Content-Type':'application/json', Authorization: `Bearer ${token}` }, body: JSON.stringify({ status }) });
-  if (res.ok) document.getElementById('status-'+id).innerText = status;
-  else alert('Failed to update');
+  const original = button.innerHTML;
+  button.disabled = true;
+  button.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
+  try {
+    const response = await fetch('/api/requests/' + id + '/status', { method:'PUT', headers:{'Content-Type':'application/json',Authorization:`Bearer ${token}`}, body:JSON.stringify({status}) });
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.error || 'Failed to update request');
+    document.getElementById('status-' + id).innerHTML = `<span class="finance-status finance-status-${status}">${status}</span>`;
+  } catch (error) {
+    alert(error.message);
+  } finally {
+    button.disabled = false;
+    button.innerHTML = original;
+  }
 }
-
-document.querySelectorAll('.update-btn').forEach(b => b.addEventListener('click', (e) => {
-  const id = e.currentTarget.dataset.id;
-  updateStatus(id);
-}));
+document.querySelectorAll('.update-btn').forEach(button => button.addEventListener('click', () => updateStatus(button.dataset.id, button)));
 </script>
 
 <%- include('../partials/footer') %>
