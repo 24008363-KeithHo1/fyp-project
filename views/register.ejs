@@ -1,48 +1,78 @@
-<%- include('partials/header', { title: 'Register' }) %>
+<%- include('partials/header', { title: typeof title !== 'undefined' ? title : 'Register' }) %>
 <%- include('partials/navbar') %>
+<% const inAdminWorkspace = typeof adminWorkspace !== 'undefined' && adminWorkspace; %>
 
-  <div class="auth-card">
-    <h2>Create account</h2>
-    <p class="text-muted">Create a user profile for the invoicing and payroll workspace.</p>
-    <form id="register">
-      <label>Email <input type="email" id="email" value="<%= email %>" required></label>
-      <label>Name <input id="name"></label>
-      <label>Password <input type="password" id="password" minlength="8" required></label>
-      <p class="text-muted" style="font-size: .85rem;">Must be at least 8 characters.</p>
-      <button>Create account</button>
-    </form>
-  </div>
- 
+<style>
+.account-workspace{max-width:980px;margin:0 auto;padding:1.1rem;font-family:'Sora','Segoe UI',sans-serif}
+.account-hero{position:relative;overflow:hidden;padding:1.35rem;border-radius:8px;background:linear-gradient(135deg,#0f172a,#2563eb 48%,#0b8f3e);box-shadow:0 18px 38px rgba(15,23,42,.16);color:#fff}
+.account-hero>*{position:relative;z-index:1}.account-hero::after{position:absolute;right:-55px;bottom:-85px;width:260px;height:150px;background:rgba(255,255,255,.1);content:'';transform:rotate(-18deg)}
+.account-eyebrow{display:inline-flex;align-items:center;gap:.4rem;margin:0 0 .35rem;padding:.3rem .6rem;border:1px solid rgba(255,255,255,.25);border-radius:999px;background:rgba(255,255,255,.12);font-size:.72rem;font-weight:800;text-transform:uppercase}
+.account-hero h1{margin:0;font-size:1.75rem;font-weight:700}.account-hero p{max-width:62ch;margin:.4rem 0 0;opacity:.86}
+.account-panel{display:grid;grid-template-columns:minmax(0,.8fr) minmax(0,1.35fr);margin-top:1rem;overflow:hidden;border:1px solid rgba(148,163,184,.2);border-radius:8px;background:#fff;box-shadow:0 14px 30px rgba(15,23,42,.08)}
+.account-aside{padding:1.4rem;background:linear-gradient(160deg,#eff6ff,#ecfdf5);color:#334155}.account-aside-icon{display:grid;place-items:center;width:48px;height:48px;border-radius:12px;background:#fff;color:#2563eb;box-shadow:0 8px 20px rgba(37,99,235,.12);font-size:1.2rem}
+.account-aside h2{margin:1rem 0 .45rem;font-size:1.05rem;font-weight:700}.account-aside p{margin:0;color:#64748b;font-size:.86rem;line-height:1.6}
+.account-form{padding:1.4rem}.account-form h2{margin:0 0 .25rem;color:#0f172a;font-size:1.1rem;font-weight:700}.account-form-subtitle{margin:0 0 1rem;color:#64748b;font-size:.84rem}
+.account-field{display:grid;gap:.35rem;margin-bottom:.85rem}.account-field label{color:#475569;font-size:.78rem;font-weight:700}.account-field .form-control{min-height:44px;margin:0;border:1px solid #cbd5e1;border-radius:8px}.account-field .form-control:focus{border-color:#2563eb;box-shadow:0 0 0 .2rem rgba(37,99,235,.13)}
+.account-help{margin:0;color:#64748b;font-size:.75rem}.account-actions{display:flex;align-items:center;justify-content:flex-end;gap:.6rem;margin-top:1.1rem}.account-primary{border:0!important;border-radius:8px!important;background:linear-gradient(135deg,#0b8f3e,#65a30d)!important;font-size:.82rem;font-weight:800}.account-secondary{border:1px solid #cbd5e1!important;border-radius:8px!important;background:#fff!important;color:#475569!important;font-size:.82rem;font-weight:800}
+.account-message{display:none;margin-top:1rem;padding:.75rem;border-radius:8px;font-size:.82rem}.account-message.success{display:block;background:#ecfdf5;color:#047857}.account-message.error{display:block;background:#fef2f2;color:#b91c1c}
+@media(max-width:720px){.account-workspace{padding:.85rem}.account-panel{grid-template-columns:1fr}.account-aside{display:none}.account-actions{align-items:stretch;flex-direction:column-reverse}.account-actions .btn{width:100%}}
+</style>
+
+<section class="account-workspace">
+  <header class="account-hero">
+    <p class="account-eyebrow"><i class="fa-solid fa-user-plus"></i> <%= inAdminWorkspace ? 'Admin operations' : 'Account registration' %></p>
+    <h1><%= inAdminWorkspace ? 'Create User Account' : 'Create Your Account' %></h1>
+    <p><%= inAdminWorkspace ? 'Register a new Staff account, then assign additional access from Manage Users when required.' : 'Create a profile for the invoicing and payroll workspace.' %></p>
+  </header>
+
+  <section class="account-panel">
+    <aside class="account-aside">
+      <span class="account-aside-icon"><i class="fa-solid fa-shield-halved"></i></span>
+      <h2>Secure account setup</h2>
+      <p>New accounts begin with Staff access. Use a valid email address and a password containing at least eight characters.</p>
+    </aside>
+    <div class="account-form">
+      <h2>Account details</h2>
+      <p class="account-form-subtitle">Complete all fields to create the account.</p>
+      <form id="register">
+        <div class="account-field"><label for="name">Full name</label><input class="form-control" id="name" autocomplete="name" required></div>
+        <div class="account-field"><label for="email">Email address</label><input class="form-control" type="email" id="email" value="<%= email %>" autocomplete="email" required></div>
+        <div class="account-field"><label for="password">Password</label><input class="form-control" type="password" id="password" minlength="8" autocomplete="new-password" required><p class="account-help">Use at least 8 characters.</p></div>
+        <div class="account-actions">
+          <a class="btn account-secondary" href="<%= inAdminWorkspace ? '/admin/dashboard' : '/login' %>"><%= inAdminWorkspace ? 'Back to Dashboard' : 'Back to Login' %></a>
+          <button class="btn account-primary" id="registerSubmit" type="submit"><i class="fa-solid fa-user-plus"></i> Create Account</button>
+        </div>
+      </form>
+      <div id="registerMessage" class="account-message" role="status"></div>
+    </div>
+  </section>
+</section>
 
 <script>
-document.getElementById('register').addEventListener('submit', async e=>{
-  e.preventDefault();
-  const body = { name: document.getElementById('name').value, email: document.getElementById('email').value, password: document.getElementById('password').value };
-  const res = await fetch('/api/auth/register',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(body)});
-  const j = await res.json();
-  if (j.id) {
-    const token = localStorage.getItem('token');
-    let isAdmin = false;
-
-    if (token) {
-      try {
-        isAdmin = JSON.parse(atob(token.split('.')[1])).role === 'Admin';
-      } catch (err) {
-        isAdmin = false;
-      }
-    }
-
-    if (isAdmin) {
-      alert('User registered successfully.');
-      location = '/admin/dashboard';
-      return;
-    }
-
-    alert('Registered. Please login.');
-    location='/login';
-    return;
+document.getElementById('register').addEventListener('submit', async (event) => {
+  event.preventDefault();
+  const button = document.getElementById('registerSubmit');
+  const message = document.getElementById('registerMessage');
+  button.disabled = true;
+  message.className = 'account-message';
+  try {
+    const body = {
+      name: document.getElementById('name').value.trim(),
+      email: document.getElementById('email').value.trim(),
+      password: document.getElementById('password').value
+    };
+    const response = await fetch('/api/auth/register', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) });
+    const result = await response.json();
+    if (!response.ok || !result.id) throw new Error(result.error || 'Registration failed');
+    message.textContent = 'Account created successfully.';
+    message.className = 'account-message success';
+    setTimeout(() => location = <%- JSON.stringify(inAdminWorkspace ? '/admin/users' : '/login') %>, 700);
+  } catch (error) {
+    message.textContent = error.message;
+    message.className = 'account-message error';
+  } finally {
+    button.disabled = false;
   }
-  alert(j.error || 'Registration failed');
 });
 </script>
 

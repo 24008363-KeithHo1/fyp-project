@@ -15,5 +15,11 @@ router.get('/users/:id/edit', admin.editUserView);
 router.post('/users/:id', admin.updateUser);
 router.get('/dashboard', admin.dashboardView);
 router.get('/requests', reqCtrl.deptInboxPage);
+router.get('/register', (req, res) => {
+  res.render('register', { token: '', email: '', title: 'Create User Account', adminWorkspace: true });
+});
+router.get('/reset', (req, res) => {
+  res.render('reset', { token: req.query.token || '', title: 'Password Reset', adminWorkspace: true });
+});
 
 module.exports = router;

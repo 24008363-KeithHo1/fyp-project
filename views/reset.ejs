@@ -1,46 +1,86 @@
-<%- include('partials/header', { title: 'Reset Password' }) %>
+<%- include('partials/header', { title: typeof title !== 'undefined' ? title : 'Reset Password' }) %>
 <%- include('partials/navbar') %>
+<% const inAdminWorkspace = typeof adminWorkspace !== 'undefined' && adminWorkspace; %>
 
-  <div class="auth-card">
-    <h2>Reset Password</h2>
-    <div id="request">
-      <p class="text-muted">Enter your email to receive a reset link.</p>
-      <form id="requestForm">
-        <label>Email <input type="email" id="emailReq" required></label>
-        <button>Request reset</button>
-      </form>
-    </div>
+<style>
+.reset-workspace{max-width:980px;margin:0 auto;padding:1.1rem;font-family:'Sora','Segoe UI',sans-serif}.reset-hero{position:relative;overflow:hidden;padding:1.35rem;border-radius:8px;background:linear-gradient(135deg,#0f172a,#7c3aed 50%,#2563eb);box-shadow:0 18px 38px rgba(15,23,42,.16);color:#fff}.reset-hero>*{position:relative;z-index:1}.reset-hero::after{position:absolute;right:-55px;bottom:-85px;width:260px;height:150px;background:rgba(255,255,255,.1);content:'';transform:rotate(-18deg)}.reset-eyebrow{display:inline-flex;align-items:center;gap:.4rem;margin:0 0 .35rem;padding:.3rem .6rem;border:1px solid rgba(255,255,255,.25);border-radius:999px;background:rgba(255,255,255,.12);font-size:.72rem;font-weight:800;text-transform:uppercase}.reset-hero h1{margin:0;font-size:1.75rem;font-weight:700}.reset-hero p{max-width:62ch;margin:.4rem 0 0;opacity:.86}
+.reset-panel{display:grid;grid-template-columns:minmax(0,.8fr) minmax(0,1.35fr);margin-top:1rem;overflow:hidden;border:1px solid rgba(148,163,184,.2);border-radius:8px;background:#fff;box-shadow:0 14px 30px rgba(15,23,42,.08)}.reset-aside{padding:1.4rem;background:linear-gradient(160deg,#f5f3ff,#eff6ff)}.reset-aside-icon{display:grid;place-items:center;width:48px;height:48px;border-radius:12px;background:#fff;color:#7c3aed;box-shadow:0 8px 20px rgba(124,58,237,.12);font-size:1.2rem}.reset-aside h2{margin:1rem 0 .45rem;color:#0f172a;font-size:1.05rem;font-weight:700}.reset-aside p{margin:0;color:#64748b;font-size:.86rem;line-height:1.6}.reset-form{padding:1.4rem}.reset-form h2{margin:0 0 .25rem;color:#0f172a;font-size:1.1rem;font-weight:700}.reset-subtitle{margin:0 0 1rem;color:#64748b;font-size:.84rem}.reset-field{display:grid;gap:.35rem;margin-bottom:.85rem}.reset-field label{color:#475569;font-size:.78rem;font-weight:700}.reset-field .form-control{min-height:44px;margin:0;border:1px solid #cbd5e1;border-radius:8px}.reset-field .form-control:focus{border-color:#7c3aed;box-shadow:0 0 0 .2rem rgba(124,58,237,.13)}.reset-help{margin:0;color:#64748b;font-size:.75rem}.reset-actions{display:flex;align-items:center;justify-content:flex-end;gap:.6rem;margin-top:1.1rem}.reset-primary{border:0!important;border-radius:8px!important;background:linear-gradient(135deg,#7c3aed,#2563eb)!important;font-size:.82rem;font-weight:800}.reset-secondary{border:1px solid #cbd5e1!important;border-radius:8px!important;background:#fff!important;color:#475569!important;font-size:.82rem;font-weight:800}.reset-message{display:none;margin-top:1rem;padding:.75rem;border-radius:8px;font-size:.82rem}.reset-message.success{display:block;background:#ecfdf5;color:#047857}.reset-message.error{display:block;background:#fef2f2;color:#b91c1c}
+@media(max-width:720px){.reset-workspace{padding:.85rem}.reset-panel{grid-template-columns:1fr}.reset-aside{display:none}.reset-actions{align-items:stretch;flex-direction:column-reverse}.reset-actions .btn{width:100%}}
+</style>
 
-    <div id="perform" style="display:none;">
-      <p class="text-muted">Use the link from your email to set a new password.</p>
-      <form id="resetForm">
-        <label>New password <input type="password" id="newPass" minlength="8" required></label>
-        <p class="text-muted" style="font-size: .85rem;">Must be at least 8 characters.</p>
-        <button>Reset password</button>
-      </form>
+<section class="reset-workspace">
+  <header class="reset-hero">
+    <p class="reset-eyebrow"><i class="fa-solid fa-key"></i> <%= inAdminWorkspace ? 'Admin operations' : 'Account recovery' %></p>
+    <h1>Password Reset</h1>
+    <p>Send a secure reset link or, when following an emailed link, choose a new password.</p>
+  </header>
+  <section class="reset-panel">
+    <aside class="reset-aside">
+      <span class="reset-aside-icon"><i class="fa-solid fa-lock"></i></span>
+      <h2>Email-based recovery</h2>
+      <p>For privacy, the system gives the same response whether or not an email address is registered.</p>
+    </aside>
+    <div class="reset-form">
+      <div id="request">
+        <h2>Request reset link</h2>
+        <p class="reset-subtitle">Enter the account email address to send recovery instructions.</p>
+        <form id="requestForm">
+          <div class="reset-field"><label for="emailReq">Email address</label><input class="form-control" type="email" id="emailReq" autocomplete="email" required></div>
+          <div class="reset-actions"><a class="btn reset-secondary" href="<%= inAdminWorkspace ? '/admin/dashboard' : '/login' %>">Back</a><button class="btn reset-primary" id="requestSubmit" type="submit"><i class="fa-solid fa-paper-plane"></i> Send Reset Link</button></div>
+        </form>
+      </div>
+      <div id="perform" style="display:none">
+        <h2>Choose new password</h2>
+        <p class="reset-subtitle">Enter a new password for this account.</p>
+        <form id="resetForm">
+          <div class="reset-field"><label for="newPass">New password</label><input class="form-control" type="password" id="newPass" minlength="8" autocomplete="new-password" required><p class="reset-help">Use at least 8 characters.</p></div>
+          <div class="reset-actions"><a class="btn reset-secondary" href="/login">Cancel</a><button class="btn reset-primary" id="resetSubmit" type="submit"><i class="fa-solid fa-shield-halved"></i> Reset Password</button></div>
+        </form>
+      </div>
+      <div id="resetMessage" class="reset-message" role="status"></div>
     </div>
-  </div>
- 
+  </section>
+</section>
 
 <script>
-const token = new URLSearchParams(window.location.search).get('token') || '<%= token || "" %>';
-
-document.getElementById('requestForm').addEventListener('submit', async e=>{
-  e.preventDefault();
-  await fetch('/api/auth/request-reset',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({email:document.getElementById('emailReq').value})});
-  alert('If email exists, a reset link was sent.');
+const resetToken = new URLSearchParams(window.location.search).get('token') || <%- JSON.stringify(token || '') %>;
+const resetMessage = document.getElementById('resetMessage');
+document.getElementById('requestForm').addEventListener('submit', async (event) => {
+  event.preventDefault();
+  const button = document.getElementById('requestSubmit');
+  button.disabled = true;
+  try {
+    await fetch('/api/auth/request-reset', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ email: document.getElementById('emailReq').value.trim() }) });
+    resetMessage.textContent = 'If the email exists, a reset link has been sent.';
+    resetMessage.className = 'reset-message success';
+  } catch (error) {
+    resetMessage.textContent = 'Unable to request a reset right now.';
+    resetMessage.className = 'reset-message error';
+  } finally {
+    button.disabled = false;
+  }
 });
-
-if (token) {
-  document.getElementById('request').style.display='none';
-  document.getElementById('perform').style.display='block';
+if (resetToken) {
+  document.getElementById('request').style.display = 'none';
+  document.getElementById('perform').style.display = 'block';
 }
-
-document.getElementById('resetForm').addEventListener('submit', async e=>{
-  e.preventDefault();
-  const res = await fetch('/api/auth/reset',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({token,password:document.getElementById('newPass').value})});
-  const j = await res.json();
-  if (j.ok) { alert('Password reset. Please login.'); location='/login'; } else alert(j.error || 'Failed');
+document.getElementById('resetForm').addEventListener('submit', async (event) => {
+  event.preventDefault();
+  const button = document.getElementById('resetSubmit');
+  button.disabled = true;
+  try {
+    const response = await fetch('/api/auth/reset', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ token: resetToken, password: document.getElementById('newPass').value }) });
+    const result = await response.json();
+    if (!response.ok || !result.ok) throw new Error(result.error || 'Password reset failed');
+    resetMessage.textContent = 'Password reset successfully. Redirecting to login…';
+    resetMessage.className = 'reset-message success';
+    setTimeout(() => location = '/login', 800);
+  } catch (error) {
+    resetMessage.textContent = error.message;
+    resetMessage.className = 'reset-message error';
+  } finally {
+    button.disabled = false;
+  }
 });
 </script>
 
