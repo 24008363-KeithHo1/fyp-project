@@ -7,10 +7,12 @@ const requireRole = require('./middlewares/roles');
 
 const { sequelize } = require('./config/db');
 const { startPayrollAutomationScheduler } = require('./services/payrollAutomation');
+const SubscriptionPlan = require('./models/SubscriptionPlan');
+const PartnerCustomer = require('./models/PartnerCustomer');
+const { seedSubscriptionPlans } = require('./services/partnerCustomerDemoData');
 
 // Register the separate Partner Subscription Billing master-data model with
 // Sequelize. It intentionally has no relationship to the existing invoices.
-require('./models/PartnerCustomer');
 
 const app = express();
 // view engine
@@ -148,6 +150,28 @@ async function ensurePayrollWorkflowColumns() {
   }
 }
 
+async function ensurePartnerCustomerSubscriptionSchema() {
+  await SubscriptionPlan.sync();
+  await PartnerCustomer.sync();
+
+  const [columns] = await sequelize.query("SHOW COLUMNS FROM `PartnerCustomers` LIKE 'subscriptionPlanId'");
+  if (columns.length === 0) {
+    await sequelize.query("ALTER TABLE `PartnerCustomers` ADD COLUMN `subscriptionPlanId` INTEGER NULL AFTER `region`");
+  }
+
+  const plans = await seedSubscriptionPlans();
+  await sequelize.query(
+    "UPDATE `PartnerCustomers` SET `subscriptionPlanId` = :basicPlanId WHERE `subscriptionPlanId` IS NULL",
+    { replacements: { basicPlanId: plans.BASIC.id } }
+  );
+  await sequelize.query("ALTER TABLE `PartnerCustomers` MODIFY COLUMN `subscriptionPlanId` INTEGER NOT NULL");
+
+  const [indexes] = await sequelize.query("SHOW INDEX FROM `PartnerCustomers` WHERE `Key_name` = 'partner_customers_subscription_plan_id'");
+  if (indexes.length === 0) {
+    await sequelize.query("CREATE INDEX `partner_customers_subscription_plan_id` ON `PartnerCustomers` (`subscriptionPlanId`)");
+  }
+}
+
 async function start() {
   try {
     await sequelize.authenticate();
@@ -157,6 +181,7 @@ async function start() {
     await ensurePayrollBankNumberColumn();
     await ensureReminderPayrollPeriodColumn();
     await ensurePayrollWorkflowColumns();
+    await ensurePartnerCustomerSubscriptionSchema();
     startPayrollAutomationScheduler();
     app.listen(PORT, () => {
       console.log(`Server running at http://localhost:${PORT}`);

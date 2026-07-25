@@ -7,6 +7,7 @@ const router = express.Router();
 router.use(auth);
 router.use(requireRole(['Admin']));
 
+router.get('/plans', controller.plans);
 router.get('/', controller.list);
 router.post('/', controller.create);
 router.get('/:id', controller.get);

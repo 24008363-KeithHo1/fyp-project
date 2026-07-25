@@ -1,5 +1,6 @@
 const { Op } = require('sequelize');
 const PartnerCustomer = require('../models/PartnerCustomer');
+const SubscriptionPlan = require('../models/SubscriptionPlan');
 const { logAction } = require('../utils/audit');
 
 const ALLOWED_STATUSES = ['Active', 'Suspended', 'Inactive'];
@@ -24,7 +25,7 @@ function clean(value) {
 
 function validatePayload(body, partial = false) {
   const errors = [];
-  const required = ['businessName', 'businessType', 'contactPerson', 'billingEmail', 'subscriptionStartDate'];
+  const required = ['businessName', 'businessType', 'contactPerson', 'billingEmail', 'subscriptionStartDate', 'subscriptionPlanId'];
   if (!partial) {
     required.forEach((field) => {
       if (!clean(body[field])) errors.push({ field, message: `${field} is required.` });
@@ -46,6 +47,12 @@ function validatePayload(body, partial = false) {
       errors.push({ field: 'paymentTermsDays', message: 'Payment terms must be between 0 and 365 days.' });
     }
   }
+  if (body.subscriptionPlanId !== undefined) {
+    const planId = Number(body.subscriptionPlanId);
+    if (!Number.isInteger(planId) || planId <= 0) {
+      errors.push({ field: 'subscriptionPlanId', message: 'Select a valid subscription plan.' });
+    }
+  }
   if (body.status !== undefined && !ALLOWED_STATUSES.includes(clean(body.status))) {
     errors.push({ field: 'status', message: 'Invalid customer status.' });
   }
@@ -56,12 +63,16 @@ function writableFields(body) {
   const fields = [
     'businessName', 'businessType', 'contactPerson', 'billingEmail', 'phone',
     'billingAddress', 'region', 'paymentTermsDays', 'subscriptionStartDate',
-    'status', 'notes'
+    'subscriptionPlanId', 'status', 'notes'
   ];
   return fields.reduce((result, field) => {
     if (body[field] !== undefined) result[field] = clean(body[field]);
     return result;
   }, {});
+}
+
+async function activePlan(planId) {
+  return SubscriptionPlan.findOne({ where: { id: Number(planId), isActive: true } });
 }
 
 async function nextCustomerCode() {
@@ -70,10 +81,18 @@ async function nextCustomerCode() {
   return `CUS-${String(nextNumber).padStart(4, '0')}`;
 }
 
-exports.page = (req, res) => res.render('admin/partner-customers', {
-  title: 'Partner Customers',
-  businessTypes: ALLOWED_BUSINESS_TYPES
-});
+exports.page = async (req, res, next) => {
+  try {
+    const plans = await SubscriptionPlan.findAll({ where: { isActive: true }, order: [['monthlyFee', 'ASC']] });
+    res.render('admin/partner-customers', {
+      title: 'Partner Customers',
+      businessTypes: ALLOWED_BUSINESS_TYPES,
+      plans
+    });
+  } catch (error) {
+    next(error);
+  }
+};
 
 exports.list = async (req, res) => {
   try {
@@ -89,7 +108,11 @@ exports.list = async (req, res) => {
         { billingEmail: { [Op.like]: `%${search}%` } }
       ];
     }
-    const customers = await PartnerCustomer.findAll({ where, order: [['id', 'DESC']] });
+    const customers = await PartnerCustomer.findAll({
+      where,
+      include: [{ model: SubscriptionPlan, as: 'subscriptionPlan' }],
+      order: [['id', 'DESC']]
+    });
     res.json(customers);
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -97,7 +120,9 @@ exports.list = async (req, res) => {
 };
 
 exports.get = async (req, res) => {
-  const customer = await PartnerCustomer.findByPk(req.params.id);
+  const customer = await PartnerCustomer.findByPk(req.params.id, {
+    include: [{ model: SubscriptionPlan, as: 'subscriptionPlan' }]
+  });
   if (!customer) return res.status(404).json({ error: 'Partner customer not found' });
   res.json(customer);
 };
@@ -106,7 +131,9 @@ exports.create = async (req, res) => {
   try {
     const errors = validatePayload(req.body || {});
     if (errors.length) return res.status(400).json({ error: 'Validation failed', details: errors });
-
+    if (!await activePlan(req.body.subscriptionPlanId)) {
+      return res.status(400).json({ error: 'The selected subscription plan is unavailable.' });
+    }
     const values = writableFields(req.body);
     values.customerCode = await nextCustomerCode();
     values.currency = 'SGD';
@@ -128,7 +155,9 @@ exports.update = async (req, res) => {
     if (!customer) return res.status(404).json({ error: 'Partner customer not found' });
     const errors = validatePayload(req.body || {}, true);
     if (errors.length) return res.status(400).json({ error: 'Validation failed', details: errors });
-
+    if (req.body.subscriptionPlanId !== undefined && !await activePlan(req.body.subscriptionPlanId)) {
+      return res.status(400).json({ error: 'The selected subscription plan is unavailable.' });
+    }
     const changes = writableFields(req.body || {});
     // Customer code, currency and billing cycle are deliberately immutable here.
     await customer.update(changes);
@@ -159,6 +188,11 @@ exports.setStatus = async (req, res) => {
   } catch (error) {
     res.status(400).json({ error: error.message });
   }
+};
+
+exports.plans = async (req, res) => {
+  const plans = await SubscriptionPlan.findAll({ where: { isActive: true }, order: [['monthlyFee', 'ASC']] });
+  res.json(plans);
 };
 
 exports.businessTypes = ALLOWED_BUSINESS_TYPES;

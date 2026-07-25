@@ -52,6 +52,19 @@ CREATE TABLE IF NOT EXISTS InvoiceItems (
   INDEX idx_invoice_items_line_no (line_no)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
+-- Partner Subscription Billing module: independent plan catalogue.
+CREATE TABLE IF NOT EXISTS SubscriptionPlans (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  code ENUM('BASIC','STANDARD','PREMIUM') NOT NULL UNIQUE,
+  name ENUM('Basic','Standard','Premium') NOT NULL UNIQUE,
+  monthlyFee DECIMAL(10,2) NOT NULL,
+  currency VARCHAR(10) NOT NULL DEFAULT 'SGD',
+  features JSON NOT NULL,
+  isActive BOOLEAN NOT NULL DEFAULT TRUE,
+  createdAt DATETIME DEFAULT CURRENT_TIMESTAMP,
+  updatedAt DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
 -- Partner Subscription Billing module: independent customer master data.
 -- Do not link this table to the existing Invoices or Payments tables.
 CREATE TABLE IF NOT EXISTS PartnerCustomers (
@@ -64,6 +77,7 @@ CREATE TABLE IF NOT EXISTS PartnerCustomers (
   phone VARCHAR(30),
   billingAddress VARCHAR(500),
   region VARCHAR(100),
+  subscriptionPlanId INT NOT NULL,
   currency VARCHAR(10) NOT NULL DEFAULT 'SGD',
   billingCycle ENUM('Monthly') NOT NULL DEFAULT 'Monthly',
   paymentTermsDays INT UNSIGNED NOT NULL DEFAULT 14,
@@ -75,7 +89,9 @@ CREATE TABLE IF NOT EXISTS PartnerCustomers (
   updatedAt DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   INDEX idx_partner_customers_status (status),
   INDEX idx_partner_customers_business_type (businessType),
-  INDEX idx_partner_customers_billing_email (billingEmail)
+  INDEX idx_partner_customers_billing_email (billingEmail),
+  INDEX partner_customers_subscription_plan_id (subscriptionPlanId),
+  CONSTRAINT fk_partner_customer_subscription_plan FOREIGN KEY (subscriptionPlanId) REFERENCES SubscriptionPlans(id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- Payrolls

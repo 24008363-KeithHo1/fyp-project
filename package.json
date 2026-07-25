@@ -6,7 +6,8 @@
   "scripts": {
     "start": "node app.js",
     "dev": "nodemon app.js",
-    "seed": "node scripts/seedAdmin.js"
+    "seed": "node scripts/seedAdmin.js",
+    "seed:partners": "node scripts/seedPartnerCustomers.js"
   },
   "dependencies": {
     "bcryptjs": "^2.4.3",

@@ -15,6 +15,7 @@
   .partner-stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:1rem}.partner-stat{position:relative;display:flex;flex-direction:column;gap:.42rem;min-height:118px;padding:1rem 1rem 1.1rem;overflow:hidden;border:0;border-radius:var(--pc-radius);color:#fff;box-shadow:0 16px 30px rgba(15,23,42,.13);transition:transform .16s ease,box-shadow .16s ease,filter .16s ease}.partner-stat:hover{transform:translateY(-4px);filter:saturate(1.04);box-shadow:0 22px 38px rgba(15,23,42,.18)}.partner-stat::after{position:absolute;right:-24px;bottom:-36px;width:150px;height:84px;background:linear-gradient(135deg,rgba(255,255,255,.18),rgba(255,255,255,.04));content:'';transform:rotate(-18deg)}.partner-stat > *{position:relative;z-index:1}.partner-stat:nth-child(1){background:linear-gradient(135deg,#0f766e,#22c55e)}.partner-stat:nth-child(2){background:linear-gradient(135deg,#4f46e5,#8b5cf6)}.partner-stat:nth-child(3){background:linear-gradient(135deg,#0369a1,#06b6d4)}.partner-stat:nth-child(4){background:linear-gradient(135deg,#c2410c,#f59e0b)}.partner-stat-icon{display:inline-flex;align-items:center;justify-content:center;width:34px;height:34px;border-radius:8px;background:rgba(255,255,255,.16);font-size:.9rem}.partner-stat-label{font-size:.75rem;font-weight:800;letter-spacing:0;text-transform:uppercase;opacity:.82}.partner-stat strong{display:block;color:#fff;font-family:'DM Mono',monospace;font-size:1.45rem;line-height:1.15}.partner-stat small{margin-top:auto;font-size:.74rem;line-height:1.35;opacity:.82}
   .partner-panel{overflow:hidden;border:1px solid var(--pc-border);border-radius:var(--pc-radius);background:linear-gradient(180deg,rgba(255,255,255,.98),rgba(240,249,255,.78));box-shadow:var(--pc-shadow);transition:border-color .16s ease,box-shadow .16s ease}.partner-panel:hover{border-color:rgba(6,182,212,.28);box-shadow:0 20px 36px rgba(15,23,42,.12)}.partner-filter-panel{background:linear-gradient(135deg,rgba(255,255,255,.98),rgba(255,247,237,.82))}.partner-table-panel{padding:0}.partner-panel-head{display:flex;align-items:center;justify-content:space-between;gap:1rem;padding:1.05rem 1.2rem;border-bottom:1px solid rgba(148,163,184,.16)}.partner-panel-title{display:flex;align-items:center;gap:.52rem;margin:0 0 .85rem;color:var(--pc-text);font-size:.95rem;font-weight:700}.partner-panel-head .partner-panel-title{margin:0}.partner-panel-title i{display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;border-radius:8px;background:linear-gradient(135deg,#0f766e,#22c55e);color:#fff;font-size:.8rem}.partner-filter-panel .form-control,.partner-filter-panel .form-select,.partner-editor-panel .form-control,.partner-editor-panel .form-select{border-color:rgba(148,163,184,.28);background:#fff}.partner-filter-panel .form-control:focus,.partner-filter-panel .form-select:focus,.partner-editor-panel .form-control:focus,.partner-editor-panel .form-select:focus{border-color:#06b6d4;box-shadow:0 0 0 .2rem rgba(6,182,212,.16)}
   .partner-table-panel .table-responsive{border:0;border-radius:0;box-shadow:none}.partner-table{margin:0;border-collapse:separate;border-spacing:0}.partner-table thead th{background:linear-gradient(135deg,#e0f2fe,#ecfdf3)!important;color:#0f172a;font-size:.76rem;font-weight:800;letter-spacing:0;text-transform:uppercase}.partner-table th,.partner-table td{padding:.78rem .8rem;vertical-align:middle;border-color:rgba(148,163,184,.13)}.partner-table tbody tr{transition:background .14s ease,box-shadow .14s ease}.partner-table tbody tr:hover{box-shadow:inset 4px 0 0 #06b6d4}.partner-table tbody tr:hover>*{background:#f0f9ff}.status-pill{display:inline-flex;align-items:center;padding:.32rem .58rem;border-radius:999px;color:#fff;font-size:.72rem;font-weight:800}.status-Active{background:linear-gradient(135deg,#16a34a,#22c55e)}.status-Suspended{background:linear-gradient(135deg,#f59e0b,#facc15)}.status-Inactive{background:#e2e8f0;color:#475569}.partner-actions{display:flex;gap:.35rem;flex-wrap:wrap}.partner-actions .btn{min-height:31px;padding:.36rem .52rem;border-radius:7px;font-size:.7rem;font-weight:800}.partner-actions .btn-outline-primary{border-color:#bae6fd;background:#e0f2fe;color:#075985}.partner-actions .btn-outline-warning{border-color:#fde68a;background:#fef3c7;color:#92400e}.partner-actions .btn-outline-success{border-color:#bbf7d0;background:#dcfce7;color:#166534}.partner-actions .btn-outline-secondary{border-color:#cbd5e1;background:#f1f5f9;color:#475569}
+  .plan-pill{display:inline-flex;align-items:center;padding:.3rem .55rem;border-radius:999px;background:#ede9fe;color:#5b21b6;font-size:.72rem;font-weight:800}.plan-fee{margin-top:.2rem;color:#64748b;font-family:'DM Mono',monospace;font-size:.72rem}.plan-help{min-height:54px;padding:.7rem .8rem;border:1px solid #dbeafe;border-radius:8px;background:#eff6ff;color:#334155;font-size:.78rem}
   .partner-editor-panel{padding:1.25rem}.partner-editor-panel .btn-success{border:0;background:linear-gradient(135deg,var(--pc-green),var(--pc-lime));box-shadow:0 10px 20px rgba(11,143,62,.2)}.partner-editor-panel .btn-success:hover{background:linear-gradient(135deg,#087a34,#65a30d)}.required::after{content:' *';color:#dc2626}.partner-page .alert{border:0;border-radius:8px;box-shadow:0 12px 24px rgba(15,23,42,.08)}
   @media(max-width:900px){.partner-stats{grid-template-columns:repeat(2,minmax(0,1fr))}}@media(max-width:600px){.partner-page{padding:.85rem}.partner-hero{padding:1rem;align-items:flex-start!important}.partner-new-customer{width:100%}.partner-stats{grid-template-columns:1fr}.partner-panel-head{padding:1rem}.partner-editor-panel{padding:1rem}}
 </style>
@@ -28,7 +29,7 @@
   <div id="alertBox"></div>
   <section class="partner-stats mb-3">
     <div class="partner-stat"><i class="fa-solid fa-building partner-stat-icon" aria-hidden="true"></i><span class="partner-stat-label">Total Customers</span><strong id="totalCount">0</strong><small>All subscription records</small></div>
-    <div class="partner-stat"><i class="fa-solid fa-circle-check partner-stat-icon" aria-hidden="true"></i><span class="partner-stat-label">Active</span><strong id="activeCount">0</strong><small>Available for billing</small></div>
+    <div class="partner-stat"><i class="fa-solid fa-circle-check partner-stat-icon" aria-hidden="true"></i><span class="partner-stat-label">Active</span><strong id="activeCount">0</strong><small>Available for monthly billing</small></div>
     <div class="partner-stat"><i class="fa-solid fa-pause partner-stat-icon" aria-hidden="true"></i><span class="partner-stat-label">Suspended</span><strong id="suspendedCount">0</strong><small>Billing temporarily paused</small></div>
     <div class="partner-stat"><i class="fa-solid fa-circle-minus partner-stat-icon" aria-hidden="true"></i><span class="partner-stat-label">Inactive</span><strong id="inactiveCount">0</strong><small>No longer active</small></div>
   </section>
@@ -44,7 +45,7 @@
   <section class="partner-panel partner-table-panel mb-3">
     <div class="partner-panel-head"><h2 class="partner-panel-title"><i class="fa-solid fa-list-check" aria-hidden="true"></i> Customer Register</h2></div>
     <div class="table-responsive">
-      <table class="table table-hover partner-table"><thead><tr><th>Customer</th><th>Business</th><th>Contact</th><th>Billing</th><th>Status</th><th>Actions</th></tr></thead><tbody id="customerRows"><tr><td colspan="6" class="text-center text-muted py-4">Loading…</td></tr></tbody></table>
+      <table class="table table-hover partner-table"><thead><tr><th>Customer</th><th>Business</th><th>Contact</th><th>Plan</th><th>Billing</th><th>Status</th><th>Actions</th></tr></thead><tbody id="customerRows"><tr><td colspan="7" class="text-center text-muted py-4">Loading…</td></tr></tbody></table>
     </div>
   </section>
 
@@ -61,8 +62,10 @@
         <div class="col-md-4"><label class="form-label" for="region">Region</label><select class="form-select" id="region"><option value="">Select region</option><option>Central Singapore</option><option>East Singapore</option><option>North Singapore</option><option>North-East Singapore</option><option>West Singapore</option></select></div>
         <div class="col-md-4"><label class="form-label required" for="subscriptionStartDate">Subscription start</label><input class="form-control" id="subscriptionStartDate" type="date" required></div>
         <div class="col-md-8"><label class="form-label" for="billingAddress">Billing address</label><input class="form-control" id="billingAddress" maxlength="500"></div>
-        <div class="col-md-2"><label class="form-label" for="paymentTermsDays">Payment terms</label><div class="input-group"><input class="form-control" id="paymentTermsDays" type="number" min="0" max="365" value="14"><span class="input-group-text">days</span></div></div>
-        <div class="col-md-2"><label class="form-label" for="customerStatus">Status</label><select class="form-select" id="customerStatus"><option>Active</option><option>Suspended</option><option>Inactive</option></select></div>
+        <div class="col-md-4"><label class="form-label required" for="subscriptionPlanId">Subscription plan</label><select class="form-select" id="subscriptionPlanId" required><option value="">Select a plan</option><% plans.forEach(plan => { %><option value="<%= plan.id %>" data-fee="<%= Number(plan.monthlyFee).toFixed(2) %>" data-features="<%= (plan.features || []).join(' • ') %>"><%= plan.name %> — SGD <%= Number(plan.monthlyFee).toFixed(2) %>/month</option><% }) %></select></div>
+        <div class="col-md-3"><label class="form-label" for="paymentTermsDays">Payment terms</label><div class="input-group"><input class="form-control" id="paymentTermsDays" type="number" min="0" max="365" value="14"><span class="input-group-text">days</span></div></div>
+        <div class="col-md-3"><label class="form-label" for="customerStatus">Status</label><select class="form-select" id="customerStatus"><option>Active</option><option>Suspended</option><option>Inactive</option></select></div>
+        <div class="col-12"><div class="plan-help" id="planHelp">Choose Basic, Standard, or Premium to view its monthly fee and included features.</div></div>
         <div class="col-12"><label class="form-label" for="notes">Internal notes</label><textarea class="form-control" id="notes" rows="2"></textarea></div>
       </div>
       <div class="d-flex justify-content-end gap-2 mt-3"><button type="button" class="btn btn-outline-secondary" id="cancelEditor">Cancel</button><button class="btn btn-success" id="saveCustomer">Save Customer</button></div>
@@ -96,11 +99,12 @@ function render() {
   const status = document.getElementById('statusFilter').value;
   const visible = customers.filter(c => (!status || c.status === status) && (!query || `${c.customerCode} ${c.businessName} ${c.contactPerson} ${c.billingEmail}`.toLowerCase().includes(query)));
   const rows = document.getElementById('customerRows');
-  if (!visible.length) { rows.innerHTML = '<tr><td colspan="6" class="text-center text-muted py-4">No partner customers found.</td></tr>'; return; }
+  if (!visible.length) { rows.innerHTML = '<tr><td colspan="7" class="text-center text-muted py-4">No partner customers found.</td></tr>'; return; }
   rows.innerHTML = visible.map(c => `<tr>
     <td><strong>${escapeHtml(c.customerCode)}</strong><div class="small text-muted">Started ${escapeHtml(c.subscriptionStartDate)}</div></td>
     <td><strong>${escapeHtml(c.businessName)}</strong><div class="small text-muted">${escapeHtml(c.businessType)}${c.region ? ' · ' + escapeHtml(c.region) : ''}</div></td>
     <td>${escapeHtml(c.contactPerson)}<div class="small text-muted">${escapeHtml(c.phone || 'No phone')}</div></td>
+    <td><span class="plan-pill">${escapeHtml(c.subscriptionPlan?.name || 'Unassigned')}</span><div class="plan-fee">${c.subscriptionPlan ? `${escapeHtml(c.subscriptionPlan.currency)} ${Number(c.subscriptionPlan.monthlyFee).toFixed(2)}/month` : ''}</div></td>
     <td>${escapeHtml(c.billingEmail)}<div class="small text-muted">Monthly · ${Number(c.paymentTermsDays)} days</div></td>
     <td><span class="status-pill status-${escapeHtml(c.status)}">${escapeHtml(c.status)}</span></td>
     <td><div class="partner-actions"><button class="btn btn-sm btn-outline-primary" data-edit="${c.id}">Edit</button>${c.status === 'Active' ? `<button class="btn btn-sm btn-outline-warning" data-status-id="${c.id}" data-status="Suspended">Suspend</button>` : `<button class="btn btn-sm btn-outline-success" data-status-id="${c.id}" data-status="Active">Activate</button>`}<button class="btn btn-sm btn-outline-secondary" data-status-id="${c.id}" data-status="Inactive">Deactivate</button></div></td>
@@ -114,6 +118,7 @@ function openEditor(customer=null) {
   document.getElementById('customerForm').reset();
   document.getElementById('paymentTermsDays').value = 14;
   document.getElementById('customerStatus').value = 'Active';
+  document.getElementById('subscriptionPlanId').value = customer?.subscriptionPlanId || '';
   document.getElementById('customerId').value = customer?.id || '';
   document.getElementById('editorTitle').textContent = customer ? `Edit ${customer.customerCode}` : 'Add Customer';
   ['businessName','businessType','contactPerson','billingEmail','phone','billingAddress','region','subscriptionStartDate','status','notes'].forEach(field => {
@@ -121,6 +126,7 @@ function openEditor(customer=null) {
     if (customer && element) element.value = customer[field] || '';
   });
   if (customer) document.getElementById('paymentTermsDays').value = customer.paymentTermsDays;
+  updatePlanHelp();
   document.getElementById('editorPanel').classList.remove('d-none');
   document.getElementById('editorPanel').scrollIntoView({behavior:'smooth'});
 }
@@ -128,6 +134,14 @@ function closeEditor() { document.getElementById('editorPanel').classList.add('d
 document.getElementById('newCustomer').addEventListener('click', () => openEditor());
 document.getElementById('closeEditor').addEventListener('click', closeEditor);
 document.getElementById('cancelEditor').addEventListener('click', closeEditor);
+function updatePlanHelp() {
+  const select = document.getElementById('subscriptionPlanId');
+  const option = select.options[select.selectedIndex];
+  document.getElementById('planHelp').textContent = option && option.value
+    ? `SGD ${option.dataset.fee} per month • ${option.dataset.features}`
+    : 'Choose Basic, Standard, or Premium to view its monthly fee and included features.';
+}
+document.getElementById('subscriptionPlanId').addEventListener('change', updatePlanHelp);
 ['search','statusFilter'].forEach(id => document.getElementById(id).addEventListener('input', render));
 document.getElementById('customerRows').addEventListener('click', async event => {
   const edit = event.target.closest('[data-edit]');
@@ -144,6 +158,7 @@ document.getElementById('customerForm').addEventListener('submit', async event =
   const payload = {};
   ['businessName','businessType','contactPerson','billingEmail','phone','billingAddress','region','subscriptionStartDate','notes'].forEach(field => payload[field] = document.getElementById(field).value);
   payload.paymentTermsDays = Number(document.getElementById('paymentTermsDays').value);
+  payload.subscriptionPlanId = Number(document.getElementById('subscriptionPlanId').value);
   payload.status = document.getElementById('customerStatus').value;
   const button = document.getElementById('saveCustomer'); button.disabled = true;
   try {

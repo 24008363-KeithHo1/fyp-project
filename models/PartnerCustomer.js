@@ -1,5 +1,6 @@
 const { DataTypes } = require('sequelize');
 const { sequelize } = require('../config/db');
+const SubscriptionPlan = require('./SubscriptionPlan');
 
 // Master customer data for the separate Partner Subscription Billing module.
 // This model must not be associated with the existing Invoice or Payment models.
@@ -34,6 +35,11 @@ const PartnerCustomer = sequelize.define('PartnerCustomer', {
   phone: { type: DataTypes.STRING(30) },
   billingAddress: { type: DataTypes.STRING(500) },
   region: { type: DataTypes.STRING(100) },
+  subscriptionPlanId: {
+    type: DataTypes.INTEGER,
+    allowNull: false,
+    references: { model: SubscriptionPlan, key: 'id' }
+  },
   currency: {
     type: DataTypes.STRING(10),
     allowNull: false,
@@ -69,6 +75,15 @@ const PartnerCustomer = sequelize.define('PartnerCustomer', {
     { fields: ['businessType'] },
     { fields: ['billingEmail'] }
   ]
+});
+
+PartnerCustomer.belongsTo(SubscriptionPlan, {
+  as: 'subscriptionPlan',
+  foreignKey: 'subscriptionPlanId'
+});
+SubscriptionPlan.hasMany(PartnerCustomer, {
+  as: 'partnerCustomers',
+  foreignKey: 'subscriptionPlanId'
 });
 
 module.exports = PartnerCustomer;

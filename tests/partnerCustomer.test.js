@@ -8,6 +8,7 @@ async function run() {
     businessType: 'Hair Salon',
     contactPerson: 'Contact Person 1',
     billingEmail: 'customer1@example.com',
+    subscriptionPlanId: 1,
     subscriptionStartDate: '2026-07-01'
   });
 
@@ -23,6 +24,7 @@ async function run() {
     businessType: 'Nail Salon',
     contactPerson: 'Contact Person 2',
     billingEmail: 'not-an-email',
+    subscriptionPlanId: 1,
     subscriptionStartDate: '2026-07-01'
   });
 
