@@ -144,6 +144,77 @@ exports.get = async (req, res) => {
   res.json(customer);
 };
 
+exports.billingList = async (req, res) => {
+  try {
+    const customers = await PartnerCustomer.findAll({
+      attributes: [
+        'id', 'customerCode', 'businessName', 'businessType', 'billingEmail',
+        'subscriptionPlanId', 'currency', 'billingCycle', 'paymentTermsDays',
+        'subscriptionStartDate', 'autoBillingEnabled', 'nextBillingDate', 'status'
+      ],
+      include: [{
+        model: SubscriptionPlan,
+        as: 'subscriptionPlan',
+        attributes: ['id', 'code', 'name', 'monthlyFee', 'currency', 'features']
+      }],
+      order: [['businessName', 'ASC']]
+    });
+    res.json(customers);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+exports.updateBilling = async (req, res) => {
+  try {
+    const customer = await PartnerCustomer.findByPk(req.params.id);
+    if (!customer) return res.status(404).json({ error: 'Partner customer not found' });
+
+    const allowedFields = [
+      'subscriptionPlanId',
+      'paymentTermsDays',
+      'autoBillingEnabled',
+      'nextBillingDate'
+    ];
+    const suppliedFields = Object.keys(req.body || {});
+    const forbiddenFields = suppliedFields.filter((field) => !allowedFields.includes(field));
+    if (forbiddenFields.length) {
+      return res.status(403).json({
+        error: 'Finance can edit billing settings only.',
+        forbiddenFields
+      });
+    }
+
+    const errors = validatePayload(req.body || {}, true);
+    if (errors.length) return res.status(400).json({ error: 'Validation failed', details: errors });
+    if (req.body.subscriptionPlanId !== undefined && !await activePlan(req.body.subscriptionPlanId)) {
+      return res.status(400).json({ error: 'The selected subscription plan is unavailable.' });
+    }
+
+    const resultingAutoBilling = req.body.autoBillingEnabled === undefined
+      ? customer.autoBillingEnabled
+      : req.body.autoBillingEnabled === true || req.body.autoBillingEnabled === 'true';
+    const resultingNextBillingDate = req.body.nextBillingDate === undefined
+      ? customer.nextBillingDate
+      : clean(req.body.nextBillingDate);
+    if (resultingAutoBilling && !resultingNextBillingDate) {
+      return res.status(400).json({ error: 'Next billing date is required when automatic billing is enabled.' });
+    }
+
+    const changes = writableFields(req.body || {});
+    await customer.update(changes);
+    await logAction(req, 'update_billing', 'PartnerCustomer', customer.id, {
+      customerCode: customer.customerCode,
+      changedFields: Object.keys(changes)
+    });
+    res.json(await PartnerCustomer.findByPk(customer.id, {
+      include: [{ model: SubscriptionPlan, as: 'subscriptionPlan' }]
+    }));
+  } catch (error) {
+    res.status(400).json({ error: error.message });
+  }
+};
+
 exports.create = async (req, res) => {
   try {
     const errors = validatePayload(req.body || {});

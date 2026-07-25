@@ -64,6 +64,7 @@ app.get('/profile', require('./middlewares/auth'), requireRole(['Admin','Staff']
 app.use('/api/auth', require('./routes/auth'));
 app.use('/api/invoices', require('./routes/invoice'));
 app.use('/api/partner-customers', require('./routes/partnerCustomers'));
+app.use('/api/subscription-invoices', require('./routes/subscriptionInvoices'));
 app.use('/api/payroll', require('./routes/payroll'));
 app.use('/api/reports', require('./routes/report'));
 app.use('/api/requests', require('./routes/requestsApi'));

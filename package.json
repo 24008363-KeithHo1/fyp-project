@@ -8,7 +8,8 @@
     "dev": "nodemon app.js",
     "seed": "node scripts/seedAdmin.js",
     "seed:partners": "node scripts/seedPartnerCustomers.js",
-    "db:subscription-invoices": "node scripts/syncSubscriptionInvoiceSchema.js"
+    "db:subscription-invoices": "node scripts/syncSubscriptionInvoiceSchema.js",
+    "preview:subscription-invoices": "node scripts/previewSubscriptionInvoiceGeneration.js"
   },
   "dependencies": {
     "bcryptjs": "^2.4.3",

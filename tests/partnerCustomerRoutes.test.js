@@ -16,3 +16,22 @@ test('partner customer API is restricted to Admin', () => {
   assert.match(routes, /requireRole\(\['Admin'\]\)/);
   assert.match(routes, /router\.patch\('\/:id\/status'/);
 });
+
+test('subscription draft generation API is separate and restricted to Finance', () => {
+  const routes = fs.readFileSync(path.join(root, 'routes', 'subscriptionInvoices.js'), 'utf8');
+  assert.match(routes, /requireRole\(\['Finance'\]\)/);
+  assert.doesNotMatch(routes, /requireRole\(\['Admin'\]\)/);
+  assert.match(routes, /generation-preview/);
+  assert.match(routes, /generate-drafts/);
+  assert.doesNotMatch(routes, /invoiceController/);
+});
+
+test('Finance partner access is limited to billing routes', () => {
+  const routes = fs.readFileSync(path.join(root, 'routes', 'partnerCustomers.js'), 'utf8');
+  const controller = fs.readFileSync(path.join(root, 'controllers', 'partnerCustomerController.js'), 'utf8');
+  assert.match(routes, /router\.get\('\/billing', requireRole\(\['Finance'\]\)/);
+  assert.match(routes, /router\.patch\('\/:id\/billing', requireRole\(\['Finance'\]\)/);
+  assert.match(routes, /requireRole\(\['Admin', 'Finance'\]\), controller\.plans/);
+  assert.match(controller, /Finance can edit billing settings only/);
+  assert.match(controller, /const allowedFields = \[[\s\S]*?'subscriptionPlanId'[\s\S]*?'paymentTermsDays'[\s\S]*?'autoBillingEnabled'[\s\S]*?'nextBillingDate'/);
+});
