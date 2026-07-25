@@ -170,6 +170,22 @@ async function ensurePartnerCustomerSubscriptionSchema() {
   if (indexes.length === 0) {
     await sequelize.query("CREATE INDEX `partner_customers_subscription_plan_id` ON `PartnerCustomers` (`subscriptionPlanId`)");
   }
+
+  const automationColumns = [
+    ['autoBillingEnabled', 'BOOLEAN NOT NULL DEFAULT TRUE AFTER `subscriptionStartDate`'],
+    ['nextBillingDate', 'DATE NULL AFTER `autoBillingEnabled`']
+  ];
+  for (const [name, definition] of automationColumns) {
+    const [existingColumns] = await sequelize.query(`SHOW COLUMNS FROM \`PartnerCustomers\` LIKE '${name}'`);
+    if (existingColumns.length === 0) {
+      await sequelize.query(`ALTER TABLE \`PartnerCustomers\` ADD COLUMN \`${name}\` ${definition}`);
+    }
+  }
+
+  const [billingIndex] = await sequelize.query("SHOW INDEX FROM `PartnerCustomers` WHERE `Key_name` = 'idx_partner_customers_next_billing'");
+  if (billingIndex.length === 0) {
+    await sequelize.query("CREATE INDEX `idx_partner_customers_next_billing` ON `PartnerCustomers` (`autoBillingEnabled`, `nextBillingDate`)");
+  }
 }
 
 async function start() {

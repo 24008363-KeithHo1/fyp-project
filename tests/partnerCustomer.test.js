@@ -16,6 +16,7 @@ async function run() {
   assert.strictEqual(customer.currency, 'SGD');
   assert.strictEqual(customer.billingCycle, 'Monthly');
   assert.strictEqual(customer.paymentTermsDays, 14);
+  assert.strictEqual(customer.autoBillingEnabled, true);
   assert.strictEqual(customer.status, 'Active');
 
   const invalidCustomer = PartnerCustomer.build({

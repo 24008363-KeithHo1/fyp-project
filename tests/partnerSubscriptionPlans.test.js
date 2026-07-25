@@ -16,3 +16,12 @@ test('demo records use synthetic customer labels and approved plans', () => {
     assert.ok(['BASIC', 'STANDARD', 'PREMIUM'].includes(customer[4]));
   });
 });
+
+test('demo billing configuration schedules monthly automation', () => {
+  const source = require('fs').readFileSync(
+    require('path').join(__dirname, '..', 'services', 'partnerCustomerDemoData.js'),
+    'utf8'
+  );
+  assert.match(source, /autoBillingEnabled:\s*true/);
+  assert.match(source, /nextBillingDate:\s*'2026-07-31'/);
+});

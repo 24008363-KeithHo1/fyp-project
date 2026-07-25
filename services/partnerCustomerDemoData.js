@@ -72,6 +72,8 @@ async function seedPartnerCustomerDemoData() {
       billingCycle: 'Monthly',
       paymentTermsDays: 14,
       subscriptionStartDate: startDate,
+      autoBillingEnabled: true,
+      nextBillingDate: '2026-07-31',
       notes: 'Synthetic demonstration record; not a real Vaniday partner.'
     };
 

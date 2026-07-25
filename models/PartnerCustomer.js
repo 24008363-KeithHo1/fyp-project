@@ -61,6 +61,15 @@ const PartnerCustomer = sequelize.define('PartnerCustomer', {
     type: DataTypes.DATEONLY,
     allowNull: false
   },
+  autoBillingEnabled: {
+    type: DataTypes.BOOLEAN,
+    allowNull: false,
+    defaultValue: true
+  },
+  nextBillingDate: {
+    type: DataTypes.DATEONLY,
+    allowNull: true
+  },
   status: {
     type: DataTypes.ENUM('Active', 'Suspended', 'Inactive'),
     allowNull: false,

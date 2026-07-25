@@ -41,6 +41,19 @@ function validatePayload(body, partial = false) {
   if (body.subscriptionStartDate !== undefined && Number.isNaN(new Date(body.subscriptionStartDate).getTime())) {
     errors.push({ field: 'subscriptionStartDate', message: 'Enter a valid subscription start date.' });
   }
+  if (body.nextBillingDate !== undefined && body.nextBillingDate !== null && body.nextBillingDate !== '' &&
+      Number.isNaN(new Date(body.nextBillingDate).getTime())) {
+    errors.push({ field: 'nextBillingDate', message: 'Enter a valid next billing date.' });
+  }
+  const autoBillingEnabled = body.autoBillingEnabled === undefined
+    ? !partial
+    : body.autoBillingEnabled === true || body.autoBillingEnabled === 'true';
+  if (autoBillingEnabled && !clean(body.nextBillingDate) && !partial) {
+    errors.push({ field: 'nextBillingDate', message: 'Next billing date is required when automatic billing is enabled.' });
+  }
+  if (body.autoBillingEnabled === true && body.nextBillingDate === '') {
+    errors.push({ field: 'nextBillingDate', message: 'Next billing date is required when automatic billing is enabled.' });
+  }
   if (body.paymentTermsDays !== undefined) {
     const days = Number(body.paymentTermsDays);
     if (!Number.isInteger(days) || days < 0 || days > 365) {
@@ -63,10 +76,14 @@ function writableFields(body) {
   const fields = [
     'businessName', 'businessType', 'contactPerson', 'billingEmail', 'phone',
     'billingAddress', 'region', 'paymentTermsDays', 'subscriptionStartDate',
-    'subscriptionPlanId', 'status', 'notes'
+    'subscriptionPlanId', 'autoBillingEnabled', 'nextBillingDate', 'status', 'notes'
   ];
   return fields.reduce((result, field) => {
-    if (body[field] !== undefined) result[field] = clean(body[field]);
+    if (body[field] !== undefined) {
+      result[field] = field === 'autoBillingEnabled'
+        ? body[field] === true || body[field] === 'true'
+        : clean(body[field]);
+    }
     return result;
   }, {});
 }
@@ -157,6 +174,15 @@ exports.update = async (req, res) => {
     if (errors.length) return res.status(400).json({ error: 'Validation failed', details: errors });
     if (req.body.subscriptionPlanId !== undefined && !await activePlan(req.body.subscriptionPlanId)) {
       return res.status(400).json({ error: 'The selected subscription plan is unavailable.' });
+    }
+    const resultingAutoBilling = req.body.autoBillingEnabled === undefined
+      ? customer.autoBillingEnabled
+      : req.body.autoBillingEnabled === true || req.body.autoBillingEnabled === 'true';
+    const resultingNextBillingDate = req.body.nextBillingDate === undefined
+      ? customer.nextBillingDate
+      : clean(req.body.nextBillingDate);
+    if (resultingAutoBilling && !resultingNextBillingDate) {
+      return res.status(400).json({ error: 'Next billing date is required when automatic billing is enabled.' });
     }
     const changes = writableFields(req.body || {});
     // Customer code, currency and billing cycle are deliberately immutable here.

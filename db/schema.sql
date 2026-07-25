@@ -82,6 +82,8 @@ CREATE TABLE IF NOT EXISTS PartnerCustomers (
   billingCycle ENUM('Monthly') NOT NULL DEFAULT 'Monthly',
   paymentTermsDays INT UNSIGNED NOT NULL DEFAULT 14,
   subscriptionStartDate DATE NOT NULL,
+  autoBillingEnabled BOOLEAN NOT NULL DEFAULT TRUE,
+  nextBillingDate DATE,
   status ENUM('Active','Suspended','Inactive') NOT NULL DEFAULT 'Active',
   notes TEXT,
   data JSON,
@@ -90,6 +92,7 @@ CREATE TABLE IF NOT EXISTS PartnerCustomers (
   INDEX idx_partner_customers_status (status),
   INDEX idx_partner_customers_business_type (businessType),
   INDEX idx_partner_customers_billing_email (billingEmail),
+  INDEX idx_partner_customers_next_billing (autoBillingEnabled, nextBillingDate),
   INDEX partner_customers_subscription_plan_id (subscriptionPlanId),
   CONSTRAINT fk_partner_customer_subscription_plan FOREIGN KEY (subscriptionPlanId) REFERENCES SubscriptionPlans(id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
