@@ -45,8 +45,13 @@ test('subscription invoice review page is explicitly Finance-only', () => {
   );
 });
 
-test('subscription invoice review UI is read-only at this stage', () => {
+test('subscription invoice review UI exposes draft edit and rejection but not approval or sending', () => {
   const view = fs.readFileSync(path.join(root, 'views', 'finance', 'subscription-invoices.ejs'), 'utf8');
-  assert.match(view, /Review-only stage/);
-  assert.doesNotMatch(view, /data-approve-id|data-reject-id|data-send-id/);
+  const routes = fs.readFileSync(path.join(root, 'routes', 'subscriptionInvoices.js'), 'utf8');
+  assert.match(view, /Draft review stage/);
+  assert.match(view, /saveDraftChanges/);
+  assert.match(view, /confirmRejectDraft/);
+  assert.match(routes, /router\.patch\('\/:id\/draft'/);
+  assert.match(routes, /router\.post\('\/:id\/reject'/);
+  assert.doesNotMatch(view, /data-approve-id|data-send-id|approveDraft|sendInvoice/);
 });

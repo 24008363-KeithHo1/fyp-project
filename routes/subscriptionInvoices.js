@@ -11,6 +11,8 @@ router.get('/generation-preview', controller.previewGeneration);
 router.post('/generate-drafts', controller.generateDrafts);
 router.get('/automation-runs', controller.automationHistory);
 router.get('/', controller.list);
+router.patch('/:id/draft', controller.updateDraft);
+router.post('/:id/reject', controller.rejectDraft);
 router.get('/:id', controller.get);
 
 module.exports = router;

@@ -1,4 +1,5 @@
 const { Op } = require('sequelize');
+const { sequelize } = require('../config/db');
 const {
   previewSubscriptionInvoiceGeneration,
   parseBillingPeriod
@@ -9,7 +10,10 @@ const {
 const SubscriptionAutomationRun = require('../models/SubscriptionAutomationRun');
 const SubscriptionInvoice = require('../models/SubscriptionInvoice');
 const SubscriptionInvoiceItem = require('../models/SubscriptionInvoiceItem');
-const { SUBSCRIPTION_INVOICE_STATUSES } = require('../services/subscriptionInvoiceLifecycle');
+const {
+  SUBSCRIPTION_INVOICE_STATUSES,
+  assertSubscriptionInvoiceTransition
+} = require('../services/subscriptionInvoiceLifecycle');
 const { logAction } = require('../utils/audit');
 
 exports.reviewPage = (req, res) => res.render('finance/subscription-invoices', {
@@ -64,6 +68,141 @@ exports.get = async (req, res) => {
     res.json(invoice);
   } catch (error) {
     res.status(500).json({ error: error.message });
+  }
+};
+
+exports.updateDraft = async (req, res) => {
+  const transaction = await sequelize.transaction();
+  try {
+    const invoice = await SubscriptionInvoice.findByPk(req.params.id, {
+      transaction,
+      lock: transaction.LOCK.UPDATE
+    });
+    if (!invoice) {
+      await transaction.rollback();
+      return res.status(404).json({ error: 'Subscription invoice not found' });
+    }
+    if (invoice.status !== 'Draft') {
+      await transaction.rollback();
+      return res.status(409).json({ error: 'Only Draft subscription invoices can be edited.' });
+    }
+
+    const allowedFields = ['billingEmailSnapshot', 'description', 'dueDate', 'subtotal', 'taxAmount'];
+    const suppliedFields = Object.keys(req.body || {});
+    const forbiddenFields = suppliedFields.filter((field) => !allowedFields.includes(field));
+    if (forbiddenFields.length) {
+      await transaction.rollback();
+      return res.status(403).json({
+        error: 'Finance can edit approved draft fields only.',
+        forbiddenFields
+      });
+    }
+
+    const changes = {};
+    if (req.body.billingEmailSnapshot !== undefined) {
+      const email = String(req.body.billingEmailSnapshot).trim();
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+        await transaction.rollback();
+        return res.status(400).json({ error: 'Enter a valid invoice billing email.' });
+      }
+      changes.billingEmailSnapshot = email;
+    }
+    if (req.body.description !== undefined) {
+      const description = String(req.body.description).trim();
+      if (!description) {
+        await transaction.rollback();
+        return res.status(400).json({ error: 'Invoice description is required.' });
+      }
+      changes.description = description;
+    }
+    if (req.body.dueDate !== undefined) {
+      const dueDate = String(req.body.dueDate).trim();
+      if (Number.isNaN(new Date(dueDate).getTime()) || new Date(dueDate) < new Date(invoice.invoiceDate)) {
+        await transaction.rollback();
+        return res.status(400).json({ error: 'Due date must be valid and cannot be before the invoice date.' });
+      }
+      changes.dueDate = dueDate;
+    }
+
+    const subtotal = req.body.subtotal === undefined ? Number(invoice.subtotal) : Number(req.body.subtotal);
+    const taxAmount = req.body.taxAmount === undefined ? Number(invoice.taxAmount) : Number(req.body.taxAmount);
+    if (!Number.isFinite(subtotal) || subtotal < 0 || !Number.isFinite(taxAmount) || taxAmount < 0) {
+      await transaction.rollback();
+      return res.status(400).json({ error: 'Subtotal and tax must be valid non-negative amounts.' });
+    }
+    changes.subtotal = Math.round((subtotal + Number.EPSILON) * 100) / 100;
+    changes.taxAmount = Math.round((taxAmount + Number.EPSILON) * 100) / 100;
+    changes.totalAmount = Math.round((changes.subtotal + changes.taxAmount + Number.EPSILON) * 100) / 100;
+
+    await invoice.update(changes, { transaction });
+    let item = await SubscriptionInvoiceItem.findOne({
+      where: { subscriptionInvoiceId: invoice.id, lineNumber: 1 },
+      transaction,
+      lock: transaction.LOCK.UPDATE
+    });
+    const itemValues = {
+      description: changes.description || invoice.description,
+      quantity: 1,
+      unitPrice: changes.subtotal,
+      lineAmount: changes.subtotal
+    };
+    if (item) {
+      await item.update(itemValues, { transaction });
+    } else {
+      item = await SubscriptionInvoiceItem.create({
+        subscriptionInvoiceId: invoice.id,
+        lineNumber: 1,
+        ...itemValues
+      }, { transaction });
+    }
+    await transaction.commit();
+
+    await logAction(req, 'edit_draft', 'SubscriptionInvoice', invoice.id, {
+      number: invoice.number,
+      changedFields: Object.keys(changes)
+    });
+    res.json(await SubscriptionInvoice.findByPk(invoice.id, {
+      include: [{ model: SubscriptionInvoiceItem, as: 'items', separate: true, order: [['lineNumber', 'ASC']] }]
+    }));
+  } catch (error) {
+    if (!transaction.finished) await transaction.rollback();
+    res.status(400).json({ error: error.message });
+  }
+};
+
+exports.rejectDraft = async (req, res) => {
+  const transaction = await sequelize.transaction();
+  try {
+    const invoice = await SubscriptionInvoice.findByPk(req.params.id, {
+      transaction,
+      lock: transaction.LOCK.UPDATE
+    });
+    if (!invoice) {
+      await transaction.rollback();
+      return res.status(404).json({ error: 'Subscription invoice not found' });
+    }
+    const reason = String((req.body && req.body.reason) || '').trim();
+    if (reason.length < 3) {
+      await transaction.rollback();
+      return res.status(400).json({ error: 'A rejection reason of at least 3 characters is required.' });
+    }
+    assertSubscriptionInvoiceTransition(invoice.status, 'Rejected');
+    await invoice.update({
+      status: 'Rejected',
+      rejectedBy: req.user.id,
+      rejectedAt: new Date(),
+      rejectionReason: reason
+    }, { transaction });
+    await transaction.commit();
+    await logAction(req, 'reject', 'SubscriptionInvoice', invoice.id, {
+      number: invoice.number,
+      reason
+    });
+    res.json(invoice);
+  } catch (error) {
+    if (!transaction.finished) await transaction.rollback();
+    const status = error.code === 'INVALID_SUBSCRIPTION_INVOICE_TRANSITION' ? 409 : 400;
+    res.status(status).json({ error: error.message });
   }
 };
 
