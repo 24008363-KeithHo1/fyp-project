@@ -329,15 +329,42 @@ body:has(.audit-page){background:linear-gradient(135deg,#f7faf8 0%,#e8f7ee 48%,#
         <label for="action">Action</label>
         <select name="action" id="action">
           <option value="">All Actions</option>
-          <option value="register" <%= (filters?.action === 'register') ? 'selected' : '' %>>Register</option>
-          <option value="login_success" <%= (filters?.action === 'login_success') ? 'selected' : '' %>>Login Success</option>
-          <option value="login_failed" <%= (filters?.action === 'login_failed') ? 'selected' : '' %>>Login Failed</option>
-          <option value="mfa_enabled" <%= (filters?.action === 'mfa_enabled') ? 'selected' : '' %>>MFA Enabled</option>
-          <option value="password_reset" <%= (filters?.action === 'password_reset') ? 'selected' : '' %>>Password Reset</option>
-          <option value="create" <%= (filters?.action === 'create') ? 'selected' : '' %>>Create</option>
-          <option value="update" <%= (filters?.action === 'update') ? 'selected' : '' %>>Update</option>
-          <option value="delete" <%= (filters?.action === 'delete') ? 'selected' : '' %>>Delete</option>
-          <option value="payment_received" <%= (filters?.action === 'payment_received') ? 'selected' : '' %>>Payment Received</option>
+
+          <optgroup label="Authentication">
+            <option value="register" <%= (filters?.action === 'register') ? 'selected' : '' %>>Register</option>
+            <option value="login_success" <%= (filters?.action === 'login_success') ? 'selected' : '' %>>Login Success</option>
+            <option value="login_failed" <%= (filters?.action === 'login_failed') ? 'selected' : '' %>>Login Failed</option>
+            <option value="login_mfa_required" <%= (filters?.action === 'login_mfa_required') ? 'selected' : '' %>>Login (MFA Required)</option>
+            <option value="password_reset" <%= (filters?.action === 'password_reset') ? 'selected' : '' %>>Password Reset</option>
+          </optgroup>
+
+          <optgroup label="Two-Factor Authentication">
+            <option value="mfa_setup_initiated" <%= (filters?.action === 'mfa_setup_initiated') ? 'selected' : '' %>>MFA Setup Started</option>
+            <option value="mfa_enabled" <%= (filters?.action === 'mfa_enabled') ? 'selected' : '' %>>MFA Enabled</option>
+            <option value="mfa_disabled" <%= (filters?.action === 'mfa_disabled') ? 'selected' : '' %>>MFA Disabled</option>
+            <option value="mfa_disable_failed" <%= (filters?.action === 'mfa_disable_failed') ? 'selected' : '' %>>MFA Disable Failed</option>
+            <option value="mfa_verify_success" <%= (filters?.action === 'mfa_verify_success') ? 'selected' : '' %>>MFA Verify Success</option>
+            <option value="mfa_verify_failed" <%= (filters?.action === 'mfa_verify_failed') ? 'selected' : '' %>>MFA Verify Failed</option>
+            <option value="admin_reset_user_mfa" <%= (filters?.action === 'admin_reset_user_mfa') ? 'selected' : '' %>>Admin Reset User MFA</option>
+          </optgroup>
+
+          <optgroup label="Account Management">
+            <option value="update_profile" <%= (filters?.action === 'update_profile') ? 'selected' : '' %>>Profile Updated</option>
+            <option value="update_user" <%= (filters?.action === 'update_user') ? 'selected' : '' %>>Admin Updated User</option>
+          </optgroup>
+
+          <optgroup label="Invoicing">
+            <option value="create" <%= (filters?.action === 'create') ? 'selected' : '' %>>Create</option>
+            <option value="update" <%= (filters?.action === 'update') ? 'selected' : '' %>>Update</option>
+            <option value="delete" <%= (filters?.action === 'delete') ? 'selected' : '' %>>Delete</option>
+            <option value="bulk_upload" <%= (filters?.action === 'bulk_upload') ? 'selected' : '' %>>Bulk Upload</option>
+            <option value="send" <%= (filters?.action === 'send') ? 'selected' : '' %>>Invoice Sent</option>
+            <option value="view" <%= (filters?.action === 'view') ? 'selected' : '' %>>Invoice Viewed</option>
+          </optgroup>
+
+          <optgroup label="Payments">
+            <option value="payment_received" <%= (filters?.action === 'payment_received') ? 'selected' : '' %>>Payment Received</option>
+          </optgroup>
         </select>
       </div>
 
@@ -349,6 +376,12 @@ body:has(.audit-page){background:linear-gradient(135deg,#f7faf8 0%,#e8f7ee 48%,#
           <option value="Invoice" <%= (filters?.entity === 'Invoice') ? 'selected' : '' %>>Invoice</option>
           <option value="Payment" <%= (filters?.entity === 'Payment') ? 'selected' : '' %>>Payment</option>
           <option value="Payroll" <%= (filters?.entity === 'Payroll') ? 'selected' : '' %>>Payroll</option>
+          <option value="PayrollPeriod" <%= (filters?.entity === 'PayrollPeriod') ? 'selected' : '' %>>Payroll Period</option>
+          <option value="PartnerCustomer" <%= (filters?.entity === 'PartnerCustomer') ? 'selected' : '' %>>Partner Customer</option>
+          <option value="Request" <%= (filters?.entity === 'Request') ? 'selected' : '' %>>Request</option>
+          <option value="SubscriptionInvoice" <%= (filters?.entity === 'SubscriptionInvoice') ? 'selected' : '' %>>Subscription Invoice</option>
+          <option value="SubscriptionAutomationRun" <%= (filters?.entity === 'SubscriptionAutomationRun') ? 'selected' : '' %>>Subscription Automation Run</option>
+          <option value="AutomationSetting" <%= (filters?.entity === 'AutomationSetting') ? 'selected' : '' %>>Automation Setting</option>
         </select>
       </div>
 
@@ -399,8 +432,14 @@ body:has(.audit-page){background:linear-gradient(135deg,#f7faf8 0%,#e8f7ee 48%,#
               <td>
                 <span class="action-badge <%= 
                   log.action.includes('login_failed') || log.action.includes('failed') ? 'action-failed' :
+                  // MFA being turned off — by the user themselves or an
+                  // Admin resetting a locked-out account — is one of the
+                  // most security-sensitive events possible in this log,
+                  // so it gets the same red 'delete' styling as an actual
+                  // deletion rather than blending in with routine activity.
+                  log.action === 'mfa_disabled' || log.action === 'admin_reset_user_mfa' ? 'action-delete' :
                   log.action === 'register' ? 'action-login' :
-                  log.action.includes('create') || log.action.includes('_sent') || log.action.includes('_enabled') ? 'action-create' :
+                  log.action.includes('create') || log.action.includes('_sent') || log.action.includes('_enabled') || log.action === 'bulk_upload' ? 'action-create' :
                   log.action.includes('update') || log.action.includes('_confirmed') ? 'action-update' :
                   log.action.includes('delete') ? 'action-delete' : ''
                 %>">

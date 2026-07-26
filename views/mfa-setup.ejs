@@ -70,19 +70,4 @@
   });
 
   document.getElementById('get').addEventListener('click', async ()=>{
-    const res = await fetch('/api/auth/mfa/setup',{method:'POST',headers:{authorization:'Bearer '+token}});
-    const j = await res.json();
-    if (!res.ok) { alert(j.error || 'Failed to start MFA setup'); return; }
-    document.getElementById('qr').innerHTML = `<img src="${j.qr}" alt="qr"><p>Secret: ${j.secret}</p>`;
-    document.getElementById('confirm').style.display='block';
-  });
-  document.getElementById('confirm').addEventListener('submit', async e=>{
-    e.preventDefault();
-    const code = document.getElementById('code').value;
-    const res = await fetch('/api/auth/mfa/enable',{method:'POST',headers:{authorization:'Bearer '+token,'content-type':'application/json'},body:JSON.stringify({code})});
-    const j = await res.json(); if (j.ok) { alert('MFA enabled'); location.reload(); } else alert(j.error||'Failed');
-  });
-  </script>
-</main>
-
-<%- include('partials/footer') %>
+    const res = await fetch('/api/auth/mfa/setup',

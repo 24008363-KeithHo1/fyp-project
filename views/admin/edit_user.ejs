@@ -60,9 +60,12 @@
               <span style="color: #15803d; font-weight: 700; font-size: .85rem;">
                 <i class="fa-solid fa-shield-halved"></i> Enabled
               </span>
-              <form method="post" action="/admin/users/<%= user.id %>/reset-mfa" onsubmit="return confirm('Reset MFA for this user? They will be logged in without MFA until they set it up again on a new device. Use this only if the user has lost access to their authenticator app.');">
-                <button type="submit" class="btn btn-sm btn-outline-danger">Reset MFA</button>
-              </form>
+              <!-- Reset MFA button/form intentionally rendered OUTSIDE this
+                   element, right after the main form closes below — HTML
+                   does not allow a <form> nested inside another <form>,
+                   and browsers silently strip the inner one (including its
+                   action and onsubmit) during parsing if nested here. -->
+              <span id="resetMfaSlot"></span>
             </div>
             <p class="text-muted" style="font-size: .78rem; margin: .35rem 0 0;">
               Use "Reset MFA" only if this user has lost access to their authenticator device — it disables MFA immediately so they can log back in, then set it up again themselves from their profile.
@@ -77,6 +80,20 @@
         <button class="btn admin-edit-save" type="submit"><i class="fa-solid fa-check" aria-hidden="true"></i> Save Changes</button>
       </div>
     </form>
+
+    <% if (user.mfaEnabled) { %>
+      <!-- This form is a sibling of the Account Settings form above, not
+           nested inside it — see the comment near #resetMfaSlot. -->
+      <form method="post" action="/admin/users/<%= user.id %>/reset-mfa" id="resetMfaForm" onsubmit="return confirm('Reset MFA for this user? They will be logged in without MFA until they set it up again on a new device. Use this only if the user has lost access to their authenticator app.');" style="display:inline;">
+        <button type="submit" class="btn btn-sm btn-outline-danger">Reset MFA</button>
+      </form>
+      <script>
+        // Move the Reset MFA button visually back up next to "✓ Enabled",
+        // since the <form> itself has to live outside the main form in
+        // the markup to stay valid HTML.
+        document.getElementById('resetMfaSlot').appendChild(document.getElementById('resetMfaForm'));
+      </script>
+    <% } %>
   </section>
 </section>
 
