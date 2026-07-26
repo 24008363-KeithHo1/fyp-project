@@ -181,13 +181,19 @@ exports.mfaSetup = async (req, res) => {
   try {
     const user = req.user;
     if (!user) return res.status(401).json({ error: 'Unauthenticated' });
+    // Refuse to regenerate the secret while MFA is already enabled and
+    // working. Previously this endpoint would silently overwrite
+    // mfaSecret unconditionally — since mfaEnabled stays true throughout,
+    // a user who re-visited this page (e.g. out of curiosity, since
+    // nothing here indicated MFA was already on) would have their working
+    // authenticator entry invalidated the instant they clicked "Generate
+    // MFA Setup" again, with no way back in once logged out, since there
+    // was previously no way to disable/reset MFA at all.
+    if (user.mfaEnabled) {
+      return res.status(400).json({ error: 'MFA is already enabled on this account. Disable it first if you want to set up a new device.' });
+    }
     const { ip, userAgent } = getRequestMetadata(req);
     const secret = speakeasy.generateSecret({ name: `FYP (${user.email})` });
-    // KNOWN LIMITATION: calling this endpoint again before mfaEnable
-    // silently overwrites the previous secret, invalidating any
-    // already-scanned QR code. Acceptable for current scope since the
-    // user simply re-scans the new QR; a production version should
-    // either warn on overwrite or store pending/active secrets separately.
     // store secret temporarily on user record (not enabling until verify)
     user.mfaSecret = secret.base32;
     await user.save();
@@ -211,8 +217,36 @@ exports.mfaEnable = async (req, res) => {
   } catch (err) { res.status(400).json({ error: err.message }); }
 };
 
-// Invite token functionality removed — registration is open without invites.
+/**
+ * Lets a logged-in user turn MFA off for their own account. Requires the
+ * current password (not just a valid session token) since MFA is meant
+ * to be a stronger protection than the session alone — if a stolen/leaked
+ * token were enough on its own, this endpoint would let an attacker
+ * remove the very protection MFA is meant to add.
+ */
+exports.mfaDisable = async (req, res) => {
+  try {
+    const user = req.user;
+    if (!user) return res.status(401).json({ error: 'Unauthenticated' });
+    const { password } = req.body;
+    const { ip, userAgent } = getRequestMetadata(req);
+    if (!password) {
+      return res.status(400).json({ error: 'Please enter your current password to disable MFA.' });
+    }
+    const match = await bcrypt.compare(password, user.password);
+    if (!match) {
+      await logAudit({ userId: user.id, action: 'mfa_disable_failed', entity: 'User', entityId: user.id, meta: { reason: 'invalid_password' }, ip, userAgent });
+      return res.status(401).json({ error: 'Incorrect password.' });
+    }
+    user.mfaEnabled = false;
+    user.mfaSecret = null;
+    await user.save();
+    await logAudit({ userId: user.id, action: 'mfa_disabled', entity: 'User', entityId: user.id, meta: {}, ip, userAgent });
+    res.json({ ok: true });
+  } catch (err) { res.status(400).json({ error: err.message }); }
+};
 
+// Invite token functionality removed — registration is open without invites.
 exports.requestPasswordReset = async (req, res) => {
   try {
     const { email } = req.body;
@@ -305,7 +339,8 @@ exports.me = async (req, res) => {
       address: user.address,
       bio: user.bio,
       profileImage: user.profileImage,
-      role
+      role,
+      mfaEnabled: !!user.mfaEnabled
     }, dashboard });
   } catch (err) {
     res.status(400).json({ error: err.message });

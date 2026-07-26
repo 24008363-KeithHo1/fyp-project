@@ -121,6 +121,43 @@ exports.updateUser = async (req, res) => {
   }
 };
 
+/**
+ * Emergency recovery: clears a user's MFA so they can log in again without
+ * it, then they can re-enroll a new device from their own profile. This is
+ * the only recovery path for a user who has lost access to their
+ * authenticator app (lost/reset phone, uninstalled app, etc.) — unlike a
+ * forgotten password, there was previously no way back in once a user's
+ * stored MFA secret no longer matched what their app could produce.
+ */
+exports.resetUserMfa = async (req, res) => {
+  try {
+    const targetId = parseInt(req.params.id, 10);
+    if (!Number.isInteger(targetId)) {
+      return res.status(400).send('Invalid user id.');
+    }
+    const targetUser = await User.findByPk(targetId);
+    if (!targetUser) {
+      return res.status(404).send('User not found.');
+    }
+    await User.update({ mfaEnabled: false, mfaSecret: null }, { where: { id: targetId } });
+    try {
+      await AuditLog.create({
+        userId: req.user && req.user.id ? req.user.id : null,
+        action: 'admin_reset_user_mfa',
+        entity: 'User',
+        entityId: targetId,
+        meta: { targetEmail: targetUser.email }
+      });
+    } catch (logErr) {
+      console.error('Audit log failed:', logErr);
+    }
+    res.redirect('/admin/users/' + targetId + '/edit');
+  } catch (err) {
+    console.error(err);
+    res.status(500).send('Server error');
+  }
+};
+
 exports.dashboardView = async (req, res) => {
   try {
     const Invoice = require('../models/Invoice');

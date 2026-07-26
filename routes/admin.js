@@ -13,6 +13,7 @@ router.get('/audit-logs', admin.listAuditLogs);
 router.get('/audit-logs-json', admin.listAuditLogsJson);
 router.get('/users/:id/edit', admin.editUserView);
 router.post('/users/:id', admin.updateUser);
+router.post('/users/:id/reset-mfa', admin.resetUserMfa);
 router.get('/dashboard', admin.dashboardView);
 router.get('/requests', reqCtrl.deptInboxPage);
 router.get('/register', (req, res) => {

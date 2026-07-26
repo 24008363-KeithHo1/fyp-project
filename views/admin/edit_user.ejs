@@ -53,6 +53,24 @@
           </div>
           <% if (isSelf) { %><input type="hidden" name="isActive" value="on"><% } %>
         </div>
+        <div class="admin-edit-field admin-edit-field-wide">
+          <label>Two-Factor Authentication</label>
+          <% if (user.mfaEnabled) { %>
+            <div class="admin-edit-check" style="justify-content: space-between;">
+              <span style="color: #15803d; font-weight: 700; font-size: .85rem;">
+                <i class="fa-solid fa-shield-halved"></i> Enabled
+              </span>
+              <form method="post" action="/admin/users/<%= user.id %>/reset-mfa" onsubmit="return confirm('Reset MFA for this user? They will be logged in without MFA until they set it up again on a new device. Use this only if the user has lost access to their authenticator app.');">
+                <button type="submit" class="btn btn-sm btn-outline-danger">Reset MFA</button>
+              </form>
+            </div>
+            <p class="text-muted" style="font-size: .78rem; margin: .35rem 0 0;">
+              Use "Reset MFA" only if this user has lost access to their authenticator device — it disables MFA immediately so they can log back in, then set it up again themselves from their profile.
+            </p>
+          <% } else { %>
+            <span class="text-muted" style="font-size: .85rem;">Not enabled</span>
+          <% } %>
+        </div>
       </div>
       <div class="admin-edit-actions">
         <a class="btn admin-edit-cancel" href="/admin/users">Cancel</a>

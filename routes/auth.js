@@ -11,5 +11,6 @@ router.post('/reset', auth.resetPassword);
 router.post('/mfa/verify', auth.mfaVerifyLimiter, auth.mfaVerify);
 router.post('/mfa/setup', require('../middlewares/auth'), auth.mfaSetup);
 router.post('/mfa/enable', require('../middlewares/auth'), auth.mfaEnable);
+router.post('/mfa/disable', require('../middlewares/auth'), auth.mfaDisable);
 
 module.exports = router;

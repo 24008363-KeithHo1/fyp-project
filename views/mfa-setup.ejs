@@ -1,28 +1,86 @@
 <%- include('partials/header', { title: 'MFA Setup' }) %>
 <%- include('partials/navbar') %>
 
-  <h2>MFA Setup</h2>
-  <p>This page will request a QR and secret from the server. You must be logged in.</p>
-  <button id="get">Generate MFA Setup</button>
-  <div id="qr"></div>
-  <form id="confirm" style="display:none;">
-    <label>Enter code from app: <input id="code"></label>
-    <button>Enable MFA</button>
-  </form>
+  <h2>Two-Factor Authentication</h2>
+  <p>Add an extra layer of security to your account using an authenticator app.</p>
+
+  <div id="statusLoading">Checking current status…</div>
+
+  <!-- Shown when MFA is already enabled -->
+  <div id="alreadyEnabled" style="display:none;">
+    <p><strong>✓ MFA is currently enabled</strong> on your account.</p>
+    <p class="text-muted" style="font-size:.9rem;">
+      To set up a different device, first disable MFA below, then set it up again.
+    </p>
+    <form id="disableForm">
+      <label>Enter your current password to disable MFA:
+        <input type="password" id="disablePassword" required>
+      </label>
+      <button type="submit">Disable MFA</button>
+    </form>
+  </div>
+
+  <!-- Shown when MFA is not yet enabled -->
+  <div id="notEnabled" style="display:none;">
+    <button id="get">Generate MFA Setup</button>
+    <div id="qr"></div>
+    <form id="confirm" style="display:none;">
+      <label>Enter code from app: <input id="code"></label>
+      <button>Enable MFA</button>
+    </form>
+  </div>
+
   <script>
+  const token = localStorage.getItem('token');
+  if (!token) location = '/login';
+
+  // Check current status first so a user who already has MFA enabled
+  // sees a disable option instead of a "Generate MFA Setup" button that
+  // would (previously) silently invalidate their working setup the
+  // moment they clicked it.
+  fetch('/api/auth/me', { headers: { authorization: 'Bearer ' + token } })
+    .then((res) => res.json())
+    .then((data) => {
+      document.getElementById('statusLoading').style.display = 'none';
+      if (data.user && data.user.mfaEnabled) {
+        document.getElementById('alreadyEnabled').style.display = 'block';
+      } else {
+        document.getElementById('notEnabled').style.display = 'block';
+      }
+    })
+    .catch(() => {
+      document.getElementById('statusLoading').textContent = 'Could not load your MFA status. Please refresh.';
+    });
+
+  document.getElementById('disableForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const password = document.getElementById('disablePassword').value;
+    const res = await fetch('/api/auth/mfa/disable', {
+      method: 'POST',
+      headers: { authorization: 'Bearer ' + token, 'content-type': 'application/json' },
+      body: JSON.stringify({ password })
+    });
+    const j = await res.json();
+    if (j.ok) {
+      alert('MFA disabled.');
+      location.reload();
+    } else {
+      alert(j.error || 'Failed to disable MFA');
+    }
+  });
+
   document.getElementById('get').addEventListener('click', async ()=>{
-    const token = localStorage.getItem('token'); if (!token) return location='/login';
     const res = await fetch('/api/auth/mfa/setup',{method:'POST',headers:{authorization:'Bearer '+token}});
     const j = await res.json();
+    if (!res.ok) { alert(j.error || 'Failed to start MFA setup'); return; }
     document.getElementById('qr').innerHTML = `<img src="${j.qr}" alt="qr"><p>Secret: ${j.secret}</p>`;
     document.getElementById('confirm').style.display='block';
   });
   document.getElementById('confirm').addEventListener('submit', async e=>{
     e.preventDefault();
-    const token = localStorage.getItem('token');
     const code = document.getElementById('code').value;
     const res = await fetch('/api/auth/mfa/enable',{method:'POST',headers:{authorization:'Bearer '+token,'content-type':'application/json'},body:JSON.stringify({code})});
-    const j = await res.json(); if (j.ok) alert('MFA enabled'); else alert(j.error||'Failed');
+    const j = await res.json(); if (j.ok) { alert('MFA enabled'); location.reload(); } else alert(j.error||'Failed');
   });
   </script>
 </main>
