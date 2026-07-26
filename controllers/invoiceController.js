@@ -152,6 +152,9 @@ async function applyOverdueStatus(invoice) {
  * Creates one invoice, retrying on invoice-number collisions. Shared by
  * both the single-invoice create() endpoint and bulkUpload(), so the
  * numbering/race-safety logic only lives in one place.
+ *
+ * Uses MAX(id), not COUNT(*) — see the matching comment in create() for
+ * why: count() breaks permanently as soon as any invoice is ever deleted.
  */
 async function createInvoiceWithRetry({ customer_name, amount, currency, due_date, data }) {
   const now = new Date();
@@ -161,8 +164,8 @@ async function createInvoiceWithRetry({ customer_name, amount, currency, due_dat
   let lastError;
 
   for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
-    const count = await Invoice.count();
-    const seq = count + 1 + attempt;
+    const maxId = await Invoice.max('id');
+    const seq = (maxId || 0) + 1 + attempt;
     const number = `INV-${prefix}-${String(seq).padStart(4,'0')}`;
 
     try {
@@ -228,15 +231,23 @@ exports.create = async (req, res) => {
     const prefix = `${now.getFullYear()}${String(now.getMonth()+1).padStart(2,'0')}`;
 
     // Retry loop: guards against a race where two concurrent requests both
-    // read the same count() and try to create the same invoice number.
-    // The DB's unique constraint on `number` is the actual source of truth;
-    // count() is only ever used as a starting guess.
+    // read the same starting number and try to create the same invoice
+    // number. The DB's unique constraint on `number` is the actual source
+    // of truth; this is only ever used as a starting guess.
+    //
+    // Uses MAX(id) rather than COUNT(*): count() breaks permanently once
+    // any invoice is ever deleted, since the row count drops but every
+    // previously-used number stays taken — every subsequent invoice would
+    // then keep colliding with an existing number, exhausting all retry
+    // attempts. id is an InnoDB AUTO_INCREMENT column, which never reuses
+    // a value even after a row is deleted, so basing the sequence on the
+    // highest id ever issued stays collision-safe regardless of deletions.
     const MAX_ATTEMPTS = 3;
     let inv;
     let lastError;
     for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
-      const count = await Invoice.count();
-      const seq = count + 1 + attempt; // nudge forward on each retry
+      const maxId = await Invoice.max('id');
+      const seq = (maxId || 0) + 1 + attempt; // nudge forward on each retry
       const number = `INV-${prefix}-${String(seq).padStart(4,'0')}`;
 
       const tx = await sequelize.transaction();
