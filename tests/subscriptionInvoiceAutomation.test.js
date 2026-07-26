@@ -6,6 +6,10 @@ const {
   billingPeriodFor,
   automationRunKey
 } = require('../services/subscriptionInvoiceAutomation');
+const {
+  DEMO_POLL_INTERVAL_MS,
+  parseSingaporeScheduleTime
+} = require('../services/subscriptionInvoiceDemoScheduler');
 
 test('scheduler is configured for midnight on possible month-end dates', () => {
   assert.equal(DEFAULT_CRON, '0 0 28-31 * *');
@@ -24,4 +28,23 @@ test('handles leap-year February month end', () => {
 
 test('uses one idempotency key per monthly generation period', () => {
   assert.equal(automationRunKey('2026-07'), 'monthly-subscription-invoices:2026-07');
+});
+
+test('converts a Finance demo time from Singapore time to UTC', () => {
+  const now = new Date('2026-07-26T01:00:00.000Z');
+  const scheduled = parseSingaporeScheduleTime('2026-07-26T10:30', now);
+  assert.equal(scheduled.toISOString(), '2026-07-26T02:30:00.000Z');
+  assert.equal(DEMO_POLL_INTERVAL_MS, 5000);
+});
+
+test('rejects past or excessively distant Finance demo times', () => {
+  const now = new Date('2026-07-26T02:00:00.000Z');
+  assert.throws(
+    () => parseSingaporeScheduleTime('2026-07-26T09:00', now),
+    /future/
+  );
+  assert.throws(
+    () => parseSingaporeScheduleTime('2026-09-30T10:00', now),
+    /30 days/
+  );
 });

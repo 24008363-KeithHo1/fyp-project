@@ -12,6 +12,7 @@ const SubscriptionAutomationRun = require('../models/SubscriptionAutomationRun')
 const SubscriptionInvoice = require('../models/SubscriptionInvoice');
 const SubscriptionInvoiceItem = require('../models/SubscriptionInvoiceItem');
 const SubscriptionEmailDelivery = require('../models/SubscriptionEmailDelivery');
+const SubscriptionDemoSchedule = require('../models/SubscriptionDemoSchedule');
 const {
   SUBSCRIPTION_INVOICE_STATUSES,
   assertSubscriptionInvoiceTransition
@@ -19,6 +20,9 @@ const {
 const { logAction } = require('../utils/audit');
 const { generateSubscriptionInvoicePDF } = require('../utils/subscriptionInvoicePdf');
 const { sendSubscriptionInvoiceEmail } = require('../services/subscriptionInvoiceEmail');
+const {
+  createDemoSchedule
+} = require('../services/subscriptionInvoiceDemoScheduler');
 
 exports.reviewPage = (req, res) => res.render('finance/subscription-invoices', {
   title: 'Subscription Invoices',
@@ -467,6 +471,66 @@ exports.generateDrafts = async (req, res) => {
     });
   } catch (error) {
     res.status(400).json({ error: error.message });
+  }
+};
+
+exports.generateDemoNow = async (req, res) => {
+  try {
+    const period = req.body && req.body.period;
+    parseBillingPeriod(period);
+    const outcome = await runMonthlySubscriptionInvoiceGeneration({
+      period,
+      triggerSource: 'FinanceRecovery',
+      triggeredBy: req.user.id,
+      scheduledFor: new Date(),
+      runKey: `demo-subscription-invoices:immediate:${crypto.randomUUID()}`
+    });
+    await logAction(req, 'trigger_demo_generation', 'SubscriptionAutomationRun', outcome.run.id, {
+      period,
+      generated: outcome.result ? outcome.result.generated : 0,
+      skipped: outcome.result ? outcome.result.skipped : 0
+    });
+    res.status(outcome.result && outcome.result.failed ? 207 : 201).json({
+      run: outcome.run,
+      result: outcome.result,
+      message: outcome.result && outcome.result.generated
+        ? `${outcome.result.generated} demo draft invoice(s) generated.`
+        : 'Demo completed. No new drafts were generated; review eligibility or duplicate results.'
+    });
+  } catch (error) {
+    res.status(400).json({ error: error.message });
+  }
+};
+
+exports.scheduleDemo = async (req, res) => {
+  try {
+    const schedule = await createDemoSchedule({
+      billingPeriod: req.body && req.body.period,
+      singaporeDateTime: req.body && req.body.scheduledFor,
+      createdBy: req.user.id
+    });
+    await logAction(req, 'schedule_demo_generation', 'SubscriptionDemoSchedule', schedule.id, {
+      billingPeriod: schedule.billingPeriod,
+      scheduledFor: schedule.scheduledFor,
+      timezone: schedule.timezone
+    });
+    res.status(201).json({
+      schedule,
+      message: 'Demo generation scheduled using Singapore time.'
+    });
+  } catch (error) {
+    res.status(400).json({ error: error.message });
+  }
+};
+
+exports.demoSchedules = async (req, res) => {
+  try {
+    res.json(await SubscriptionDemoSchedule.findAll({
+      order: [['createdAt', 'DESC']],
+      limit: 20
+    }));
+  } catch (error) {
+    res.status(500).json({ error: error.message });
   }
 };
 

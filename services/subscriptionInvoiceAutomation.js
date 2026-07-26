@@ -43,9 +43,10 @@ async function runMonthlySubscriptionInvoiceGeneration({
   period = billingPeriodFor(),
   triggerSource = 'Scheduler',
   triggeredBy = null,
-  scheduledFor = new Date()
+  scheduledFor = new Date(),
+  runKey: suppliedRunKey = null
 } = {}) {
-  const runKey = automationRunKey(period);
+  const runKey = suppliedRunKey || automationRunKey(period);
   const [run, created] = await SubscriptionAutomationRun.findOrCreate({
     where: { runKey },
     defaults: {

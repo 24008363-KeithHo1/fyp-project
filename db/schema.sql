@@ -211,6 +211,24 @@ CREATE TABLE IF NOT EXISTS SubscriptionEmailDeliveries (
   INDEX idx_subscription_delivery_recipient (recipient)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
+CREATE TABLE IF NOT EXISTS SubscriptionDemoSchedules (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  billingPeriod VARCHAR(7) NOT NULL,
+  scheduledFor DATETIME NOT NULL,
+  timezone VARCHAR(50) NOT NULL DEFAULT 'Asia/Singapore',
+  status ENUM('Scheduled','Running','Completed','Failed','Cancelled') NOT NULL DEFAULT 'Scheduled',
+  createdBy INT NOT NULL,
+  automationRunId INT,
+  startedAt DATETIME,
+  completedAt DATETIME,
+  errorMessage TEXT,
+  data JSON,
+  createdAt DATETIME DEFAULT CURRENT_TIMESTAMP,
+  updatedAt DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  INDEX idx_subscription_demo_due (status, scheduledFor),
+  INDEX idx_subscription_demo_creator (createdBy, createdAt)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
 -- Payrolls
 CREATE TABLE IF NOT EXISTS Payrolls (
   id INT AUTO_INCREMENT PRIMARY KEY,

@@ -76,3 +76,17 @@ test('subscription customer view uses its own secure token route', () => {
   assert.match(controller, /invoice\.status === 'Sent'/);
   assert.doesNotMatch(controller, /models\/Invoice|models\/Payment/);
 });
+
+test('Finance has isolated immediate and scheduled demo generation controls', () => {
+  const routes = fs.readFileSync(path.join(root, 'routes', 'subscriptionInvoices.js'), 'utf8');
+  const view = fs.readFileSync(path.join(root, 'views', 'finance', 'subscription-invoices.ejs'), 'utf8');
+  const scheduler = fs.readFileSync(path.join(root, 'services', 'subscriptionInvoiceDemoScheduler.js'), 'utf8');
+  assert.match(routes, /router\.post\('\/demo-generate'/);
+  assert.match(routes, /router\.post\('\/demo-schedules'/);
+  assert.match(routes, /router\.get\('\/demo-schedules'/);
+  assert.match(view, /Finance demo generation/);
+  assert.match(view, /Generate now/);
+  assert.match(view, /Singapore time \(SGT\)/);
+  assert.match(scheduler, /demo-subscription-invoices:scheduled:/);
+  assert.doesNotMatch(scheduler, /models\/Invoice|models\/Payment/);
+});

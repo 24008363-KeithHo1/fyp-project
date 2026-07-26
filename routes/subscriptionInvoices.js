@@ -9,6 +9,9 @@ router.use(requireRole(['Finance']));
 
 router.get('/generation-preview', controller.previewGeneration);
 router.post('/generate-drafts', controller.generateDrafts);
+router.post('/demo-generate', controller.generateDemoNow);
+router.get('/demo-schedules', controller.demoSchedules);
+router.post('/demo-schedules', controller.scheduleDemo);
 router.get('/automation-runs', controller.automationHistory);
 router.get('/', controller.list);
 router.patch('/:id/draft', controller.updateDraft);
