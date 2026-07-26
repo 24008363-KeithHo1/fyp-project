@@ -1037,10 +1037,10 @@ main .form-select:hover{
   border-color:rgba(37,99,235,.38);
 }
 
-/* Keep all four payment methods visible and make Bootstrap tab panels size predictably. */
+/* Keep all payment methods visible and make tab panels size predictably. */
 .payments-page .payment-tabs{
   display:grid;
-  grid-template-columns:repeat(4,minmax(0,1fr));
+  grid-template-columns:repeat(3,minmax(0,1fr));
   width:100%;
 }
 

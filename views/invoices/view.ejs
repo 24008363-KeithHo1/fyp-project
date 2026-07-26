@@ -45,11 +45,9 @@
           <button class="btn btn-success" type="button" onclick="payByCard(<%= invoice.id %>)">Pay by Card</button>
           <button class="btn btn-outline-warning" type="button" onclick="payByPayPal(<%= invoice.id %>)">PayPal</button>
           <button class="btn btn-outline-dark" type="button" onclick="showNETS(<%= invoice.id %>)">NETS QR</button>
-          <button class="btn btn-outline-primary" type="button" onclick="showBankTransfer(<%= invoice.id %>)">Bank Transfer</button>
         </div>
         <div id="paypalButtons" class="mt-3" style="max-width:320px"></div>
         <div id="netsBox" class="bank-transfer-box mt-3 d-none"></div>
-        <div id="bankTransfer" class="bank-transfer-box mt-3 d-none"></div>
       <% } %>
       <div class="mt-3">
         <a class="btn btn-primary" href="/api/invoices/<%= invoice.id %>/pdf?token=<%= encodeURIComponent((invoice.data && invoice.data.view_token) || '') %>" target="_blank">Download PDF</a>
@@ -116,34 +114,8 @@
   }
 
   async function showNETS(id){
-    const res = await fetch(`/payment/nets/${id}`);
-    const data = await res.json();
-    if (!res.ok) return alert(data.error || 'Unable to generate NETS QR');
-    const box = document.getElementById('netsBox');
-    box.classList.remove('d-none');
-    box.innerHTML = `
-      <h5>NETS QR</h5>
-      <img src="${data.qrDataUrl}" alt="NETS QR for ${data.invoice}" width="220" height="220">
-      <p class="mb-1"><strong>Merchant:</strong> ${data.merchantName}</p>
-      <p class="mb-1"><strong>Amount:</strong> ${data.currency} ${Number(data.amount).toFixed(2)}</p>
-      <p class="mb-0"><strong>Reference:</strong> ${data.reference}</p>
-    `;
+    window.location.href = `/payment/nets/${id}/page?return=${encodeURIComponent(`/invoices/${id}/view`)}`;
   }
 
-  async function showBankTransfer(id){
-    const res = await fetch(`/payment/bank-transfer/${id}`);
-    const data = await res.json();
-    if (!res.ok) return alert(data.error || 'Unable to load bank transfer instructions');
-    const box = document.getElementById('bankTransfer');
-    box.classList.remove('d-none');
-    box.innerHTML = `
-      <h5>Bank Transfer Instructions</h5>
-      <p class="mb-1"><strong>Bank:</strong> ${data.bankName}</p>
-      <p class="mb-1"><strong>Account name:</strong> ${data.accountName}</p>
-      <p class="mb-1"><strong>Account number:</strong> ${data.accountNumber}</p>
-      <p class="mb-1"><strong>Amount:</strong> ${data.currency} ${Number(data.amount).toFixed(2)}</p>
-      <p class="mb-0"><strong>Reference:</strong> ${data.reference}</p>
-    `;
-  }
   </script>
 <%- include('../partials/footer') %>

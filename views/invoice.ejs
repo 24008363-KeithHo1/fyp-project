@@ -1014,14 +1014,13 @@
         <td>${i.due_date ? new Date(i.due_date).toLocaleDateString() : ''}</td>
         <td><span class="invoice-badge ${statusClass(i.status, i.due_date)}">${statusLabel(i.status, i.due_date)}</span></td>
         <td class="text-end">
-          <!-- Added: invoice payment actions for PDF/CSV export, card, PayPal, NETS QR, bank transfer, and sending invoices. -->
+          <!-- Added: invoice payment actions for PDF/CSV export, card, PayPal, NETS QR, and sending invoices. -->
           <div class="invoice-actions">
             <a class="invoice-action-btn" href="/api/invoices/${i.id}/pdf" target="_blank"><i class="fa-solid fa-file-pdf"></i> PDF</a>
             <a class="invoice-action-btn" href="/api/invoices/${i.id}/excel" target="_blank"><i class="fa-solid fa-file-excel"></i> Excel</a>
             ${i.status !== 'Paid' ? `<button class="invoice-action-btn invoice-action-btn-success" onclick="payByCard(${i.id})"><i class="fa-solid fa-credit-card"></i> Card</button>` : ''}
             ${i.status !== 'Paid' ? `<button class="invoice-action-btn invoice-action-btn-warning" onclick="payByPayPal(${i.id})"><i class="fa-brands fa-paypal"></i> PayPal</button>` : ''}
             ${i.status !== 'Paid' ? `<button class="invoice-action-btn invoice-action-btn-dark" onclick="showNETS(${i.id})"><i class="fa-solid fa-qrcode"></i> NETS</button>` : ''}
-            ${i.status !== 'Paid' ? `<button class="invoice-action-btn invoice-action-btn-info" onclick="showBankTransfer(${i.id})"><i class="fa-solid fa-building-columns"></i> Bank</button>` : ''}
             <button class="invoice-action-btn invoice-action-btn-primary" onclick="sendInvoice(${i.id}, '${escapeHtml((i.data && i.data.email) || '').replace(/'/g, "\\'")}')"><i class="fa-solid fa-paper-plane"></i> Send</button>
             ${i.status !== 'Paid' ? `<button class="invoice-action-btn invoice-action-btn-danger" onclick="deleteInvoice(${i.id}, '${escapeHtml(i.number || '').replace(/'/g, "\\'")}')"><i class="fa-solid fa-trash"></i> Delete</button>` : ''}
           </div>
@@ -1180,41 +1179,9 @@
 
   // Added: displays a NETS QR code for the invoice so customers can scan and pay.
   async function showNETS(id){
-    const box = document.getElementById(`nets-qr-${id}`);
-    box.innerHTML = '';
-    try {
-      const res = await fetch(`/payment/nets/${id}`);
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Unable to generate NETS QR');
-      box.innerHTML = `
-        <div class="nets-box text-start">
-          <h6>NETS QR</h6>
-          <img src="${data.qrDataUrl}" alt="NETS QR for ${data.invoice}" width="180" height="180">
-          <p class="mb-1"><strong>Amount:</strong> ${data.currency} ${Number(data.amount).toFixed(2)}</p>
-          <p class="mb-1"><strong>Reference:</strong> ${data.reference}</p>
-          <p class="mb-0 text-muted">Finance must verify receipt before marking this invoice paid.</p>
-        </div>
-      `;
-    } catch (err) {
-      alert(err.message || 'Unable to generate NETS QR');
-    }
+    window.location.href = `/payment/nets/${id}/page?return=${encodeURIComponent('/invoices')}`;
   }
 
-  // Added: shows bank transfer instructions for customers paying outside card/PayPal/NETS.
-  async function showBankTransfer(id){
-    const res = await fetch(`/payment/bank-transfer/${id}`);
-    const data = await res.json();
-    if (!res.ok) return alert(data.error || 'Unable to load bank transfer instructions');
-    alert(
-      `Bank Transfer Instructions\n\n` +
-      `Invoice: ${data.invoice}\n` +
-      `Bank: ${data.bankName}\n` +
-      `Account name: ${data.accountName}\n` +
-      `Account number: ${data.accountNumber}\n` +
-      `Amount: ${data.currency} ${Number(data.amount).toFixed(2)}\n` +
-      `Reference: ${data.reference}`
-    );
-  }
   </script>
 
  

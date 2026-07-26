@@ -84,7 +84,7 @@ exports.summary = async (req, res) => {
 
     // Added: totals paid Stripe, PayPal, and NETS payments for dashboard analytics.
     payments.forEach((payment) => {
-      const method = payment.method || 'Manual';
+      const method = payment.method || 'Unknown';
       const amount = money(payment.amount);
       if (payment.status === 'Paid') {
         paidRevenue += amount;

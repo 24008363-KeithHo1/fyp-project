@@ -1,5 +1,6 @@
 const Excel = require('exceljs');
 const fs = require('fs');
+const path = require('path');
 
 const normalizeHeader = (value) => String(value || '')
   .trim()
@@ -126,10 +127,22 @@ async function parsePayrollExcel(filePath){
  */
 async function parseInvoiceExcel(filePath){
   const workbook = new Excel.Workbook();
-  await workbook.xlsx.readFile(filePath);
+  const ext = path.extname(filePath).toLowerCase();
+  if (ext === '.csv') {
+    await workbook.csv.readFile(filePath);
+  } else {
+    await workbook.xlsx.readFile(filePath);
+  }
   const ws = workbook.worksheets[0];
   const rows = [];
   const errors = [];
+  const headerRow = ws.getRow(1);
+  const headers = {};
+
+  headerRow.eachCell((cell, colNumber) => {
+    const normalized = normalizeHeader(cell.value && cell.value.text ? cell.value.text : cell.value);
+    if (normalized) headers[normalized] = colNumber;
+  });
 
   ws.eachRow((row, rowNumber) => {
     if (rowNumber === 1) return; // skip header
@@ -155,16 +168,25 @@ async function parseInvoiceExcel(filePath){
       return String(value).trim();
     };
 
+    const usesStandardColumns = !!getCell(1);
+    const columns = {
+      customer: headers.customer_name || headers.customer || headers.customername || (usesStandardColumns ? 1 : 2),
+      email: headers.email || (usesStandardColumns ? 2 : 3),
+      amount: headers.amount || (usesStandardColumns ? 3 : 4),
+      currency: headers.currency || (usesStandardColumns ? 4 : 5),
+      dueDate: headers.due_date || headers.due || headers.duedate || (usesStandardColumns ? 5 : 6)
+    };
+
     // Skip fully blank rows rather than reporting them as errors —
     // trailing empty rows are common in exported/edited spreadsheets.
-    const isBlankRow = [2, 3, 4, 5, 6].every((col) => !getCell(col));
+    const isBlankRow = [columns.customer, columns.email, columns.amount, columns.currency, columns.dueDate].every((col) => !getCell(col));
     if (isBlankRow) return;
 
-    const customer_name = getCell(2);
-    const email = getCell(3).toLowerCase();
-    const amount = parseFloat(getCell(4));
-    const currency = (getCell(5) || 'SGD').toUpperCase();
-    const dueDateRaw = getCell(6);
+    const customer_name = getCell(columns.customer);
+    const email = getCell(columns.email).toLowerCase();
+    const amount = parseFloat(getCell(columns.amount));
+    const currency = (getCell(columns.currency) || 'SGD').toUpperCase();
+    const dueDateRaw = getCell(columns.dueDate);
 
     const rowErrors = [];
     if (!customer_name) {
@@ -177,7 +199,7 @@ async function parseInvoiceExcel(filePath){
       }
     }
     if (!Number.isFinite(amount) || amount <= 0) {
-      rowErrors.push(`Row ${rowNumber}: Invalid amount (got: "${getCell(4)}")`);
+      rowErrors.push(`Row ${rowNumber}: Invalid amount (got: "${getCell(columns.amount)}")`);
     }
     let due_date = null;
     if (dueDateRaw) {

@@ -247,12 +247,12 @@ CREATE TABLE IF NOT EXISTS Payrolls (
   updatedAt DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
--- Added: Payment history table for Stripe, PayPal, NETS and bank-transfer confirmations
+-- Added: Payment history table for Stripe, PayPal, and NETS confirmations
 CREATE TABLE IF NOT EXISTS Payments (
   id INT AUTO_INCREMENT PRIMARY KEY,
   invoiceId INT NOT NULL,
   invoiceNumber VARCHAR(100) NOT NULL,
-  method ENUM('Stripe','PayPal','NETS','BankTransfer','Manual') NOT NULL,
+  method ENUM('Stripe','PayPal','NETS') NOT NULL,
   amount DECIMAL(10,2) NOT NULL,
   currency VARCHAR(10) DEFAULT 'SGD',
   status ENUM('Paid','Failed','Pending','Refunded') DEFAULT 'Paid',
@@ -330,7 +330,7 @@ ALTER TABLE Payrolls
   ADD COLUMN IF NOT EXISTS paid_at DATETIME,
   ADD COLUMN IF NOT EXISTS payment_method VARCHAR(100);
 ALTER TABLE Payments
-  MODIFY COLUMN method ENUM('Stripe','PayPal','NETS','BankTransfer','Manual') NOT NULL;
+  MODIFY COLUMN method ENUM('Stripe','PayPal','NETS') NOT NULL;
 ALTER TABLE Payments
   MODIFY COLUMN status ENUM('Paid','Failed','Pending','Refunded') DEFAULT 'Paid';
 

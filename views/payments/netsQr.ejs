@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title><%= title %></title>
+  <style>
+    body {
+      margin: 0;
+      font-family: Arial, Helvetica, sans-serif;
+      color: #111827;
+      background: #ffffff;
+    }
+    main {
+      padding: 28px 32px 40px;
+    }
+    h1 {
+      margin: 0 0 24px;
+      font-size: 34px;
+      line-height: 1.15;
+      font-family: Georgia, 'Times New Roman', serif;
+    }
+    .status {
+      margin: 0 0 28px;
+      font-size: 17px;
+    }
+    .qr {
+      width: 240px;
+      height: 240px;
+      object-fit: contain;
+      display: block;
+      margin: 0 0 36px 22px;
+    }
+    .timer {
+      margin: 0 0 34px;
+      font-size: 16px;
+    }
+    .details {
+      margin: -18px 0 28px;
+      color: #4b5563;
+      font-size: 14px;
+      line-height: 1.6;
+    }
+    .info {
+      display: block;
+      width: min(760px, 92vw);
+      height: auto;
+      margin: 0 0 26px 10px;
+    }
+    a {
+      color: #0000ee;
+    }
+    .warning {
+      color: #92400e;
+      margin: -14px 0 28px;
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>Scan the QR Code</h1>
+    <p class="status" id="status"><%= txnRetrievalRef ? 'Scan with your bank simulator app to complete payment' : 'Local demo QR generated' %></p>
+    <img class="qr" src="<%= qrCodeUrl %>" alt="QR Code">
+    <p class="timer" id="timer">Time remaining: 5:00</p>
+    <div class="details">
+      Invoice: <%= invoice.number %><br>
+      Amount: <%= currency %> <%= Number(amount).toFixed(2) %><br>
+      Reference: <%= reference %>
+    </div>
+    <% if (warning) { %>
+      <p class="warning"><%= warning %></p>
+    <% } %>
+    <img class="info" src="/images/netsQrInfo.png" alt="NETS Online QR payment instructions">
+    <a href="<%= returnUrl %>">Cancel</a>
+  </main>
+
+  <script>
+    const invoiceId = '<%= invoice.id %>';
+    const txnRetrievalRef = '<%= txnRetrievalRef || "" %>';
+    const reference = '<%= reference %>';
+    const returnUrl = '<%= returnUrl %>';
+    const timerElement = document.getElementById('timer');
+    const statusElement = document.getElementById('status');
+    let remainingTime = Number('<%= timer || 300 %>');
+    let poller;
+
+    function updateTimer(){
+      const minutes = Math.floor(remainingTime / 60);
+      const seconds = remainingTime % 60;
+      timerElement.textContent = `Time remaining: ${minutes}:${seconds.toString().padStart(2, '0')}`;
+      remainingTime -= 1;
+
+      if (remainingTime < 0) {
+        clearInterval(timerInterval);
+        if (poller) clearInterval(poller);
+        statusElement.textContent = 'Transaction timed out.';
+      }
+    }
+
+    async function completePayment(){
+      const res = await fetch(`/payment/nets/${invoiceId}/complete`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ reference: txnRetrievalRef || reference })
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Unable to complete NETS payment');
+      statusElement.textContent = 'Payment approved. Redirecting...';
+      setTimeout(() => { window.location.href = returnUrl; }, 1200);
+    }
+
+    async function pollStatus(){
+      if (!txnRetrievalRef) return;
+      try {
+        const timeout = remainingTime <= 0 ? '?timeout=1' : '';
+        const res = await fetch(`/payment/nets/${invoiceId}/status/${encodeURIComponent(txnRetrievalRef)}${timeout}`);
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Unable to check NETS status');
+
+        if (data.paid) {
+          clearInterval(poller);
+          await completePayment();
+        } else if (data.failed) {
+          clearInterval(poller);
+          statusElement.textContent = 'Transaction failed. Please try again.';
+        }
+      } catch (err) {
+        clearInterval(poller);
+        statusElement.textContent = err.message || 'Unable to check NETS status.';
+      }
+    }
+
+    const timerInterval = setInterval(updateTimer, 1000);
+    updateTimer();
+    if (txnRetrievalRef) {
+      poller = setInterval(pollStatus, 5000);
+      pollStatus();
+    }
+  </script>
+</body>
+</html>

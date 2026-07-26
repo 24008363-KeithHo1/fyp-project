@@ -16,6 +16,9 @@ const PAYPAL_API_BASE = process.env.PAYPAL_API_BASE || (
 );
 const PAYPAL_CURRENCY = process.env.PAYPAL_CURRENCY || 'SGD';
 const NETS_CURRENCY = 'SGD';
+const NETS_TEST_PROXY_VALUE = '201626425D';
+const NETS_BASE_URL = process.env.NETS_BASE_URL || 'https://sandbox.nets.openapipaas.com';
+const NETS_SANDBOX_TXN_ID = process.env.NETS_SANDBOX_TXN_ID || 'sandbox_nets|m|8ff8e5b6-d43e-4786-8ac5-7accf8c5bd9b';
 
 // Added to keep all payment providers using consistent Paid/Pending/Failed labels.
 function normalizePaymentStatus(status) {
@@ -51,11 +54,47 @@ function NETSProxyType() {
   return '2';
 }
 
+function isNETSMockMode() {
+  return String(process.env.NETS_MOCK || '').trim().toLowerCase() === 'true';
+}
+
+function getNETSCredentials() {
+  return {
+    apiKey: process.env.NETS_API_KEY || process.env.API_KEY,
+    projectId: process.env.NETS_PROJECT_ID || process.env.PROJECT_ID
+  };
+}
+
+async function netsApiPost(path, body) {
+  const { apiKey, projectId } = getNETSCredentials();
+  if (!apiKey || !projectId) {
+    throw new Error('NETS Developer API is not configured. Set NETS_API_KEY and NETS_PROJECT_ID.');
+  }
+
+  const response = await fetch(`${NETS_BASE_URL}${path}`, {
+    method: 'POST',
+    headers: {
+      'api-key': apiKey,
+      'project-id': projectId,
+      'content-type': 'application/json'
+    },
+    body: JSON.stringify(body)
+  });
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    throw new Error(data.message || data.error || `NETS API request failed with HTTP ${response.status}`);
+  }
+  return data;
+}
+
 // Added for NETS QR: builds the Singapore EMV payload from invoice amount and merchant settings.
 function createNETSPayload(invoice) {
-  const proxyValue = process.env.NETS_PROXY_VALUE || process.env.NETS_UEN || process.env.NETS_MOBILE;
+  const proxyValue = process.env.NETS_PROXY_VALUE
+    || process.env.NETS_UEN
+    || process.env.NETS_MOBILE
+    || (isNETSMockMode() ? NETS_TEST_PROXY_VALUE : '');
   if (!proxyValue) {
-    throw new Error('NETS is not configured. Set NETS_PROXY_VALUE, NETS_UEN, or NETS_MOBILE.');
+    throw new Error('NETS is not configured. Set NETS_PROXY_VALUE, NETS_UEN, or NETS_MOBILE, or enable NETS_MOCK=true for local testing.');
   }
 
   const merchantName = (process.env.NETS_MERCHANT_NAME || process.env.BANK_ACCOUNT_NAME || 'FYP PROJECT').slice(0, 25);
@@ -90,7 +129,126 @@ function createNETSPayload(invoice) {
   };
 }
 
-// Added so Stripe, PayPal, NETS, bank transfer, and manual payments are saved in one history table.
+function buildLocalNETSResponse(invoice) {
+  const NETS = createNETSPayload(invoice);
+  return QRCode.toDataURL(NETS.payload, {
+    errorCorrectionLevel: 'M',
+    margin: 2,
+    width: 280
+  }).then(qrDataUrl => ({
+    invoice: invoice.number,
+    amount: Number(invoice.amount),
+    currency: NETS_CURRENCY,
+    reference: NETS.reference,
+    merchantName: NETS.merchantName,
+    qrDataUrl,
+    payload: NETS.payload,
+    source: 'local'
+  }));
+}
+
+async function buildDeveloperNETSResponse(invoice) {
+  const txnId = NETS_SANDBOX_TXN_ID;
+  const apiResponse = await netsApiPost('/api/v1/common/payments/nets-qr/request', {
+    txn_id: txnId,
+    amt_in_dollars: Number(invoice.amount).toFixed(2),
+    notify_mobile: 0
+  });
+  const qrData = apiResponse && apiResponse.result && apiResponse.result.data;
+  if (!qrData || qrData.response_code !== '00' || !qrData.qr_code) {
+    throw new Error((qrData && (qrData.error_message || qrData.instruction)) || 'NETS QR request was not approved.');
+  }
+
+  return {
+    invoice: invoice.number,
+    amount: Number(invoice.amount),
+    currency: NETS_CURRENCY,
+    reference: qrData.txn_retrieval_ref || txnId,
+    merchantName: process.env.NETS_MERCHANT_NAME || 'NETS Sandbox',
+    qrDataUrl: `data:image/png;base64,${qrData.qr_code}`,
+    txnRetrievalRef: qrData.txn_retrieval_ref,
+    networkCode: qrData.network_status,
+    source: 'nets_developer_api',
+    raw: apiResponse
+  };
+}
+
+async function createNETSInvoiceSession(invoiceId) {
+  const invoice = await Invoice.findByPk(invoiceId);
+  if (!invoice) {
+    const err = new Error('Invoice not found');
+    err.status = 404;
+    throw err;
+  }
+  if (invoice.status === 'Paid') {
+    const err = new Error('Invoice is already paid');
+    err.status = 400;
+    throw err;
+  }
+  if (!Number.isFinite(Number(invoice.amount)) || Number(invoice.amount) <= 0) {
+    const err = new Error('Invoice amount must be greater than zero');
+    err.status = 400;
+    throw err;
+  }
+
+  let NETS;
+  try {
+    NETS = await buildDeveloperNETSResponse(invoice);
+  } catch (apiError) {
+    if (!isNETSMockMode()) throw apiError;
+    NETS = await buildLocalNETSResponse(invoice);
+    NETS.warning = apiError.message;
+  }
+
+  const data = Object.assign({}, invoice.data || {}, {
+    payment: Object.assign({}, (invoice.data && invoice.data.payment) || {}, {
+      provider: 'nets',
+      method: 'NETS',
+      reference: NETS.reference,
+      txnRetrievalRef: NETS.txnRetrievalRef,
+      source: NETS.source,
+      qrCreatedAt: new Date().toISOString()
+    })
+  });
+  await invoice.update({ data });
+
+  return { invoice, NETS };
+}
+
+async function recordNETSPaidInvoice(invoice, reference, paidAt, req, note) {
+  const method = 'NETS';
+  const provider = 'nets';
+  const data = Object.assign({}, invoice.data || {}, {
+    payment: Object.assign({}, (invoice.data && invoice.data.payment) || {}, {
+      provider,
+      method,
+      netsReference: reference,
+      status: 'paid',
+      paidAt: paidAt.toISOString(),
+      recordedBy: req.user && req.user.id
+    })
+  });
+
+  await invoice.update({ status: 'Paid', data });
+  const payment = await recordPayment(invoice, {
+    method,
+    amount: Number(invoice.amount),
+    currency: 'SGD',
+    providerReference: reference,
+    paidAt,
+    recordedBy: req.user && req.user.id,
+    data: {
+      netsReference: reference,
+      note
+    }
+  });
+  const { ip, userAgent } = getRequestMetadata(req);
+  await logAudit({ userId: req.user ? req.user.id : null, action: 'payment_nets_confirmed', entity: 'Payment', entityId: payment.id, meta: { invoiceNumber: invoice.number, amount: invoice.amount, reference, note }, ip, userAgent });
+
+  return payment;
+}
+
+// Added so Stripe, PayPal, and NETS payments are saved in one history table.
 async function recordPayment(invoice, paymentData) {
   const providerReference = paymentData.providerReference || `${paymentData.method}-${invoice.id}-${Date.now()}`;
   const payload = {
@@ -275,7 +433,7 @@ exports.capturePayPalOrder = async (req, res) => {
     console.error(err);
     if (err.name === 'SequelizeDatabaseError' && /Data truncated|PayPal|enum/i.test(err.message)) {
       return res.status(500).json({
-        error: "Database needs PayPal/NETS enabled in Payments.method. Run: ALTER TABLE Payments MODIFY COLUMN method ENUM('Stripe','PayPal','NETS','BankTransfer','Manual') NOT NULL;"
+        error: "Database needs PayPal/NETS enabled in Payments.method. Run: ALTER TABLE Payments MODIFY COLUMN method ENUM('Stripe','PayPal','NETS') NOT NULL;"
       });
     }
     res.status(500).json({ error: err.message });
@@ -435,48 +593,10 @@ exports.handleWebhook = async (req, res) => {
   }
 };
 
-// Added for bank transfer: returns account details and invoice reference for finance users.
-exports.bankTransferInstructions = async (req, res) => {
-  const invoice = await Invoice.findByPk(req.params.id);
-  if (!invoice) return res.status(404).json({ error: 'Invoice not found' });
-
-  res.json({
-    invoice: invoice.number,
-    amount: Number(invoice.amount),
-    currency: 'SGD',
-    reference: invoice.number,
-    bankName: process.env.BANK_NAME || 'Your Bank Name',
-    accountName: process.env.BANK_ACCOUNT_NAME || 'Your Company Name',
-    accountNumber: process.env.BANK_ACCOUNT_NUMBER || '000000000'
-  });
-};
-
 // Added for NETS QR: generates a QR image for an unpaid invoice and stores its reference.
 exports.netsQr = async (req, res) => {
   try {
-    const invoice = await Invoice.findByPk(req.params.id);
-    if (!invoice) return res.status(404).json({ error: 'Invoice not found' });
-    if (invoice.status === 'Paid') return res.status(400).json({ error: 'Invoice is already paid' });
-    if (!Number.isFinite(Number(invoice.amount)) || Number(invoice.amount) <= 0) {
-      return res.status(400).json({ error: 'Invoice amount must be greater than zero' });
-    }
-
-    const NETS = createNETSPayload(invoice);
-    const qrDataUrl = await QRCode.toDataURL(NETS.payload, {
-      errorCorrectionLevel: 'M',
-      margin: 2,
-      width: 280
-    });
-
-    const data = Object.assign({}, invoice.data || {}, {
-      payment: Object.assign({}, (invoice.data && invoice.data.payment) || {}, {
-        provider: 'nets',
-        method: 'NETS',
-        reference: NETS.reference,
-        qrCreatedAt: new Date().toISOString()
-      })
-    });
-    await invoice.update({ data });
+    const { invoice, NETS } = await createNETSInvoiceSession(req.params.id);
 
     res.json({
       invoice: invoice.number,
@@ -484,16 +604,94 @@ exports.netsQr = async (req, res) => {
       currency: NETS_CURRENCY,
       reference: NETS.reference,
       merchantName: NETS.merchantName,
-      qrDataUrl,
-      payload: NETS.payload
+      qrDataUrl: NETS.qrDataUrl,
+      payload: NETS.payload,
+      txnRetrievalRef: NETS.txnRetrievalRef,
+      source: NETS.source,
+      warning: NETS.warning
+    });
+  } catch (err) {
+    res.status(err.status || 500).json({ error: err.message });
+  }
+};
+
+exports.netsQrPage = async (req, res) => {
+  try {
+    const { invoice, NETS } = await createNETSInvoiceSession(req.params.id);
+    res.render('payments/netsQr', {
+      title: 'Scan to Pay',
+      invoice,
+      amount: Number(invoice.amount),
+      currency: NETS_CURRENCY,
+      qrCodeUrl: NETS.qrDataUrl,
+      reference: NETS.reference,
+      txnRetrievalRef: NETS.txnRetrievalRef,
+      source: NETS.source,
+      warning: NETS.warning,
+      timer: 300,
+      returnUrl: req.query.return || '/finance/payments'
+    });
+  } catch (err) {
+    res.status(err.status || 500).render('payments/netsQrFail', {
+      title: 'NETS QR Error',
+      errorMsg: err.message,
+      returnUrl: req.query.return || '/finance/payments'
+    });
+  }
+};
+
+exports.netsPaymentStatus = async (req, res) => {
+  try {
+    const txnRetrievalRef = String(req.params.txnRetrievalRef || '').trim();
+    if (!txnRetrievalRef) return res.status(400).json({ error: 'NETS transaction retrieval reference is required' });
+
+    const apiResponse = await netsApiPost('/api/v1/common/payments/nets-qr/query', {
+      txn_retrieval_ref: txnRetrievalRef,
+      frontend_timeout_status: req.query && req.query.timeout === '1' ? 1 : 0
+    });
+    const statusData = apiResponse && apiResponse.result && apiResponse.result.data;
+    const isPaid = Boolean(statusData && statusData.response_code === '00' && Number(statusData.txn_status) === 1);
+    const isFailed = Boolean(statusData && Number(statusData.txn_status) === 2);
+
+    res.json({
+      ok: true,
+      paid: isPaid,
+      failed: isFailed,
+      reference: txnRetrievalRef,
+      status: statusData,
+      raw: apiResponse
     });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 };
 
-// Added for finance confirmation: marks verified bank transfer or NETS payments as Paid.
-exports.confirmBankTransfer = async (req, res) => {
+exports.completeNETSPayment = async (req, res) => {
+  try {
+    const invoice = await Invoice.findByPk(req.params.id);
+    if (!invoice) return res.status(404).json({ error: 'Invoice not found' });
+    if (invoice.status === 'Paid') return res.json({ ok: true, invoice });
+
+    const reference = String((req.body && req.body.reference) || '').trim();
+    if (!reference) return res.status(400).json({ error: 'NETS reference is required' });
+
+    const statusResponse = await netsApiPost('/api/v1/common/payments/nets-qr/query', {
+      txn_retrieval_ref: reference,
+      frontend_timeout_status: 0
+    });
+    const statusData = statusResponse && statusResponse.result && statusResponse.result.data;
+    const isPaid = Boolean(statusData && statusData.response_code === '00' && Number(statusData.txn_status) === 1);
+    if (!isPaid) return res.status(400).json({ error: 'NETS payment has not been completed yet' });
+
+    const payment = await recordNETSPaidInvoice(invoice, reference, new Date(), req, 'Confirmed by NETS sandbox status');
+    res.json({ ok: true, invoice, payment });
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+};
+
+// Added for finance confirmation: marks verified NETS payments as Paid.
+exports.confirmNETSPayment = async (req, res) => {
   try {
     const invoice = await Invoice.findByPk(req.params.id);
     if (!invoice) return res.status(404).json({ error: 'Invoice not found' });
@@ -501,7 +699,7 @@ exports.confirmBankTransfer = async (req, res) => {
 
     const reference = req.body && req.body.reference ? String(req.body.reference).trim() : '';
     if (!reference) {
-      return res.status(400).json({ error: 'Bank reference is required' });
+      return res.status(400).json({ error: 'NETS reference is required' });
     }
     const paidAt = req.body && req.body.paidAt ? new Date(req.body.paidAt) : new Date();
     if (Number.isNaN(paidAt.getTime())) {
@@ -511,34 +709,7 @@ exports.confirmBankTransfer = async (req, res) => {
       return res.status(400).json({ error: 'Paid date cannot be future date' });
     }
 
-    const method = req.body && req.body.method === 'NETS' ? 'NETS' : 'BankTransfer';
-    const provider = method === 'NETS' ? 'nets' : 'bank_transfer';
-    const data = Object.assign({}, invoice.data || {}, {
-      payment: Object.assign({}, (invoice.data && invoice.data.payment) || {}, {
-        provider,
-        method,
-        bankReference: reference,
-        status: 'paid',
-        paidAt: paidAt.toISOString(),
-        recordedBy: req.user && req.user.id
-      })
-    });
-
-    await invoice.update({ status: 'Paid', data });
-    const payment = await recordPayment(invoice, {
-      method,
-      amount: Number(invoice.amount),
-      currency: 'SGD',
-      providerReference: reference,
-      paidAt,
-      recordedBy: req.user && req.user.id,
-      data: {
-        bankReference: reference,
-        note: req.body && req.body.note
-      }
-    });
-    const { ip, userAgent } = getRequestMetadata(req);
-    await logAudit({ userId: req.user ? req.user.id : null, action: method === 'NETS' ? 'payment_nets_confirmed' : 'payment_bank_transfer_confirmed', entity: 'Payment', entityId: payment.id, meta: { invoiceNumber: invoice.number, amount: invoice.amount, reference, note: req.body && req.body.note }, ip, userAgent });
+    const payment = await recordNETSPaidInvoice(invoice, reference, paidAt, req, req.body && req.body.note);
 
     res.json({ ok: true, invoice, payment });
   } catch (err) {

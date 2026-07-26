@@ -14,7 +14,7 @@ try{
   <div class="payment-page-hero d-flex flex-wrap align-items-end justify-content-between gap-2 mb-3">
     <div>
       <h2>Payments</h2>
-      <p class="text-muted mb-0">Record, review, and reconcile payments for invoices and bank activity.</p>
+      <p class="text-muted mb-0">Record, review, and reconcile payments for invoices.</p>
     </div>
     <button class="payment-refresh-btn" type="button" onclick="refreshPayments()" aria-label="Refresh payments">
       <i class="fa-solid fa-rotate-right" aria-hidden="true"></i>
@@ -37,21 +37,18 @@ try{
       <strong id="paypalPayments">SGD 0.00</strong>
     </div>
     <div class="report-kpi">
-      <span>Pending Transfers</span>
+      <span>Unpaid Invoices</span>
       <strong id="pendingTransfers">0</strong>
     </div>
   </div>
 
   <div id="paymentAlerts" class="finance-alerts mt-3"></div>
 
-  <!-- Added: tabbed payment workspace for Bank Transfer, Stripe, PayPal, and NETS QR. -->
+  <!-- Added: tabbed payment workspace for Stripe, PayPal, and NETS QR. -->
   <section class="report-panel finance-row payment-workspace-panel">
     <ul class="nav nav-tabs payment-tabs" id="paymentMethodTabs" role="tablist">
       <li class="nav-item" role="presentation">
-        <button class="nav-link active" id="bank-tab" data-payment-target="bankPanel" type="button" role="tab" aria-controls="bankPanel" aria-selected="true">Bank Transfer</button>
-      </li>
-      <li class="nav-item" role="presentation">
-        <button class="nav-link" id="stripe-tab" data-payment-target="stripePanel" type="button" role="tab" aria-controls="stripePanel" aria-selected="false" tabindex="-1">Stripe</button>
+        <button class="nav-link active" id="stripe-tab" data-payment-target="stripePanel" type="button" role="tab" aria-controls="stripePanel" aria-selected="true">Stripe</button>
       </li>
       <li class="nav-item" role="presentation">
         <button class="nav-link" id="paypal-tab" data-payment-target="paypalPanel" type="button" role="tab" aria-controls="paypalPanel" aria-selected="false" tabindex="-1">PayPal</button>
@@ -62,42 +59,7 @@ try{
     </ul>
 
     <div class="tab-content pt-3">
-      <div class="tab-pane payment-tab-panel fade show active" id="bankPanel" role="tabpanel" aria-labelledby="bank-tab">
-        <div class="row g-3">
-          <div class="col-lg-5">
-            <div class="bank-instructions">
-              <h5>Bank Transfer Instructions</h5>
-              <p class="mb-1"><strong>Bank:</strong> <span id="bankName">DBS Business Account</span></p>
-              <p class="mb-1"><strong>Account Name:</strong> <span id="bankAccountName">Your Company Name</span></p>
-              <p class="mb-1"><strong>Account No:</strong> <span id="bankAccountNumber">123-456789-0</span></p>
-              <p class="mb-0"><strong>Reference:</strong> Use invoice number</p>
-            </div>
-          </div>
-          <div class="col-lg-7">
-            <form id="bankTransferForm">
-              <div class="mb-3">
-                <label class="form-label" for="invoiceId">Invoice</label>
-                <select id="invoiceId" class="form-select" required></select>
-              </div>
-              <div class="mb-3">
-                <label class="form-label" for="reference">Bank reference</label>
-                <input id="reference" class="form-control" placeholder="Required transaction reference" required>
-              </div>
-              <div class="mb-3">
-                <label class="form-label" for="paidAt">Paid date</label>
-                <input id="paidAt" type="datetime-local" class="form-control">
-              </div>
-              <div class="mb-3">
-                <label class="form-label" for="note">Note</label>
-                <input id="note" class="form-control" placeholder="Optional note">
-              </div>
-              <button class="btn btn-primary payment-primary-action" type="submit">Mark as Paid</button>
-            </form>
-          </div>
-        </div>
-      </div>
-
-      <div class="tab-pane payment-tab-panel fade" id="stripePanel" role="tabpanel" aria-labelledby="stripe-tab" hidden>
+      <div class="tab-pane payment-tab-panel fade show active" id="stripePanel" role="tabpanel" aria-labelledby="stripe-tab">
         <div class="payment-method-card">
           <h5>Stripe Card Payment</h5>
           <p class="text-muted">Start a Stripe Checkout session for an unpaid invoice.</p>
@@ -171,8 +133,6 @@ try{
           <option value="Stripe">Stripe</option>
           <option value="PayPal">PayPal</option>
           <option value="NETS">NETS</option>
-          <option value="BankTransfer">Bank</option>
-          <option value="Manual">Manual</option>
         </select>
       </div>
       <div class="col-md-2">
@@ -233,6 +193,7 @@ try{
 let allInvoices = [];
 let allPayments = [];
 let paypalSdkPromise;
+let netsStatusPoller;
 
 const paymentTabs = Array.from(document.querySelectorAll('#paymentMethodTabs .nav-link'));
 const paymentPanels = Array.from(document.querySelectorAll('.payment-workspace-panel .payment-tab-panel'));
@@ -292,7 +253,6 @@ function statusBadge(status, method){
   if (cleanStatus === 'Pending') return '<span class="badge bg-warning text-dark">Pending</span>';
   if (cleanStatus === 'Failed') return '<span class="badge bg-danger">Failed</span>';
   if (cleanStatus === 'Refunded') return '<span class="badge bg-info text-dark">Refunded</span>';
-  if (method === 'Manual') return '<span class="badge bg-primary">Manual</span>';
   return `<span class="badge bg-secondary">${cleanStatus}</span>`;
 }
 
@@ -368,25 +328,9 @@ function populateInvoiceSelect(selectId, invoices){
 // Added: loads unpaid invoices into each payment method dropdown.
 async function loadInvoices(){
   allInvoices = await fetchJson('/api/invoices');
-  populateInvoiceSelect('invoiceId', allInvoices);
   populateInvoiceSelect('stripeInvoiceId', allInvoices);
   populateInvoiceSelect('paypalInvoiceId', allInvoices);
   populateInvoiceSelect('netsInvoiceId', allInvoices);
-  updateBankInstructions();
-}
-
-function updateBankInstructions(){
-  const select = document.getElementById('invoiceId');
-  if (!select) return;
-  const invoiceId = select.value;
-  if (!invoiceId) return;
-  fetchJson(`/payment/bank-transfer/${invoiceId}`).then(data => {
-    if (!document.getElementById('bankName')) return;
-    document.getElementById('bankName').textContent = data.bankName;
-    document.getElementById('bankAccountName').textContent = data.accountName;
-    document.getElementById('bankAccountNumber').textContent = data.accountNumber;
-    document.getElementById('reference').placeholder = `Use ${data.reference}`;
-  }).catch(() => {});
 }
 
 function paymentDate(payment){
@@ -410,12 +354,12 @@ function updateSummaryCards(payments){
   const paypalTotal = payments
     .filter(payment => payment.method === 'PayPal' && normalizeStatus(payment.status) === 'Paid')
     .reduce((sum, payment) => sum + Number(payment.amount || 0), 0);
-  const pendingTransfers = allInvoices.filter(invoice => invoice.status !== 'Paid').length;
+  const unpaidInvoices = allInvoices.filter(invoice => invoice.status !== 'Paid').length;
 
   document.getElementById('totalPaidToday').textContent = money(totalPaidToday);
   document.getElementById('stripePayments').textContent = money(stripeTotal);
   document.getElementById('paypalPayments').textContent = money(paypalTotal);
-  document.getElementById('pendingTransfers').textContent = pendingTransfers;
+  document.getElementById('pendingTransfers').textContent = unpaidInvoices;
 }
 
 function filteredPayments(){
@@ -487,9 +431,7 @@ function renderRecentActivity(){
       ? `${payment.invoiceNumber} refunded via ${payment.method}`
       : status === 'Failed'
       ? `${payment.method} payment failed for ${payment.invoiceNumber}`
-      : payment.method === 'BankTransfer'
-        ? `${payment.invoiceNumber} marked paid by bank transfer`
-        : payment.method === 'NETS'
+      : payment.method === 'NETS'
           ? `${payment.invoiceNumber} marked paid by NETS`
         : `${payment.invoiceNumber} paid via ${payment.method}`;
     return `<div class="activity-item">${statusBadge(status, payment.method)} <span>${action}</span></div>`;
@@ -610,30 +552,51 @@ async function renderPayPalButtons(){
   }
 }
 
-// Added: generates the NETS QR code for the selected unpaid invoice.
+// Added: opens the dedicated NETS scan-to-pay page for the selected unpaid invoice.
 async function loadNETSQr(){
   const invoiceId = document.getElementById('netsInvoiceId').value;
-  const box = document.getElementById('netsQrBox');
-  box.innerHTML = '';
+  if (netsStatusPoller) clearInterval(netsStatusPoller);
   if (!invoiceId) return showAlert('Select an unpaid invoice first');
+  window.location.href = `/payment/nets/${invoiceId}/page?return=${encodeURIComponent('/finance/payments')}`;
+}
 
-  try {
-    const data = await fetchJson(`/payment/nets/${invoiceId}`);
-    box.innerHTML = `
-      <div class="nets-box">
-        <img src="${data.qrDataUrl}" alt="NETS QR for ${data.invoice}" width="220" height="220">
-        <div>
-          <p class="mb-1"><strong>Merchant:</strong> ${data.merchantName}</p>
-          <p class="mb-1"><strong>Invoice:</strong> ${data.invoice}</p>
-          <p class="mb-1"><strong>Amount:</strong> ${data.currency} ${Number(data.amount).toFixed(2)}</p>
-          <p class="mb-2"><strong>Reference:</strong> ${data.reference}</p>
-          <button class="btn btn-primary btn-sm" type="button" onclick="confirmNETSPayment('${invoiceId}', '${data.reference}')">Mark NETS Paid</button>
-        </div>
-      </div>
-    `;
-  } catch (err) {
-    showAlert(err.message || 'Unable to generate NETS QR');
-  }
+function pollNETSPaymentStatus(invoiceId, txnRetrievalRef){
+  const statusEl = document.getElementById('netsLiveStatus');
+  let attempts = 0;
+
+  netsStatusPoller = setInterval(async () => {
+    attempts += 1;
+    try {
+      const status = await fetchJson(`/payment/nets/${invoiceId}/status/${encodeURIComponent(txnRetrievalRef)}${attempts >= 60 ? '?timeout=1' : ''}`);
+      if (statusEl) statusEl.textContent = status.paid ? 'NETS payment received.' : 'Waiting for NETS sandbox payment...';
+      if (status.paid) {
+        clearInterval(netsStatusPoller);
+        await recordNETSPayment(invoiceId, txnRetrievalRef, 'Confirmed by NETS sandbox status');
+      } else if (status.failed || attempts >= 60) {
+        clearInterval(netsStatusPoller);
+        if (statusEl) statusEl.textContent = 'NETS payment was not completed.';
+      }
+    } catch (err) {
+      if (statusEl) statusEl.textContent = err.message || 'Unable to check NETS payment status.';
+      clearInterval(netsStatusPoller);
+    }
+  }, 5000);
+}
+
+async function recordNETSPayment(invoiceId, reference, note){
+  await fetchJson(`/payment/nets/${invoiceId}/confirm`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({
+      method: 'NETS',
+      reference,
+      paidAt: new Date().toISOString(),
+      note
+    })
+  });
+  showAlert('NETS payment recorded successfully', 'success');
+  document.getElementById('netsQrBox').innerHTML = '';
+  await refreshPayments();
 }
 
 // Added: lets finance confirm the NETS receipt and mark the invoice as Paid.
@@ -642,26 +605,13 @@ async function confirmNETSPayment(invoiceId, reference){
   if (!confirmedReference) return showAlert('NETS reference is required');
 
   try {
-    await fetchJson(`/payment/bank-transfer/${invoiceId}/confirm`, {
-      method: 'POST',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({
-        method: 'NETS',
-        reference: confirmedReference,
-        paidAt: new Date().toISOString(),
-        note: 'Confirmed NETS QR payment'
-      })
-    });
-    showAlert('NETS payment recorded successfully', 'success');
-    document.getElementById('netsQrBox').innerHTML = '';
-    await refreshPayments();
+    if (netsStatusPoller) clearInterval(netsStatusPoller);
+    await recordNETSPayment(invoiceId, confirmedReference, 'Confirmed NETS QR payment');
   } catch (err) {
     showAlert(err.message);
   }
 }
 
-const bankInvoiceSelect = document.getElementById('invoiceId');
-if (bankInvoiceSelect) bankInvoiceSelect.addEventListener('change', updateBankInstructions);
 document.getElementById('historyBody').addEventListener('click', event => {
   const deleteButton = event.target.closest('.delete-payment-btn');
   if (deleteButton) {
@@ -678,39 +628,6 @@ document.getElementById('historyBody').addEventListener('click', event => {
 ['paymentSearch','methodFilter','statusFilter','dateFrom','dateTo'].forEach(id => {
   document.getElementById(id).addEventListener('input', renderPayments);
 });
-
-// Added: records verified bank transfer payments and marks the invoice as Paid.
-const bankTransferForm = document.getElementById('bankTransferForm');
-if (bankTransferForm) {
-  bankTransferForm.addEventListener('submit', async (event) => {
-    event.preventDefault();
-    clearAlerts();
-    const invoiceId = document.getElementById('invoiceId').value;
-    const reference = document.getElementById('reference').value.trim();
-    const paidAt = document.getElementById('paidAt').value;
-
-    if (!invoiceId) return showAlert('Select an unpaid invoice first');
-    if (!reference) return showAlert('Bank reference is required');
-    if (paidAt && new Date(paidAt) > new Date()) return showAlert('Paid date cannot be future date');
-
-    try {
-      await fetchJson(`/payment/bank-transfer/${invoiceId}/confirm`, {
-        method: 'POST',
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({
-          reference,
-          paidAt,
-          note: document.getElementById('note').value
-        })
-      });
-      bankTransferForm.reset();
-      showAlert('Bank transfer recorded and invoice marked Paid.', 'success');
-      await refreshPayments();
-    } catch (err) {
-      showAlert(err.message);
-    }
-  });
-}
 
 refreshPayments().catch(err => {
   document.getElementById('historyBody').innerHTML = `<tr><td colspan="8" class="text-danger">${err.message}</td></tr>`;
