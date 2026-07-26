@@ -877,6 +877,11 @@
   function statusClass(status, dueDate){
     if (status === 'Paid') return 'invoice-badge-paid';
     if (status === 'Failed') return 'invoice-badge-overdue';
+    // 'Overdue' is a real value in the Invoice model's status ENUM
+    // (Draft/Sent/Viewed/Paid/Overdue) — this check was missing, so an
+    // actually-overdue invoice fell through to the generic 'pending'
+    // (amber) badge instead of the 'overdue' (red) one meant to flag it.
+    if (status === 'Overdue') return 'invoice-badge-overdue';
     if (status === 'Pending') {
       const due = dueDate ? new Date(dueDate) : null;
       const overdue = due && !Number.isNaN(due.getTime()) && due.getTime() < new Date().setHours(0, 0, 0, 0);
@@ -888,6 +893,7 @@
   function statusLabel(status, dueDate){
     if (status === 'Paid') return 'Paid';
     if (status === 'Failed') return 'Failed';
+    if (status === 'Overdue') return 'Overdue';
     if (status === 'Pending') {
       const due = dueDate ? new Date(dueDate) : null;
       const overdue = due && !Number.isNaN(due.getTime()) && due.getTime() < new Date().setHours(0, 0, 0, 0);
@@ -904,8 +910,13 @@
 
   function updateInvoiceSummary(items){
     const paid = items.filter((item) => item.status === 'Paid');
-    const pending = items.filter((item) => item.status === 'Pending');
     const overdue = items.filter((item) => isOverdueInvoice(item));
+    // "Pending" means awaiting payment: not yet Paid and not Overdue.
+    // Real invoice statuses are Draft/Sent/Viewed/Paid/Overdue (there is
+    // no literal 'Pending' status), so matching on item.status==='Pending'
+    // always returned zero results regardless of how many invoices were
+    // actually outstanding — this counts by exclusion instead.
+    const pending = items.filter((item) => item.status !== 'Paid' && !isOverdueInvoice(item));
     document.getElementById('invoiceTotalCount').textContent = items.length;
     document.getElementById('invoicePaidCount').textContent = paid.length;
     document.getElementById('invoicePendingCount').textContent = pending.length;
