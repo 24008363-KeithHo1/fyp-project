@@ -921,6 +921,16 @@ form label{color:#2c4636;font-weight:600}
 .payments-page .badge.bg-warning{background:linear-gradient(135deg,#f59e0b,#facc15)!important}
 .payments-page .badge.bg-danger{background:linear-gradient(135deg,#dc2626,#fb7185)!important}
 .payments-page .badge.bg-info{background:linear-gradient(135deg,#06b6d4,#67e8f9)!important;color:#083344!important}
+.payments-page .payment-status-reversed{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  max-width:100%;
+  border:1px solid #a5f3fc;
+  background:#ecfeff;
+  color:#155e75;
+  white-space:nowrap;
+}
 
 .payments-page .method-pill{
   border:1px solid rgba(255,255,255,.55);

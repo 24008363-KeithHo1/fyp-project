@@ -13,8 +13,8 @@ try{
 <div class="container mt-4 payments-page">
   <div class="payment-page-hero d-flex flex-wrap align-items-end justify-content-between gap-2 mb-3">
     <div>
-      <h2>Payments</h2>
-      <p class="text-muted mb-0">Record, review, and reconcile payments for invoices.</p>
+      <h2>Supplier Payments</h2>
+      <p class="text-muted mb-0">Record, review, and reconcile supplier payments for supplier invoices.</p>
     </div>
     <button class="payment-refresh-btn" type="button" onclick="refreshPayments()" aria-label="Refresh payments">
       <i class="fa-solid fa-rotate-right" aria-hidden="true"></i>
@@ -29,15 +29,15 @@ try{
       <strong id="totalPaidToday">SGD 0.00</strong>
     </div>
     <div class="report-kpi">
-      <span>Stripe Payments</span>
+      <span>Stripe Supplier Payments</span>
       <strong id="stripePayments">SGD 0.00</strong>
     </div>
     <div class="report-kpi">
-      <span>PayPal Payments</span>
+      <span>PayPal Supplier Payments</span>
       <strong id="paypalPayments">SGD 0.00</strong>
     </div>
     <div class="report-kpi">
-      <span>Unpaid Invoices</span>
+      <span>Unpaid Supplier Invoices</span>
       <strong id="pendingTransfers">0</strong>
     </div>
   </div>
@@ -61,17 +61,17 @@ try{
     <div class="tab-content pt-3">
       <div class="tab-pane payment-tab-panel fade show active" id="stripePanel" role="tabpanel" aria-labelledby="stripe-tab">
         <div class="payment-method-card">
-          <h5>Stripe Card Payment</h5>
-          <p class="text-muted">Start a Stripe Checkout session for an unpaid invoice.</p>
+          <h5>Stripe Supplier Payment</h5>
+          <p class="text-muted">Start a Stripe Checkout session for an unpaid supplier invoice.</p>
           <div class="row g-2 align-items-end">
             <div class="col-md-8">
-              <label class="form-label" for="stripeInvoiceId">Invoice</label>
+              <label class="form-label" for="stripeInvoiceId">Supplier invoice / Vendor bill</label>
               <select id="stripeInvoiceId" class="form-select"></select>
             </div>
             <div class="col-md-4">
               <button class="provider-load-btn stripe-load-btn w-100" type="button" onclick="startStripePayment()">
                 <i class="fa-brands fa-stripe-s" aria-hidden="true"></i>
-                <span>Pay with Stripe</span>
+                <span>Pay Supplier with Stripe</span>
               </button>
             </div>
           </div>
@@ -80,11 +80,11 @@ try{
 
       <div class="tab-pane payment-tab-panel fade" id="paypalPanel" role="tabpanel" aria-labelledby="paypal-tab" hidden>
         <div class="payment-method-card">
-          <h5>PayPal Payment</h5>
-          <p class="text-muted">Create and capture a PayPal order for an unpaid invoice.</p>
+          <h5>PayPal Supplier Payment</h5>
+          <p class="text-muted">Create and capture a PayPal order for an unpaid supplier invoice.</p>
           <div class="row g-2 align-items-end">
             <div class="col-md-8">
-              <label class="form-label" for="paypalInvoiceId">Invoice</label>
+              <label class="form-label" for="paypalInvoiceId">Supplier invoice / Vendor bill</label>
               <select id="paypalInvoiceId" class="form-select"></select>
             </div>
             <div class="col-md-4">
@@ -101,10 +101,10 @@ try{
       <div class="tab-pane payment-tab-panel fade" id="netsPanel" role="tabpanel" aria-labelledby="nets-tab" hidden>
         <div class="payment-method-card">
           <h5>NETS QR</h5>
-          <p class="text-muted">Generate a NETS QR for an unpaid invoice, then confirm after receipt is verified.</p>
+          <p class="text-muted">Generate a NETS QR for an unpaid supplier invoice. Manual finance confirmation is for demonstration or reconciliation purposes and does not independently prove NETS settlement.</p>
           <div class="row g-2 align-items-end">
             <div class="col-md-8">
-              <label class="form-label" for="netsInvoiceId">Invoice</label>
+              <label class="form-label" for="netsInvoiceId">Supplier invoice / Vendor bill</label>
               <select id="netsInvoiceId" class="form-select"></select>
             </div>
             <div class="col-md-4">
@@ -125,7 +125,7 @@ try{
     <h5>Search and Filter</h5>
     <div class="row g-2">
       <div class="col-md-4">
-        <input id="paymentSearch" class="form-control" placeholder="Search invoice or reference">
+        <input id="paymentSearch" class="form-control" placeholder="Search supplier invoice or reference">
       </div>
       <div class="col-md-2">
         <select id="methodFilter" class="form-select">
@@ -141,7 +141,7 @@ try{
           <option value="Paid">Paid</option>
           <option value="Pending">Pending</option>
           <option value="Failed">Failed</option>
-          <option value="Refunded">Refunded</option>
+          <option value="Refunded">Reversed</option>
         </select>
       </div>
       <div class="col-md-2">
@@ -156,7 +156,7 @@ try{
   <!-- Added: payment history table showing recorded payments and invoice links. -->
   <section class="report-panel finance-row payment-history-panel">
     <div class="d-flex justify-content-between align-items-center mb-2">
-      <h5 class="mb-0">Payment History</h5>
+      <h5 class="mb-0">Supplier Payment History</h5>
       <span class="text-muted small" id="paymentCount">0 payments</span>
     </div>
     <div class="table-responsive">
@@ -164,8 +164,8 @@ try{
         <thead class="table-light">
           <tr>
             <th>Date</th>
-            <th>Invoice</th>
-            <th>Customer</th>
+            <th>Supplier invoice / Vendor bill</th>
+            <th>Supplier / Vendor</th>
             <th>Method</th>
             <th class="text-end">Amount</th>
             <th>Status</th>
@@ -252,7 +252,9 @@ function statusBadge(status, method){
   if (cleanStatus === 'Paid') return '<span class="badge bg-success">Paid</span>';
   if (cleanStatus === 'Pending') return '<span class="badge bg-warning text-dark">Pending</span>';
   if (cleanStatus === 'Failed') return '<span class="badge bg-danger">Failed</span>';
-  if (cleanStatus === 'Refunded') return '<span class="badge bg-info text-dark">Refunded</span>';
+  if (cleanStatus === 'Refunded') {
+    return '<span class="badge payment-status-reversed" title="Payment reversal / Supplier refund">Reversed</span>';
+  }
   return `<span class="badge bg-secondary">${cleanStatus}</span>`;
 }
 
@@ -406,10 +408,10 @@ function renderPayments(){
       <td class="text-break">${paymentReferenceDetails(payment)}</td>
       <td class="payment-action-cell">
         <div class="payment-action-group" aria-label="Payment actions for ${payment.invoiceNumber || 'invoice'}">
-          <a class="payment-history-btn invoice-btn" href="/api/invoices/${payment.invoiceId}/pdf" target="_blank" rel="noopener">Invoice</a>
+          <a class="payment-history-btn invoice-btn" href="/api/invoices/${payment.invoiceId}/pdf" target="_blank" rel="noopener">Supplier invoice</a>
           <a class="payment-history-btn receipt-btn" href="/api/invoices/${payment.invoiceId}/pdf" target="_blank" rel="noopener" download>Receipt</a>
-          ${normalizeStatus(payment.status) === 'Paid' ? `<button class="payment-history-btn refund-btn refund-payment-btn" type="button" data-payment-id="${payment.id}">Refund</button>` : ''}
-          <button class="payment-history-btn delete-payment-btn" type="button" data-payment-id="${payment.id}">Delete</button>
+          ${normalizeStatus(payment.status) === 'Paid' ? `<button class="payment-history-btn refund-btn refund-payment-btn" type="button" data-payment-id="${payment.id}">Payment reversal</button>` : ''}
+          ${normalizeStatus(payment.status) !== 'Paid' ? `<button class="payment-history-btn delete-payment-btn" type="button" data-payment-id="${payment.id}">Delete</button>` : ''}
         </div>
       </td>
     `;
@@ -428,11 +430,11 @@ function renderRecentActivity(){
   container.innerHTML = allPayments.slice(0, 5).map(payment => {
     const status = normalizeStatus(payment.status);
   const action = status === 'Refunded'
-      ? `${payment.invoiceNumber} refunded via ${payment.method}`
+      ? `${payment.invoiceNumber} reversed via ${payment.method}`
       : status === 'Failed'
       ? `${payment.method} payment failed for ${payment.invoiceNumber}`
       : payment.method === 'NETS'
-          ? `${payment.invoiceNumber} marked paid by NETS`
+          ? `${payment.invoiceNumber} recorded as NETS ${payment.data && payment.data.confirmationType === 'manual_finance_confirmation' ? 'manual finance confirmation' : 'payment'}`
         : `${payment.invoiceNumber} paid via ${payment.method}`;
     return `<div class="activity-item">${statusBadge(status, payment.method)} <span>${action}</span></div>`;
   }).join('');
@@ -443,8 +445,15 @@ function paymentReferenceDetails(payment){
   if (normalizeStatus(payment.status) === 'Refunded' && refund) {
     return `
       <div>${refund.refundReference || payment.providerReference || ''}</div>
-      <small class="text-muted d-block">Refund to: ${refund.testBankAccountNumber || '-'}</small>
+      <small class="text-muted d-block">Supplier bank account: ${refund.testBankAccountNumber || '-'}</small>
       <small class="text-muted d-block">Bank ref: ${refund.testBankReference || '-'}</small>
+    `;
+  }
+  if (payment.method === 'NETS' && payment.data && payment.data.confirmationType === 'manual_finance_confirmation') {
+    return `
+      <div>${payment.providerReference || ''}</div>
+      <small class="text-muted d-block">Manual finance confirmation for demonstration or reconciliation purposes.</small>
+      <small class="text-muted d-block">Does not independently prove NETS settlement.</small>
     `;
   }
   return payment.providerReference || '';
@@ -454,7 +463,8 @@ function paymentReferenceDetails(payment){
 async function deletePayment(paymentId, button){
   const payment = allPayments.find(item => Number(item.id) === Number(paymentId));
   if (!payment) return showAlert('Payment not found');
-  if (!confirm(`Delete payment history for ${payment.invoiceNumber || 'this invoice'}? This cannot be undone.`)) return;
+  if (normalizeStatus(payment.status) === 'Paid') return showAlert('Paid supplier payment records cannot be deleted. Record a payment reversal first.');
+  if (!confirm(`Delete supplier payment history for ${payment.invoiceNumber || 'this supplier invoice'}? This cannot be undone.`)) return;
 
   try {
     if (button) {
@@ -474,30 +484,30 @@ async function deletePayment(paymentId, button){
   }
 }
 
-// Added: lets finance refund a paid payment and reopens the invoice for repayment.
+// Added: lets finance record a payment reversal and reopens the supplier invoice for repayment.
 async function refundPayment(paymentId, button){
   const payment = allPayments.find(item => Number(item.id) === Number(paymentId));
   if (!payment) return showAlert('Payment not found');
 
   try {
-    showAlert(`Refunding ${payment.invoiceNumber || 'payment'}...`);
+    showAlert(`Recording payment reversal for ${payment.invoiceNumber || 'supplier payment'}...`);
     if (button) {
       button.disabled = true;
-      button.textContent = 'Refunding...';
+      button.textContent = 'Reversing...';
     }
     await fetchJson(`/payment/${paymentId}/refund`, {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ reason: 'Refunded by finance' })
+      body: JSON.stringify({ reason: 'Payment reversal recorded by finance' })
     });
-    showAlert('Payment refunded and invoice reopened.', 'success');
+    showAlert('Payment reversal recorded and supplier invoice reopened.', 'success');
     await refreshPayments();
   } catch (err) {
     showAlert(err.message);
   } finally {
     if (button) {
       button.disabled = false;
-      button.textContent = 'Refund';
+      button.textContent = 'Payment reversal';
     }
   }
 }
@@ -571,7 +581,7 @@ function pollNETSPaymentStatus(invoiceId, txnRetrievalRef){
       if (statusEl) statusEl.textContent = status.paid ? 'NETS payment received.' : 'Waiting for NETS sandbox payment...';
       if (status.paid) {
         clearInterval(netsStatusPoller);
-        await recordNETSPayment(invoiceId, txnRetrievalRef, 'Confirmed by NETS sandbox status');
+        await completeNETSPayment(invoiceId, txnRetrievalRef);
       } else if (status.failed || attempts >= 60) {
         clearInterval(netsStatusPoller);
         if (statusEl) statusEl.textContent = 'NETS payment was not completed.';
@@ -583,8 +593,19 @@ function pollNETSPaymentStatus(invoiceId, txnRetrievalRef){
   }, 5000);
 }
 
+async function completeNETSPayment(invoiceId, reference){
+  await fetchJson(`/payment/nets/${invoiceId}/complete`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ reference })
+  });
+  showAlert('NETS payment recorded from sandbox status query', 'success');
+  document.getElementById('netsQrBox').innerHTML = '';
+  await refreshPayments();
+}
+
 async function recordNETSPayment(invoiceId, reference, note){
-  await fetchJson(`/payment/nets/${invoiceId}/confirm`, {
+  const data = await fetchJson(`/payment/nets/${invoiceId}/confirm`, {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
     body: JSON.stringify({
@@ -594,19 +615,19 @@ async function recordNETSPayment(invoiceId, reference, note){
       note
     })
   });
-  showAlert('NETS payment recorded successfully', 'success');
+  showAlert(data.notice || 'Manual finance confirmation recorded for demonstration or reconciliation purposes', 'success');
   document.getElementById('netsQrBox').innerHTML = '';
   await refreshPayments();
 }
 
-// Added: lets finance confirm the NETS receipt and mark the invoice as Paid.
+// Added: lets finance manually record a NETS reference for demo/reconciliation.
 async function confirmNETSPayment(invoiceId, reference){
-  const confirmedReference = prompt('NETS transaction/reference', reference || '');
+  const confirmedReference = prompt('Manual finance confirmation for demonstration or reconciliation purposes. Enter NETS transaction/reference:', reference || '');
   if (!confirmedReference) return showAlert('NETS reference is required');
 
   try {
     if (netsStatusPoller) clearInterval(netsStatusPoller);
-    await recordNETSPayment(invoiceId, confirmedReference, 'Confirmed NETS QR payment');
+    await recordNETSPayment(invoiceId, confirmedReference, 'Manual finance confirmation for demonstration or reconciliation purposes');
   } catch (err) {
     showAlert(err.message);
   }

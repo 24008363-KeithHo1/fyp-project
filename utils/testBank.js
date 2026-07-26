@@ -81,12 +81,12 @@ async function simulateSalaryRelease({ payroll, releasedBy }) {
 
 async function simulateRefundDestination({ payment, invoice, refundedBy }) {
   const amount = money(payment.amount);
-  const customerReference = invoice && invoice.data && invoice.data.email
+  const supplierReference = invoice && invoice.data && invoice.data.email
     ? invoice.data.email
     : `invoice-${payment.invoiceId}`;
   const refundAccount = await findOrCreateTestAccount({
-    ownerType: 'Customer',
-    ownerReference: customerReference,
+    ownerType: 'Supplier',
+    ownerReference: supplierReference,
     accountName: invoice ? invoice.customer_name : payment.invoiceNumber,
     openingBalance: 0
   });
@@ -94,12 +94,12 @@ async function simulateRefundDestination({ payment, invoice, refundedBy }) {
 
   await creditAccount(refundAccount, amount);
   const transaction = await TestBankTransaction.create({
-    type: 'Refund',
+    type: 'PaymentReversal',
     toAccountId: refundAccount.id,
     amount,
     currency: payment.currency || 'SGD',
     reference,
-    description: `Refund for ${payment.invoiceNumber}`,
+    description: `Payment reversal / supplier refund for ${payment.invoiceNumber}`,
     processedAt: new Date(),
     data: {
       paymentId: payment.id,

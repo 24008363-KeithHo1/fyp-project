@@ -21,7 +21,7 @@
     { label: 'Dashboard', href: '/finance/dashboard', icon: 'fa-chart-line', active: requestPath === '/finance/dashboard' },
     { label: 'Subscription Invoices', href: '/finance/subscription-invoices', icon: 'fa-file-contract', active: requestPath.startsWith('/finance/subscription-invoices') },
     { label: 'Invoices', href: '/invoices', icon: 'fa-file-invoice-dollar', active: requestPath.startsWith('/invoices') },
-    { label: 'Payments', href: '/finance/payments', icon: 'fa-credit-card', active: requestPath === '/finance/payments' },
+    { label: 'Supplier Payments', href: '/finance/payments', icon: 'fa-credit-card', active: requestPath === '/finance/payments' },
     { label: 'Bank Reconciliation', href: '/finance/bank-reconcile', icon: 'fa-building-columns', active: requestPath === '/finance/bank-reconcile' },
     { label: 'Payroll', href: '/payroll', icon: 'fa-money-check-dollar', active: requestPath === '/payroll' },
     { label: 'Approvals', href: '/finance/payroll-approvals', icon: 'fa-clipboard-check', active: requestPath.startsWith('/finance/payroll-approvals') },
@@ -37,7 +37,7 @@
   ];
   const adminLinks = [
     { label: 'Dashboard', href: '/admin/dashboard', icon: 'fa-chart-line', active: requestPath === '/admin/dashboard' },
-    { label: 'Partner Customers', href: '/partner-customers', icon: 'fa-handshake', active: requestPath === '/partner-customers' },
+    { label: 'Partner Suppliers / Vendors', href: '/partner-customers', icon: 'fa-handshake', active: requestPath === '/partner-customers' },
     { label: 'Manage Users', href: '/admin/users', icon: 'fa-users-gear', active: requestPath.startsWith('/admin/users') },
     { label: 'Create Account', href: '/admin/register', icon: 'fa-user-plus', active: requestPath === '/admin/register' },
     { label: 'Password Reset', href: '/admin/reset', icon: 'fa-key', active: requestPath === '/admin/reset' },

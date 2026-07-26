@@ -67,7 +67,7 @@ function validatePayload(body, partial = false) {
     }
   }
   if (body.status !== undefined && !ALLOWED_STATUSES.includes(clean(body.status))) {
-    errors.push({ field: 'status', message: 'Invalid customer status.' });
+    errors.push({ field: 'status', message: 'Invalid supplier/vendor status.' });
   }
   return errors;
 }
@@ -102,7 +102,7 @@ exports.page = async (req, res, next) => {
   try {
     const plans = await SubscriptionPlan.findAll({ where: { isActive: true }, order: [['monthlyFee', 'ASC']] });
     res.render('admin/partner-customers', {
-      title: 'Partner Customers',
+      title: 'Partner Suppliers / Vendors',
       businessTypes: ALLOWED_BUSINESS_TYPES,
       plans
     });
@@ -140,7 +140,7 @@ exports.get = async (req, res) => {
   const customer = await PartnerCustomer.findByPk(req.params.id, {
     include: [{ model: SubscriptionPlan, as: 'subscriptionPlan' }]
   });
-  if (!customer) return res.status(404).json({ error: 'Partner customer not found' });
+  if (!customer) return res.status(404).json({ error: 'Partner supplier/vendor not found' });
   res.json(customer);
 };
 
@@ -168,7 +168,7 @@ exports.billingList = async (req, res) => {
 exports.updateBilling = async (req, res) => {
   try {
     const customer = await PartnerCustomer.findByPk(req.params.id);
-    if (!customer) return res.status(404).json({ error: 'Partner customer not found' });
+    if (!customer) return res.status(404).json({ error: 'Partner supplier/vendor not found' });
 
     const allowedFields = [
       'subscriptionPlanId',
@@ -240,7 +240,7 @@ exports.create = async (req, res) => {
 exports.update = async (req, res) => {
   try {
     const customer = await PartnerCustomer.findByPk(req.params.id);
-    if (!customer) return res.status(404).json({ error: 'Partner customer not found' });
+    if (!customer) return res.status(404).json({ error: 'Partner supplier/vendor not found' });
     const errors = validatePayload(req.body || {}, true);
     if (errors.length) return res.status(400).json({ error: 'Validation failed', details: errors });
     if (req.body.subscriptionPlanId !== undefined && !await activePlan(req.body.subscriptionPlanId)) {
@@ -271,9 +271,9 @@ exports.update = async (req, res) => {
 exports.setStatus = async (req, res) => {
   try {
     const customer = await PartnerCustomer.findByPk(req.params.id);
-    if (!customer) return res.status(404).json({ error: 'Partner customer not found' });
+    if (!customer) return res.status(404).json({ error: 'Partner supplier/vendor not found' });
     const status = clean(req.body && req.body.status);
-    if (!ALLOWED_STATUSES.includes(status)) return res.status(400).json({ error: 'Invalid customer status' });
+    if (!ALLOWED_STATUSES.includes(status)) return res.status(400).json({ error: 'Invalid supplier/vendor status' });
     const previousStatus = customer.status;
     await customer.update({ status });
     await logAction(req, 'status_change', 'PartnerCustomer', customer.id, {

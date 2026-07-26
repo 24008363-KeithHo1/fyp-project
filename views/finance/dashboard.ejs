@@ -148,7 +148,7 @@ body{background:linear-gradient(135deg,#f7faf8 0%,#e8f7ee 48%,#f8fbf9 100%)!impo
     <div class="fd-header-right">
       <span class="fd-date" id="fd-today"></span>
       <a href="/finance/payments" class="btn-payments">
-        <i class="fa-solid fa-arrow-right-arrow-left"></i> Payments
+        <i class="fa-solid fa-arrow-right-arrow-left"></i> Supplier Payments
       </a>
     </div>
   </header>
@@ -170,7 +170,7 @@ body{background:linear-gradient(135deg,#f7faf8 0%,#e8f7ee 48%,#f8fbf9 100%)!impo
     </div>
     <div class="fd-kpi kpi-pending">
       <div class="fd-kpi-icon"><i class="fa-solid fa-clock"></i></div>
-      <div class="fd-kpi-label">Pending Payments</div>
+      <div class="fd-kpi-label">Pending Supplier Payments</div>
       <div class="fd-kpi-value" id="financePendingPayments">0</div>
       <div class="fd-kpi-sub">Awaiting settlement</div>
     </div>
@@ -218,7 +218,7 @@ body{background:linear-gradient(135deg,#f7faf8 0%,#e8f7ee 48%,#f8fbf9 100%)!impo
 
   <div class="fd-panel fd-spacer">
     <div class="fd-table-header">
-      <h2 class="fd-panel-title" style="margin:0"><i class="fa-solid fa-list-check"></i> Recent Payments</h2>
+      <h2 class="fd-panel-title" style="margin:0"><i class="fa-solid fa-list-check"></i> Recent Supplier Payments</h2>
       <a href="/finance/payments" class="btn-view-all">View all →</a>
     </div>
     <div class="fd-table-scroll">
@@ -286,7 +286,7 @@ body{background:linear-gradient(135deg,#f7faf8 0%,#e8f7ee 48%,#f8fbf9 100%)!impo
       </a>
       <a href="/finance/payments" class="fd-action-card">
         <div class="fd-action-icon"><i class="fa-solid fa-credit-card"></i></div>
-        <div><div class="fd-action-name">Payments</div><div class="fd-action-desc">Record &amp; reconcile</div></div>
+        <div><div class="fd-action-name">Supplier Payments</div><div class="fd-action-desc">Record &amp; reconcile</div></div>
       </a>
       <a href="/finance/bank-reconcile" class="fd-action-card">
         <div class="fd-action-icon"><i class="fa-solid fa-building-columns"></i></div>
@@ -435,7 +435,7 @@ function renderAlerts(totals) {
   const items = [];
   if ((totals.overdueInvoiceCount||0)>0) items.push(`${totals.overdueInvoiceCount} overdue invoice${totals.overdueInvoiceCount===1?'':'s'}`);
   if ((totals.failedPayPalCount||0)>0) items.push(`${totals.failedPayPalCount} failed PayPal transaction${totals.failedPayPalCount===1?'':'s'}`);
-  if ((totals.refundedPaymentCount||0)>0) items.push(`${totals.refundedPaymentCount} refunded payment${totals.refundedPaymentCount===1?'':'s'} totalling ${financeMoney(totals.refundedPaymentAmount)}`);
+  if ((totals.refundedPaymentCount||0)>0) items.push(`${totals.refundedPaymentCount} payment reversal${totals.refundedPaymentCount===1?'':'s'} / supplier refund${totals.refundedPaymentCount===1?'':'s'} totalling ${financeMoney(totals.refundedPaymentAmount)}`);
   if ((totals.payrollDueSoonCount||0)>0) items.push(`${totals.payrollDueSoonCount} payroll run${totals.payrollDueSoonCount===1?'':'s'} due in 2 days`);
   const container = document.getElementById('financeAlerts');
   if (!items.length) { container.innerHTML='<div class="fd-alerts-empty"><i class="fa-solid fa-circle-check"></i> No active finance alerts.</div>'; return; }

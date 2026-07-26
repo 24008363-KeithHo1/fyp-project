@@ -218,12 +218,15 @@ async function createNETSInvoiceSession(invoiceId) {
 async function recordNETSPaidInvoice(invoice, reference, paidAt, req, note) {
   const method = 'NETS';
   const provider = 'nets';
+  const confirmationType = note && note.confirmationType ? note.confirmationType : 'nets_status_query';
+  const confirmationNote = note && note.text ? note.text : note;
   const data = Object.assign({}, invoice.data || {}, {
     payment: Object.assign({}, (invoice.data && invoice.data.payment) || {}, {
       provider,
       method,
       netsReference: reference,
       status: 'paid',
+      confirmationType,
       paidAt: paidAt.toISOString(),
       recordedBy: req.user && req.user.id
     })
@@ -239,11 +242,12 @@ async function recordNETSPaidInvoice(invoice, reference, paidAt, req, note) {
     recordedBy: req.user && req.user.id,
     data: {
       netsReference: reference,
-      note
+      confirmationType,
+      note: confirmationNote
     }
   });
   const { ip, userAgent } = getRequestMetadata(req);
-  await logAudit({ userId: req.user ? req.user.id : null, action: 'payment_nets_confirmed', entity: 'Payment', entityId: payment.id, meta: { invoiceNumber: invoice.number, amount: invoice.amount, reference, note }, ip, userAgent });
+  await logAudit({ userId: req.user ? req.user.id : null, action: 'payment_nets_confirmed', entity: 'Payment', entityId: payment.id, meta: { invoiceNumber: invoice.number, amount: invoice.amount, reference, confirmationType, note: confirmationNote }, ip, userAgent });
 
   return payment;
 }
@@ -683,14 +687,17 @@ exports.completeNETSPayment = async (req, res) => {
     const isPaid = Boolean(statusData && statusData.response_code === '00' && Number(statusData.txn_status) === 1);
     if (!isPaid) return res.status(400).json({ error: 'NETS payment has not been completed yet' });
 
-    const payment = await recordNETSPaidInvoice(invoice, reference, new Date(), req, 'Confirmed by NETS sandbox status');
+    const payment = await recordNETSPaidInvoice(invoice, reference, new Date(), req, {
+      confirmationType: 'nets_status_query',
+      text: 'Confirmed by NETS sandbox status query'
+    });
     res.json({ ok: true, invoice, payment });
   } catch (err) {
     res.status(400).json({ error: err.message });
   }
 };
 
-// Added for finance confirmation: marks verified NETS payments as Paid.
+// Added for finance confirmation: manually records a finance confirmation for demo/reconciliation.
 exports.confirmNETSPayment = async (req, res) => {
   try {
     const invoice = await Invoice.findByPk(req.params.id);
@@ -709,9 +716,20 @@ exports.confirmNETSPayment = async (req, res) => {
       return res.status(400).json({ error: 'Paid date cannot be future date' });
     }
 
-    const payment = await recordNETSPaidInvoice(invoice, reference, paidAt, req, req.body && req.body.note);
+    const payment = await recordNETSPaidInvoice(invoice, reference, paidAt, req, {
+      confirmationType: 'manual_finance_confirmation',
+      text: req.body && req.body.note
+        ? String(req.body.note)
+        : 'Manual finance confirmation for demonstration or reconciliation purposes'
+    });
 
-    res.json({ ok: true, invoice, payment });
+    res.json({
+      ok: true,
+      invoice,
+      payment,
+      confirmationType: 'manual_finance_confirmation',
+      notice: 'Manual finance confirmation for demonstration or reconciliation purposes. This entry does not independently prove NETS settlement.'
+    });
   } catch (err) {
     res.status(400).json({ error: err.message });
   }
@@ -743,6 +761,9 @@ exports.removeHistoryItem = async (req, res) => {
   try {
     const payment = await Payment.findByPk(req.params.id);
     if (!payment) return res.status(404).json({ error: 'Payment not found' });
+    if (normalizePaymentStatus(payment.status) === 'Paid') {
+      return res.status(400).json({ error: 'Paid supplier payment records cannot be deleted. Record a payment reversal first.' });
+    }
 
     await payment.destroy();
 
@@ -773,8 +794,8 @@ exports.refundPayment = async (req, res) => {
   try {
     const payment = await Payment.findByPk(req.params.id);
     if (!payment) return res.status(404).json({ error: 'Payment not found' });
-    if (payment.status === 'Refunded') return res.status(400).json({ error: 'Payment is already refunded' });
-    if (payment.status !== 'Paid') return res.status(400).json({ error: 'Only paid payments can be refunded' });
+    if (payment.status === 'Refunded') return res.status(400).json({ error: 'Payment reversal has already been recorded' });
+    if (payment.status !== 'Paid') return res.status(400).json({ error: 'Only paid supplier payments can be reversed' });
 
     const invoice = await Invoice.findByPk(payment.invoiceId);
     const refundedAt = new Date();
