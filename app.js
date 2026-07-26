@@ -63,8 +63,8 @@ app.get('/mypayslips', require('./middlewares/auth'), require('./controllers/pay
 app.get('/reports', require('./middlewares/auth'), (req, res) => res.render('reports'));
 app.get('/register', (req, res) => res.render('register', { token: req.query.token || '', email: req.query.email || '', title: 'Register' }));
 app.get('/reset', (req, res) => res.render('reset', { token: req.query.token || '' }));
-app.get('/mfa-setup', (req, res) => res.render('mfa-setup'));
-app.get('/profile', require('./middlewares/auth'), requireRole(['Admin','Staff']), (req, res) => res.render('staff/profile'));
+app.get('/mfa-setup', require('./middlewares/auth'), (req, res) => res.render('mfa-setup'));
+app.get('/profile', require('./middlewares/auth'), requireRole(['Admin','Staff','Finance','HR']), (req, res) => res.render('staff/profile'));
 
 // Routes
 app.use('/api/auth', require('./routes/auth'));

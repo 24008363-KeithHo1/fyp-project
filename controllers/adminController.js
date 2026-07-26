@@ -71,6 +71,10 @@ exports.updateUser = async (req, res) => {
     const targetId = parseInt(req.params.id, 10);
     const newIsActive = isActive === 'on';
 
+    if (!Number.isInteger(targetId)) {
+      return res.status(400).send('Invalid user id.');
+    }
+
     // Validate role against a whitelist instead of letting an invalid
     // ENUM value fail at the DB layer with a generic 500.
     if (role && !VALID_ROLES.includes(role)) {
@@ -87,6 +91,15 @@ exports.updateUser = async (req, res) => {
       if (!newIsActive) {
         return res.status(400).send('You cannot deactivate your own account.');
       }
+    }
+
+    // Existence check before writing — without this, updating a stale or
+    // tampered/nonexistent id silently matches zero rows, yet the code
+    // would still write an audit log entry and redirect as if it
+    // succeeded, giving false confidence that the change actually landed.
+    const targetUser = await User.findByPk(targetId);
+    if (!targetUser) {
+      return res.status(404).send('User not found.');
     }
 
     await User.update({ role, isActive: newIsActive }, { where: { id: targetId } });

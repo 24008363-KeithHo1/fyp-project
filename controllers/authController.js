@@ -22,6 +22,32 @@ exports.passwordResetLimiter = rateLimit({
   legacyHeaders: false
 });
 
+// Throttle login attempts to slow down password brute-forcing against a
+// known email. 10 attempts per 15 minutes per IP — generous enough not to
+// lock out a real user who mistypes a password a few times, but enough
+// to make guessing infeasible at scale.
+exports.loginLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 10,
+  message: { error: 'Too many login attempts. Please try again later.' },
+  standardHeaders: true,
+  legacyHeaders: false
+});
+
+// Throttle MFA code verification. A 6-digit TOTP code only has 1,000,000
+// possible values, and MFA is the *last* line of defense once someone
+// already has a valid mfaToken (i.e. already knows the correct email +
+// password) — without this, that final step would be brute-forceable at
+// whatever rate the attacker could sustain. 5 attempts per 5 minutes per
+// IP is tight since a legitimate user only ever needs one correct code.
+exports.mfaVerifyLimiter = rateLimit({
+  windowMs: 5 * 60 * 1000,
+  max: 5,
+  message: { error: 'Too many verification attempts. Please try again later.' },
+  standardHeaders: true,
+  legacyHeaders: false
+});
+
 const MIN_PASSWORD_LENGTH = 8;
 
 /**
