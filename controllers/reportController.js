@@ -44,7 +44,7 @@ exports.summary = async (req, res) => {
     const invoiceStatus = {};
     const monthlyRevenue = {};
     // Added: tracks revenue by payment method for the finance dashboard chart.
-    const paymentMethodRevenue = { Stripe: 0, PayPal: 0, NETS: 0 };
+    const paymentMethodRevenue = { Stripe: 0, PayPal: 0, NETS: 0, BankTransfer: 0 };
     // Added: sends latest payment transactions to the dashboard recent payments table.
     const recentTransactions = payments.slice(0, 5).map((payment) => ({
       invoiceNumber: payment.invoiceNumber,
@@ -91,7 +91,7 @@ exports.summary = async (req, res) => {
         if (payment.invoiceId) paidInvoiceIds.add(payment.invoiceId);
         const key = monthKey(payment.paidAt || payment.createdAt);
         monthlyRevenue[key] = (monthlyRevenue[key] || 0) + amount;
-        if (method === 'Stripe' || method === 'PayPal' || method === 'NETS') {
+        if (method === 'Stripe' || method === 'PayPal' || method === 'NETS' || method === 'BankTransfer') {
           paymentMethodRevenue[method] = (paymentMethodRevenue[method] || 0) + amount;
         }
       }

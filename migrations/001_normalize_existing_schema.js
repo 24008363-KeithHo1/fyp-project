@@ -97,30 +97,31 @@ async function addForeignKey(sequelize, relationship) {
   );
 }
 
-async function removeDuplicateProviderReferenceIndexes(sequelize) {
-  if (!(await tableExists(sequelize, 'Payments'))) return;
-
+async function removeDuplicateUniqueColumnIndexes(sequelize, table, column, preferredName) {
+  if (!(await tableExists(sequelize, table))) return;
   const rows = await sequelize.query(
     `SELECT INDEX_NAME, NON_UNIQUE,
             GROUP_CONCAT(COLUMN_NAME ORDER BY SEQ_IN_INDEX) AS columnsList
        FROM information_schema.STATISTICS
-      WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'Payments'
+      WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ?
       GROUP BY INDEX_NAME, NON_UNIQUE
       ORDER BY INDEX_NAME`,
-    { type: QueryTypes.SELECT }
+    { replacements: [table], type: QueryTypes.SELECT }
   );
 
   const matchingIndexes = rows.filter((row) =>
-    Number(row.NON_UNIQUE) === 0 && row.columnsList === 'providerReference'
+    Number(row.NON_UNIQUE) === 0 && row.columnsList === column
   );
-  const retainedIndex = matchingIndexes.find((row) => row.INDEX_NAME === 'providerReference') ||
+  const retainedIndex = matchingIndexes.find((row) => row.INDEX_NAME === preferredName) ||
     matchingIndexes[0];
   const duplicateNames = matchingIndexes
     .filter((row) => row.INDEX_NAME !== retainedIndex?.INDEX_NAME)
     .map((row) => row.INDEX_NAME);
 
   for (const indexName of duplicateNames) {
-    await sequelize.query(`ALTER TABLE \`Payments\` DROP INDEX \`${indexName.replace(/`/g, '``')}\``);
+    await sequelize.query(
+      `ALTER TABLE \`${table}\` DROP INDEX \`${indexName.replace(/`/g, '``')}\``
+    );
   }
 }
 
@@ -175,10 +176,23 @@ module.exports.up = async ({ sequelize }) => {
   await addColumnIfMissing(sequelize, 'PartnerCustomers', 'autoBillingEnabled', 'BOOLEAN NOT NULL DEFAULT TRUE');
   await addColumnIfMissing(sequelize, 'PartnerCustomers', 'nextBillingDate', 'DATE NULL');
 
-  await ensureEnum(sequelize, 'Payments', 'method', ['Stripe', 'PayPal', 'NETS'], null, false);
+  await ensureEnum(
+    sequelize,
+    'Payments',
+    'method',
+    ['Stripe', 'PayPal', 'NETS', 'BankTransfer'],
+    null,
+    false
+  );
   await ensureEnum(sequelize, 'Payments', 'status', ['Paid', 'Failed', 'Pending', 'Refunded'], 'Paid');
   await ensureEnum(sequelize, 'Payrolls', 'payment_status', ['Pending', 'Approved', 'Paid'], 'Pending');
-  await removeDuplicateProviderReferenceIndexes(sequelize);
+  await removeDuplicateUniqueColumnIndexes(
+    sequelize,
+    'Payments',
+    'providerReference',
+    'providerReference'
+  );
+  await removeDuplicateUniqueColumnIndexes(sequelize, 'Users', 'email', 'email');
   await ensureIndex(sequelize, 'Payrolls', 'payrolls_payroll_period_id', ['payrollPeriodId']);
   await ensureIndex(
     sequelize,
