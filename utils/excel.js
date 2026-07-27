@@ -123,7 +123,7 @@ async function parsePayrollExcel(filePath){
  * copied, edited, and reused directly as an import template. Layout,
  * repeated per invoice:
  *
- *   Number | Customer | Currency | Amount | Status | Due   <- invoice header (Number/Amount/Status are ignored on import — a fresh number is generated, amount is computed from line items, and new invoices always start as Draft)
+ *   Number | Customer | Currency | Amount | Status | Due   <- invoice header (Number/Amount/Status are ignored on import — a fresh number is generated, amount is computed from line items, and new invoices always start as Draft. Customer and Due are required; Currency defaults to SGD if blank)
  *   <actual values>                                         <- invoice data
  *   (optional blank row)
  *   Description | Qty | Unit Price | Discount % | Tax % | Line Total  <- items header (Line Total ignored — computed from the other columns)
@@ -182,8 +182,16 @@ async function parseInvoiceExcelBlocks(filePath) {
     if (!current.customer_name) {
       blockErrors.push(`Row ${current.blockStartRow}: Missing Customer`);
     }
+    // Due date is required for bulk upload specifically (unlike the manual
+    // "Create Invoice" form, where it stays optional). Bulk upload is used
+    // to import many invoices at once, where a blank Due cell is much
+    // easier to miss across dozens of rows than in a single manual entry —
+    // and an invoice with no due date can never be flagged Overdue, which
+    // could let a genuinely late payment go untracked unnoticed at scale.
     let due_date = null;
-    if (current.due_date_raw) {
+    if (!current.due_date_raw) {
+      blockErrors.push(`Row ${current.blockStartRow}: Missing Due date`);
+    } else {
       const parsed = new Date(current.due_date_raw);
       if (Number.isNaN(parsed.getTime())) {
         blockErrors.push(`Row ${current.blockStartRow}: Invalid Due date (got: "${current.due_date_raw}")`);
