@@ -23,13 +23,13 @@
 
 <div class="partner-page">
   <section class="partner-hero d-flex justify-content-between align-items-center flex-wrap gap-3 mb-4">
-    <div><div class="partner-eyebrow">Partner Subscription Billing</div><h1 class="h3 mb-1">Partner Suppliers / Vendors</h1><p class="mb-0">Admin master-data workspace for fictional demonstration suppliers and vendors.</p></div>
-    <button class="btn btn-light fw-bold partner-new-customer" id="newCustomer"><i class="fa-solid fa-plus me-1"></i> Add Supplier / Vendor</button>
+    <div><div class="partner-eyebrow">Partner Subscription Billing</div><h1 class="h3 mb-1">Partner Customers</h1><p class="mb-0">Admin master-data workspace for fictional demonstration customers.</p></div>
+    <button class="btn btn-light fw-bold partner-new-customer" id="newCustomer"><i class="fa-solid fa-plus me-1"></i> Add Customer</button>
   </section>
 
   <div id="alertBox"></div>
   <section class="partner-stats mb-4">
-    <div class="partner-stat"><i class="fa-solid fa-building partner-stat-icon" aria-hidden="true"></i><span class="partner-stat-label">Total Suppliers / Vendors</span><strong id="totalCount">0</strong><small>All subscription records</small></div>
+    <div class="partner-stat"><i class="fa-solid fa-building partner-stat-icon" aria-hidden="true"></i><span class="partner-stat-label">Total Customers</span><strong id="totalCount">0</strong><small>All subscription records</small></div>
     <div class="partner-stat"><i class="fa-solid fa-circle-check partner-stat-icon" aria-hidden="true"></i><span class="partner-stat-label">Active</span><strong id="activeCount">0</strong><small>Available for monthly billing</small></div>
     <div class="partner-stat"><i class="fa-solid fa-pause partner-stat-icon" aria-hidden="true"></i><span class="partner-stat-label">Suspended</span><strong id="suspendedCount">0</strong><small>Billing temporarily paused</small></div>
     <div class="partner-stat"><i class="fa-solid fa-circle-minus partner-stat-icon" aria-hidden="true"></i><span class="partner-stat-label">Inactive</span><strong id="inactiveCount">0</strong><small>No longer active</small></div>
@@ -38,27 +38,27 @@
   <section class="partner-panel partner-filter-panel mb-4">
     <h2 class="partner-panel-title"><i class="fa-solid fa-filter" aria-hidden="true"></i> Search and Filter</h2>
     <div class="row g-2">
-      <div class="col-md-8"><label class="form-label" for="search">Search</label><input class="form-control" id="search" placeholder="Supplier/vendor code, business, contact, or email"></div>
+      <div class="col-md-8"><label class="form-label" for="search">Search</label><input class="form-control" id="search" placeholder="Customer code, business, contact, or email"></div>
       <div class="col-md-4"><label class="form-label" for="statusFilter">Status</label><select class="form-select" id="statusFilter"><option value="">All statuses</option><option>Active</option><option>Suspended</option><option>Inactive</option></select></div>
     </div>
   </section>
 
   <section class="partner-panel partner-table-panel mb-4">
-    <div class="partner-panel-head"><h2 class="partner-panel-title"><i class="fa-solid fa-list-check" aria-hidden="true"></i> Supplier / Vendor Register</h2></div>
+    <div class="partner-panel-head"><h2 class="partner-panel-title"><i class="fa-solid fa-list-check" aria-hidden="true"></i> Customer Register</h2></div>
     <div class="table-responsive">
-      <table class="table table-hover partner-table"><thead><tr><th>Supplier / Vendor</th><th>Business</th><th>Contact</th><th>Plan</th><th>Billing</th><th>Automation</th><th>Status</th><th>Actions</th></tr></thead><tbody id="customerRows"><tr><td colspan="8" class="text-center text-muted py-4">Loading…</td></tr></tbody></table>
+      <table class="table table-hover partner-table"><thead><tr><th>Customer</th><th>Business</th><th>Contact</th><th>Plan</th><th>Billing</th><th>Automation</th><th>Status</th><th>Actions</th></tr></thead><tbody id="customerRows"><tr><td colspan="8" class="text-center text-muted py-4">Loading…</td></tr></tbody></table>
     </div>
   </section>
 
   <section class="partner-panel partner-editor-panel" id="editorPanel" hidden>
-    <div class="partner-editor-header d-flex justify-content-between align-items-center"><h2 class="partner-panel-title"><i class="fa-solid fa-pen-to-square" aria-hidden="true"></i><span id="editorTitle">Add Supplier / Vendor</span></h2><button type="button" class="partner-editor-close" id="closeEditor" aria-label="Close supplier/vendor editor" title="Close"><i class="fa-solid fa-xmark" aria-hidden="true"></i></button></div>
+    <div class="partner-editor-header d-flex justify-content-between align-items-center"><h2 class="partner-panel-title"><i class="fa-solid fa-pen-to-square" aria-hidden="true"></i><span id="editorTitle">Add Customer</span></h2><button type="button" class="partner-editor-close" id="closeEditor" aria-label="Close customer editor" title="Close"><i class="fa-solid fa-xmark" aria-hidden="true"></i></button></div>
     <form id="customerForm">
       <input type="hidden" id="customerId">
       <div class="row g-3">
-        <div class="col-md-6"><label class="form-label required" for="businessName">Supplier / Vendor business name</label><input class="form-control" id="businessName" maxlength="255" placeholder="Supplier 1" required></div>
+        <div class="col-md-6"><label class="form-label required" for="businessName">Business name</label><input class="form-control" id="businessName" maxlength="255" placeholder="Customer 1" required></div>
         <div class="col-md-6"><label class="form-label required" for="businessType">Business type</label><select class="form-select" id="businessType" required><option value="">Select a type</option><% businessTypes.forEach(type => { %><option><%= type %></option><% }) %></select></div>
         <div class="col-md-6"><label class="form-label required" for="contactPerson">Contact person</label><input class="form-control" id="contactPerson" maxlength="255" placeholder="Contact Person 1" required></div>
-        <div class="col-md-6"><label class="form-label required" for="billingEmail">Billing email</label><input class="form-control" id="billingEmail" type="email" maxlength="255" placeholder="supplier1@example.com" required></div>
+        <div class="col-md-6"><label class="form-label required" for="billingEmail">Billing email</label><input class="form-control" id="billingEmail" type="email" maxlength="255" placeholder="customer1@example.com" required></div>
         <div class="col-md-4"><label class="form-label" for="phone">Phone</label><input class="form-control" id="phone" maxlength="30"></div>
         <div class="col-md-4"><label class="form-label" for="region">Region</label><select class="form-select" id="region"><option value="">Select region</option><option>Central Singapore</option><option>East Singapore</option><option>North Singapore</option><option>North-East Singapore</option><option>West Singapore</option></select></div>
         <div class="col-md-4"><label class="form-label required" for="subscriptionStartDate">Subscription start</label><input class="form-control" id="subscriptionStartDate" type="date" required></div>
@@ -67,11 +67,11 @@
         <div class="col-md-3"><label class="form-label" for="paymentTermsDays">Payment terms</label><div class="input-group"><input class="form-control" id="paymentTermsDays" type="number" min="0" max="365" value="14"><span class="input-group-text">days</span></div></div>
         <div class="col-md-3"><label class="form-label" for="customerStatus">Status</label><select class="form-select" id="customerStatus"><option>Active</option><option>Suspended</option><option>Inactive</option></select></div>
         <div class="col-12"><div class="plan-help" id="planHelp">Choose Basic, Standard, or Premium to view its monthly fee and included features.</div></div>
-        <div class="col-md-5"><div class="automation-box"><div class="form-check form-switch"><input class="form-check-input" id="autoBillingEnabled" type="checkbox" checked><label class="form-check-label fw-semibold" for="autoBillingEnabled">Generate subscription supplier invoices automatically</label></div><div class="small text-muted mt-1">Only active suppliers/vendors with this enabled will be eligible.</div></div></div>
+        <div class="col-md-5"><div class="automation-box"><div class="form-check form-switch"><input class="form-check-input" id="autoBillingEnabled" type="checkbox" checked><label class="form-check-label fw-semibold" for="autoBillingEnabled">Generate subscription invoices automatically</label></div><div class="small text-muted mt-1">Only active customers with this enabled will be eligible.</div></div></div>
         <div class="col-md-4"><label class="form-label" for="nextBillingDate">Next billing date</label><input class="form-control" id="nextBillingDate" type="date" required></div>
         <div class="col-12"><label class="form-label" for="notes">Internal notes</label><textarea class="form-control" id="notes" rows="2"></textarea></div>
       </div>
-      <div class="partner-editor-actions"><button type="button" class="btn btn-outline-secondary" id="cancelEditor">Cancel</button><button class="btn btn-success" id="saveCustomer">Save Supplier / Vendor</button></div>
+      <div class="partner-editor-actions"><button type="button" class="btn btn-outline-secondary" id="cancelEditor">Cancel</button><button class="btn btn-success" id="saveCustomer">Save Customer</button></div>
     </form>
   </section>
 </div>
@@ -102,7 +102,7 @@ function render() {
   const status = document.getElementById('statusFilter').value;
   const visible = customers.filter(c => (!status || c.status === status) && (!query || `${c.customerCode} ${c.businessName} ${c.contactPerson} ${c.billingEmail}`.toLowerCase().includes(query)));
   const rows = document.getElementById('customerRows');
-  if (!visible.length) { rows.innerHTML = '<tr><td colspan="8" class="text-center text-muted py-4">No partner suppliers/vendors found.</td></tr>'; return; }
+  if (!visible.length) { rows.innerHTML = '<tr><td colspan="8" class="text-center text-muted py-4">No partner customers found.</td></tr>'; return; }
   rows.innerHTML = visible.map(c => `<tr>
     <td><strong>${escapeHtml(c.customerCode)}</strong><div class="small text-muted">Started ${escapeHtml(c.subscriptionStartDate)}</div></td>
     <td><strong>${escapeHtml(c.businessName)}</strong><div class="small text-muted">${escapeHtml(c.businessType)}${c.region ? ' · ' + escapeHtml(c.region) : ''}</div></td>
@@ -126,7 +126,7 @@ function openEditor(customer=null) {
   document.getElementById('autoBillingEnabled').checked = customer ? Boolean(customer.autoBillingEnabled) : true;
   document.getElementById('nextBillingDate').value = customer?.nextBillingDate || '';
   document.getElementById('customerId').value = customer?.id || '';
-  document.getElementById('editorTitle').textContent = customer ? `Edit ${customer.customerCode}` : 'Add Supplier / Vendor';
+  document.getElementById('editorTitle').textContent = customer ? `Edit ${customer.customerCode}` : 'Add Customer';
   ['businessName','businessType','contactPerson','billingEmail','phone','billingAddress','region','subscriptionStartDate','status','notes'].forEach(field => {
     const element = document.getElementById(field === 'status' ? 'customerStatus' : field);
     if (customer && element) element.value = customer[field] || '';
@@ -164,8 +164,8 @@ document.getElementById('customerRows').addEventListener('click', async event =>
   const statusButton = event.target.closest('[data-status-id]');
   if (!statusButton) return;
   const customer = customers.find(c => Number(c.id) === Number(statusButton.dataset.statusId));
-  if (!confirm(`${statusButton.dataset.status} ${customer?.businessName || 'this supplier/vendor'}?`)) return;
-  try { await api(`/api/partner-customers/${statusButton.dataset.statusId}/status`, {method:'PATCH', headers:{'Content-Type':'application/json'}, body:JSON.stringify({status:statusButton.dataset.status})}); await loadCustomers(); showAlert('Supplier / Vendor status updated.', 'success'); } catch(error) { showAlert(error.message); }
+  if (!confirm(`${statusButton.dataset.status} ${customer?.businessName || 'this customer'}?`)) return;
+  try { await api(`/api/partner-customers/${statusButton.dataset.statusId}/status`, {method:'PATCH', headers:{'Content-Type':'application/json'}, body:JSON.stringify({status:statusButton.dataset.status})}); await loadCustomers(); showAlert('Customer status updated.', 'success'); } catch(error) { showAlert(error.message); }
 });
 document.getElementById('customerForm').addEventListener('submit', async event => {
   event.preventDefault();
@@ -180,7 +180,7 @@ document.getElementById('customerForm').addEventListener('submit', async event =
   const button = document.getElementById('saveCustomer'); button.disabled = true;
   try {
     await api(id ? `/api/partner-customers/${id}` : '/api/partner-customers', {method:id ? 'PATCH' : 'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(payload)});
-    closeEditor(); await loadCustomers(); showAlert(id ? 'Supplier / Vendor updated.' : 'Supplier / Vendor created.', 'success');
+    closeEditor(); await loadCustomers(); showAlert(id ? 'Customer updated.' : 'Customer created.', 'success');
   } catch(error) { showAlert(error.message); } finally { button.disabled = false; }
 });
 loadCustomers().catch(error => showAlert(error.message));
