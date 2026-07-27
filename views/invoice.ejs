@@ -807,7 +807,9 @@
                 Bulk Upload
                 <span class="invoice-panel-subtitle">Import multiple invoices from an Excel or CSV file</span>
               </div>
-              <p class="text-muted small"><strong>Format:</strong> customer name, email, amount, currency, and due date.</p>
+              <p class="text-muted small">
+                <strong>Format:</strong> matches an exported invoice — one block per invoice: <code>Number | Customer | Currency | Amount | Status | Due</code>, followed by <code>Description | Qty | Unit Price | Discount % | Tax %</code> per line item. Number, Amount, and Status are ignored on import. Repeat per invoice, separated by a blank row.
+              </p>
               <span class="invoice-bulk-upload-format">CSV / XLSX</span>
             </div>
           </div>

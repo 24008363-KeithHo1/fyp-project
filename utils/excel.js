@@ -1,6 +1,5 @@
 const Excel = require('exceljs');
 const fs = require('fs');
-const path = require('path');
 
 const normalizeHeader = (value) => String(value || '')
   .trim()
@@ -119,107 +118,176 @@ async function parsePayrollExcel(filePath){
 }
 
 /**
- * Expected columns (1-indexed, column A is left blank/unused to mirror
- * the payroll sheet layout so both templates look consistent):
- *   B: customer_name    C: email (optional, used for "send" later)
- *   D: amount           E: currency (optional, defaults SGD)
- *   F: due_date (optional, YYYY-MM-DD or Excel date)
+ * Bulk-upload format: one invoice per "block", matching the exact layout
+ * of a single invoice's Excel export — so a real exported invoice can be
+ * copied, edited, and reused directly as an import template. Layout,
+ * repeated per invoice:
+ *
+ *   Number | Customer | Currency | Amount | Status | Due   <- invoice header (Number/Amount/Status are ignored on import — a fresh number is generated, amount is computed from line items, and new invoices always start as Draft)
+ *   <actual values>                                         <- invoice data
+ *   (optional blank row)
+ *   Description | Qty | Unit Price | Discount % | Tax % | Line Total  <- items header (Line Total ignored — computed from the other columns)
+ *   <line item row 1>
+ *   <line item row 2>
+ *   ...
+ *   (a blank row, or the next invoice's "Number" header, ends the block)
  */
-async function parseInvoiceExcel(filePath){
+async function parseInvoiceExcelBlocks(filePath) {
   const workbook = new Excel.Workbook();
-  const ext = path.extname(filePath).toLowerCase();
-  if (ext === '.csv') {
-    await workbook.csv.readFile(filePath);
-  } else {
-    await workbook.xlsx.readFile(filePath);
-  }
+  await workbook.xlsx.readFile(filePath);
   const ws = workbook.worksheets[0];
-  const rows = [];
+  const invoices = [];
   const errors = [];
-  const headerRow = ws.getRow(1);
-  const headers = {};
 
-  headerRow.eachCell((cell, colNumber) => {
-    const normalized = normalizeHeader(cell.value && cell.value.text ? cell.value.text : cell.value);
-    if (normalized) headers[normalized] = colNumber;
-  });
-
-  ws.eachRow((row, rowNumber) => {
-    if (rowNumber === 1) return; // skip header
-
-    const getCell = (cellNum) => {
-      const cell = row.getCell(cellNum);
-      if (!cell || cell.value === null || cell.value === undefined) return '';
-
-      let value = cell.value;
-
-      if (typeof value === 'object' && value.richText) {
-        return value.richText.map(rt => rt.text || rt).join('').trim();
-      }
-      if (typeof value === 'object' && value.text) {
-        return value.text.trim();
-      }
-      if (value instanceof Date) {
-        return value.toISOString().split('T')[0];
-      }
-      if (typeof value === 'object' && value.toString) {
-        return value.toString().trim();
-      }
-      return String(value).trim();
-    };
-
-    const usesStandardColumns = !!getCell(1);
-    const columns = {
-      customer: headers.customer_name || headers.customer || headers.customername || (usesStandardColumns ? 1 : 2),
-      email: headers.email || (usesStandardColumns ? 2 : 3),
-      amount: headers.amount || (usesStandardColumns ? 3 : 4),
-      currency: headers.currency || (usesStandardColumns ? 4 : 5),
-      dueDate: headers.due_date || headers.due || headers.duedate || (usesStandardColumns ? 5 : 6)
-    };
-
-    // Skip fully blank rows rather than reporting them as errors —
-    // trailing empty rows are common in exported/edited spreadsheets.
-    const isBlankRow = [columns.customer, columns.email, columns.amount, columns.currency, columns.dueDate].every((col) => !getCell(col));
-    if (isBlankRow) return;
-
-    const customer_name = getCell(columns.customer);
-    const email = getCell(columns.email).toLowerCase();
-    const amount = parseFloat(getCell(columns.amount));
-    const currency = (getCell(columns.currency) || 'SGD').toUpperCase();
-    const dueDateRaw = getCell(columns.dueDate);
-
-    const rowErrors = [];
-    if (!customer_name) {
-      rowErrors.push(`Row ${rowNumber}: Missing customer_name`);
+  const getCell = (row, cellNum) => {
+    const cell = row.getCell(cellNum);
+    if (!cell || cell.value === null || cell.value === undefined) return '';
+    let value = cell.value;
+    if (typeof value === 'object' && value.richText) {
+      return value.richText.map(rt => rt.text || rt).join('').trim();
     }
-    if (email) {
-      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-      if (!emailRegex.test(email)) {
-        rowErrors.push(`Row ${rowNumber}: Invalid email format (got: "${email}")`);
-      }
+    if (typeof value === 'object' && value.text) {
+      return value.text.trim();
     }
-    if (!Number.isFinite(amount) || amount <= 0) {
-      rowErrors.push(`Row ${rowNumber}: Invalid amount (got: "${getCell(columns.amount)}")`);
+    if (value instanceof Date) {
+      return value.toISOString().split('T')[0];
+    }
+    if (typeof value === 'object' && value.toString) {
+      return value.toString().trim();
+    }
+    return String(value).trim();
+  };
+
+  const isBlankRow = (row, cols) => cols.every((col) => !getCell(row, col));
+  const normKey = (s) => String(s || '').trim().toLowerCase();
+
+  // States:
+  //   SEEK_HEADER      — waiting for a "Number" header row to start a new invoice block
+  //   READ_INVOICE     — the current row is the actual invoice data (the row right after a header row)
+  //   SEEK_ITEMS_HEADER— waiting for a "Description" header row (skipping optional blank rows first)
+  //   READ_ITEMS       — reading line-item data rows, until a blank row or the next "Number" header
+  //
+  // Important: detecting colA === 'number' NEVER means "this row has the
+  // data" — it always means "this row is a label row; the real data is on
+  // the next row" — so it always transitions to READ_INVOICE and waits for
+  // the following iteration, rather than reading data off the header row
+  // itself.
+  let mode = 'SEEK_HEADER';
+  let current = null;
+
+  function finalizeCurrent() {
+    if (!current) return;
+    const blockErrors = [];
+
+    if (!current.customer_name) {
+      blockErrors.push(`Row ${current.blockStartRow}: Missing Customer`);
     }
     let due_date = null;
-    if (dueDateRaw) {
-      const parsed = new Date(dueDateRaw);
+    if (current.due_date_raw) {
+      const parsed = new Date(current.due_date_raw);
       if (Number.isNaN(parsed.getTime())) {
-        rowErrors.push(`Row ${rowNumber}: Invalid due_date (got: "${dueDateRaw}")`);
+        blockErrors.push(`Row ${current.blockStartRow}: Invalid Due date (got: "${current.due_date_raw}")`);
       } else {
         due_date = parsed;
       }
     }
-
-    if (rowErrors.length > 0) {
-      errors.push(...rowErrors);
-    } else {
-      rows.push({ customer_name, email: email || null, amount, currency, due_date });
+    if (!current.items.length) {
+      blockErrors.push(`Row ${current.blockStartRow}: Invoice for "${current.customer_name || '(unknown)'}" has no line items`);
     }
-  });
+
+    if (blockErrors.length) {
+      errors.push(...blockErrors);
+    } else {
+      invoices.push({
+        customer_name: current.customer_name,
+        email: null,
+        currency: (current.currency || 'SGD').toUpperCase(),
+        due_date,
+        items: current.items
+      });
+    }
+    current = null;
+  }
+
+  const totalRows = ws.rowCount || 0;
+  for (let rowNumber = 1; rowNumber <= totalRows; rowNumber++) {
+    const row = ws.getRow(rowNumber);
+    const colA = normKey(getCell(row, 1));
+
+    if (mode === 'SEEK_HEADER') {
+      if (colA === 'number') {
+        mode = 'READ_INVOICE'; // next row holds the actual data
+      }
+      continue; // skip stray/blank rows between blocks
+    }
+
+    if (mode === 'READ_INVOICE') {
+      // Column A (Number) and column D (Amount) and column E (Status) are
+      // intentionally not read here — a fresh number is always generated,
+      // the amount is always computed from the line items below, and a
+      // newly-imported invoice always starts as Draft regardless of
+      // whatever those columns say (e.g. if this row came from copying a
+      // real exported invoice, which would show its old real values).
+      current = {
+        customer_name: getCell(row, 2),
+        currency: getCell(row, 3),
+        due_date_raw: getCell(row, 6),
+        items: [],
+        blockStartRow: rowNumber
+      };
+      mode = 'SEEK_ITEMS_HEADER';
+      continue;
+    }
+
+    if (mode === 'SEEK_ITEMS_HEADER') {
+      if (isBlankRow(row, [1, 2, 3, 4, 5, 6])) continue; // optional blank separator
+      if (colA === 'description') {
+        mode = 'READ_ITEMS';
+        continue;
+      }
+      // Malformed: no items header where one was expected. Report and
+      // abandon this invoice, then try to resync — if this row is itself
+      // the next invoice's header label, wait for ITS data on the next row;
+      // otherwise just keep seeking a header from here.
+      errors.push(`Row ${rowNumber}: Expected a line-items header ("Description, Qty, Unit Price, Discount %, Tax %") after the invoice row for "${current.customer_name || '(unknown)'}", but found something else — this invoice was skipped.`);
+      current = null;
+      mode = (colA === 'number') ? 'READ_INVOICE' : 'SEEK_HEADER';
+      continue;
+    }
+
+    if (mode === 'READ_ITEMS') {
+      if (isBlankRow(row, [1, 2, 3, 4, 5, 6])) {
+        finalizeCurrent();
+        mode = 'SEEK_HEADER';
+        continue;
+      }
+      if (colA === 'number') {
+        // This row is a header label for the next invoice, not data yet —
+        // finalize the one we were building, then wait for the data row.
+        finalizeCurrent();
+        mode = 'READ_INVOICE';
+        continue;
+      }
+      // Column F (Line Total) is intentionally not read — it's always
+      // recomputed from qty/unit_price/discount/tax, same as a manually
+      // created invoice, rather than trusted from the file.
+      current.items.push({
+        description: getCell(row, 1),
+        qty: getCell(row, 2),
+        unit_price: getCell(row, 3),
+        discount_rate: getCell(row, 4),
+        tax_rate: getCell(row, 5)
+      });
+      continue;
+    }
+  }
+
+  // End of file — finalize whatever invoice was still being accumulated
+  // (covers a file with no trailing blank row after the last block).
+  if (current) finalizeCurrent();
 
   try { fs.unlinkSync(filePath); } catch(e){}
-  return { rows, errors };
+  return { invoices, errors };
 }
 
-module.exports = { parsePayrollExcel, parseInvoiceExcel };
+module.exports = { parsePayrollExcel, parseInvoiceExcelBlocks };

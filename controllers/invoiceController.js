@@ -9,7 +9,7 @@ const crypto = require('crypto');
 const ExcelJS = require('exceljs');
 const multer = require('multer');
 const path = require('path');
-const { parseInvoiceExcel } = require('../utils/excel');
+const { parseInvoiceExcelBlocks } = require('../utils/excel');
 
 // Reuses the same uploads/ folder as payroll bulk upload for consistency.
 const bulkUploadStorage = multer.diskStorage({
@@ -156,7 +156,7 @@ async function applyOverdueStatus(invoice) {
  * Uses MAX(id), not COUNT(*) — see the matching comment in create() for
  * why: count() breaks permanently as soon as any invoice is ever deleted.
  */
-async function createInvoiceWithRetry({ customer_name, amount, currency, due_date, data }) {
+async function createInvoiceWithRetry({ customer_name, amount, currency, due_date, data, lineItems }) {
   const now = new Date();
   const prefix = `${now.getFullYear()}${String(now.getMonth()+1).padStart(2,'0')}`;
   const MAX_ATTEMPTS = 3;
@@ -168,11 +168,32 @@ async function createInvoiceWithRetry({ customer_name, amount, currency, due_dat
     const seq = (maxId || 0) + 1 + attempt;
     const number = `INV-${prefix}-${String(seq).padStart(4,'0')}`;
 
+    const tx = await sequelize.transaction();
     try {
-      inv = await Invoice.create({ number, customer_name, amount: round2(amount), currency, due_date, data });
+      inv = await Invoice.create({ number, customer_name, amount: round2(amount), currency, due_date, data }, { transaction: tx });
+      if (lineItems && lineItems.length) {
+        await InvoiceItem.bulkCreate(
+          lineItems.map((item, index) => ({
+            invoiceId: inv.id,
+            line_no: index + 1,
+            description: item.description,
+            qty: item.qty,
+            unit_price: item.unit_price,
+            discount_rate: item.discount_rate,
+            tax_rate: item.tax_rate,
+            line_subtotal: item.line_subtotal,
+            line_discount: item.line_discount,
+            line_tax: item.line_tax,
+            line_total: item.line_total
+          })),
+          { transaction: tx }
+        );
+      }
+      await tx.commit();
       lastError = null;
       break;
     } catch (e) {
+      await tx.rollback();
       lastError = e;
       const isUniqueViolation = e.name === 'SequelizeUniqueConstraintError';
       if (!isUniqueViolation) throw e;
@@ -294,48 +315,64 @@ exports.create = async (req, res) => {
   }
 };
 
+/**
+ * Bulk-uploads invoices from the line-items block format (see
+ * parseInvoiceExcelBlocks). Each invoice's line items are run through the
+ * same normalizeLineItems() used by the manual create() endpoint, so
+ * totals/discount/tax math and validation rules are identical whether an
+ * invoice with line items was typed in manually or bulk-uploaded.
+ */
 exports.bulkUpload = async (req, res) => {
   try {
     if (!req.file) {
       return res.status(400).json({ error: 'No file uploaded' });
     }
 
-    const { rows, errors } = await parseInvoiceExcel(req.file.path);
+    const { invoices, errors } = await parseInvoiceExcelBlocks(req.file.path);
 
-    if (errors.length > 0 && rows.length === 0) {
-      return res.status(400).json({ error: 'Validation errors - no valid rows to import', details: errors });
+    if (errors.length > 0 && invoices.length === 0) {
+      return res.status(400).json({ error: 'Validation errors - no valid invoices to import', details: errors });
     }
 
     const created = [];
     const failed = [];
 
-    // Sequential, not Promise.all: each row calls createInvoiceWithRetry,
-    // which reads Invoice.count() to pick the next invoice number. Running
-    // these concurrently would let two rows read the same count and race
-    // for the same number far more often than the retry logic is built to
-    // absorb, so we trade some speed for correctness here.
-    for (const r of rows) {
-      try {
-        const inv = await createInvoiceWithRetry({
-          customer_name: r.customer_name,
-          amount: r.amount,
-          currency: r.currency,
-          due_date: r.due_date,
-          data: { line_items: null, summary: null, currency: r.currency, email: r.email || undefined }
+    // Sequential, not Promise.all: each invoice calls createInvoiceWithRetry,
+    // which reads Invoice.max('id') to pick the next invoice number. Running
+    // these concurrently would let two invoices read the same value and
+    // race for the same number far more often than the retry logic is
+    // built to absorb, so we trade some speed for correctness here.
+    for (const inv of invoices) {
+      const normalized = normalizeLineItems(inv.items);
+      if (normalized.errors) {
+        failed.push({
+          customer_name: inv.customer_name,
+          error: normalized.errors.map((e) => e.message).join('; ')
         });
-        created.push(inv);
+        continue;
+      }
+      try {
+        const created_inv = await createInvoiceWithRetry({
+          customer_name: inv.customer_name,
+          amount: normalized.summary.total,
+          currency: inv.currency,
+          due_date: inv.due_date,
+          data: { line_items: normalized.lineItems, summary: normalized.summary, currency: inv.currency, email: inv.email || undefined },
+          lineItems: normalized.lineItems
+        });
+        created.push(created_inv);
       } catch (e) {
-        failed.push({ customer_name: r.customer_name, error: e.message });
+        failed.push({ customer_name: inv.customer_name, error: e.message });
       }
     }
 
     const response = {
       imported: created.length,
       failed: failed.length,
-      total: rows.length
+      total: invoices.length
     };
     if (errors.length > 0) {
-      response.warnings = `${errors.length} rows had validation issues and were skipped`;
+      response.warnings = `${errors.length} rows/blocks had validation issues and were skipped`;
       response.errorDetails = errors;
     }
     if (failed.length > 0) {
