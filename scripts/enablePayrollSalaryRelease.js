@@ -5,21 +5,7 @@ async function columnExists(columnName) {
   return Boolean(columns[columnName]);
 }
 
-async function addColumnIfMissing(columnName, definition) {
-  if (!(await columnExists(columnName))) {
-    await sequelize.query(`ALTER TABLE Payrolls ADD COLUMN ${columnName} ${definition}`);
-  }
-}
-
 (async () => {
-  await addColumnIfMissing('employee_name', 'VARCHAR(255)');
-  await addColumnIfMissing('employee_email', 'VARCHAR(255)');
-  await addColumnIfMissing('allowances', "JSON DEFAULT ('{}')");
-  await addColumnIfMissing('data', 'JSON');
-  await addColumnIfMissing('payment_status', "ENUM('Pending','Approved','Paid') DEFAULT 'Pending'");
-  await addColumnIfMissing('paid_at', 'DATETIME');
-  await addColumnIfMissing('payment_method', 'VARCHAR(100)');
-
   if (await columnExists('name')) {
     await sequelize.query('UPDATE Payrolls SET employee_name = name WHERE employee_name IS NULL');
   }
@@ -28,7 +14,7 @@ async function addColumnIfMissing(columnName, definition) {
   }
   await sequelize.query("UPDATE Payrolls SET payment_status = 'Pending' WHERE payment_status IS NULL");
 
-  console.log('Payroll salary release fields are ready');
+  console.log('Payroll salary release data is backfilled; schema changes are handled by npm run db:migrate');
   await sequelize.close();
 })().catch(async (err) => {
   console.error(err.message);

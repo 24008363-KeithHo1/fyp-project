@@ -6,7 +6,6 @@ async function seed() {
   try {
     await sequelize.authenticate();
     console.log('DB connected');
-    await sequelize.sync();
 
     const adminEmail = process.env.SEED_ADMIN_EMAIL;
     const adminPass = process.env.SEED_ADMIN_PASS;

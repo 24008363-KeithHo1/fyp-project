@@ -7,13 +7,11 @@ const requireRole = require('./middlewares/roles');
 
 const { sequelize } = require('./config/db');
 const { startPayrollAutomationScheduler } = require('./services/payrollAutomation');
-const SubscriptionPlan = require('./models/SubscriptionPlan');
-const PartnerCustomer = require('./models/PartnerCustomer');
+require('./models/PartnerCustomer');
 require('./models/SubscriptionInvoiceItem');
 require('./models/SubscriptionAutomationRun');
 require('./models/SubscriptionEmailDelivery');
 require('./models/SubscriptionDemoSchedule');
-const { seedSubscriptionPlans } = require('./services/partnerCustomerDemoData');
 const { startSubscriptionInvoiceScheduler } = require('./services/subscriptionInvoiceAutomation');
 const { startSubscriptionDemoScheduler } = require('./services/subscriptionInvoiceDemoScheduler');
 
@@ -94,118 +92,10 @@ app.get('/api/health', (req, res) => res.json({ status: 'ok' }));
 
 const PORT = process.env.PORT || 3000;
 
-async function ensurePayrollBankNumberColumn() {
-  const [columns] = await sequelize.query("SHOW COLUMNS FROM `Payrolls` LIKE 'bank_number'");
-  if (columns.length === 0) {
-    await sequelize.query("ALTER TABLE `Payrolls` ADD COLUMN `bank_number` VARCHAR(100) AFTER `email`");
-  }
-}
-
-async function ensureReminderPayrollPeriodColumn() {
-  const [columns] = await sequelize.query("SHOW COLUMNS FROM `ReminderDeliveries` LIKE 'payrollPeriodId'");
-  if (columns.length === 0) {
-    await sequelize.query("ALTER TABLE `ReminderDeliveries` ADD COLUMN `payrollPeriodId` INTEGER NULL AFTER `id`");
-  }
-  const [uniqueIndex] = await sequelize.query("SHOW INDEX FROM `ReminderDeliveries` WHERE `Key_name` = 'reminder_delivery_unique_recipient'");
-  const indexFields = uniqueIndex
-    .sort((a, b) => a.Seq_in_index - b.Seq_in_index)
-    .map((row) => row.Column_name);
-  const expectedFields = ['payrollPeriodId', 'reminderKey', 'deadline', 'recipient'];
-  if (indexFields.join(',') !== expectedFields.join(',')) {
-    if (uniqueIndex.length) {
-      await sequelize.query("DROP INDEX `reminder_delivery_unique_recipient` ON `ReminderDeliveries`");
-    }
-    await sequelize.query("CREATE UNIQUE INDEX `reminder_delivery_unique_recipient` ON `ReminderDeliveries` (`payrollPeriodId`, `reminderKey`, `deadline`, `recipient`)");
-  }
-}
-
-async function ensurePayrollWorkflowColumns() {
-  const payrollColumns = [
-    ['payrollPeriodId', 'INTEGER NULL AFTER `id`']
-  ];
-  const periodColumns = [
-    ['uploadedBy', 'INTEGER NULL'],
-    ['uploadedAt', 'DATETIME NULL'],
-    ['submittedBy', 'INTEGER NULL'],
-    ['submittedAt', 'DATETIME NULL'],
-    ['submissionNotes', 'TEXT NULL'],
-    ['approvedBy', 'INTEGER NULL'],
-    ['approvedAt', 'DATETIME NULL'],
-    ['rejectedBy', 'INTEGER NULL'],
-    ['rejectedAt', 'DATETIME NULL'],
-    ['rejectionReason', 'TEXT NULL'],
-    ['releasedAt', 'DATETIME NULL'],
-    ['closedBy', 'INTEGER NULL'],
-    ['closedAt', 'DATETIME NULL']
-  ];
-
-  for (const [name, definition] of payrollColumns) {
-    const [columns] = await sequelize.query(`SHOW COLUMNS FROM \`Payrolls\` LIKE '${name}'`);
-    if (columns.length === 0) {
-      await sequelize.query(`ALTER TABLE \`Payrolls\` ADD COLUMN \`${name}\` ${definition}`);
-    }
-  }
-  for (const [name, definition] of periodColumns) {
-    const [columns] = await sequelize.query(`SHOW COLUMNS FROM \`PayrollPeriods\` LIKE '${name}'`);
-    if (columns.length === 0) {
-      await sequelize.query(`ALTER TABLE \`PayrollPeriods\` ADD COLUMN \`${name}\` ${definition}`);
-    }
-  }
-
-  const [payrollPeriodIndex] = await sequelize.query("SHOW INDEX FROM `Payrolls` WHERE `Key_name` = 'payrolls_payroll_period_id'");
-  if (payrollPeriodIndex.length === 0) {
-    await sequelize.query("CREATE INDEX `payrolls_payroll_period_id` ON `Payrolls` (`payrollPeriodId`)");
-  }
-}
-
-async function ensurePartnerCustomerSubscriptionSchema() {
-  await SubscriptionPlan.sync();
-  await PartnerCustomer.sync();
-
-  const [columns] = await sequelize.query("SHOW COLUMNS FROM `PartnerCustomers` LIKE 'subscriptionPlanId'");
-  if (columns.length === 0) {
-    await sequelize.query("ALTER TABLE `PartnerCustomers` ADD COLUMN `subscriptionPlanId` INTEGER NULL AFTER `region`");
-  }
-
-  const plans = await seedSubscriptionPlans();
-  await sequelize.query(
-    "UPDATE `PartnerCustomers` SET `subscriptionPlanId` = :basicPlanId WHERE `subscriptionPlanId` IS NULL",
-    { replacements: { basicPlanId: plans.BASIC.id } }
-  );
-  await sequelize.query("ALTER TABLE `PartnerCustomers` MODIFY COLUMN `subscriptionPlanId` INTEGER NOT NULL");
-
-  const [indexes] = await sequelize.query("SHOW INDEX FROM `PartnerCustomers` WHERE `Key_name` = 'partner_customers_subscription_plan_id'");
-  if (indexes.length === 0) {
-    await sequelize.query("CREATE INDEX `partner_customers_subscription_plan_id` ON `PartnerCustomers` (`subscriptionPlanId`)");
-  }
-
-  const automationColumns = [
-    ['autoBillingEnabled', 'BOOLEAN NOT NULL DEFAULT TRUE AFTER `subscriptionStartDate`'],
-    ['nextBillingDate', 'DATE NULL AFTER `autoBillingEnabled`']
-  ];
-  for (const [name, definition] of automationColumns) {
-    const [existingColumns] = await sequelize.query(`SHOW COLUMNS FROM \`PartnerCustomers\` LIKE '${name}'`);
-    if (existingColumns.length === 0) {
-      await sequelize.query(`ALTER TABLE \`PartnerCustomers\` ADD COLUMN \`${name}\` ${definition}`);
-    }
-  }
-
-  const [billingIndex] = await sequelize.query("SHOW INDEX FROM `PartnerCustomers` WHERE `Key_name` = 'idx_partner_customers_next_billing'");
-  if (billingIndex.length === 0) {
-    await sequelize.query("CREATE INDEX `idx_partner_customers_next_billing` ON `PartnerCustomers` (`autoBillingEnabled`, `nextBillingDate`)");
-  }
-}
-
 async function start() {
   try {
     await sequelize.authenticate();
     console.log('DB connected');
-    const shouldAlterSchema = process.env.DB_SYNC_ALTER === 'true';
-    await sequelize.sync({ alter: shouldAlterSchema });
-    await ensurePayrollBankNumberColumn();
-    await ensureReminderPayrollPeriodColumn();
-    await ensurePayrollWorkflowColumns();
-    await ensurePartnerCustomerSubscriptionSchema();
     startPayrollAutomationScheduler();
     startSubscriptionInvoiceScheduler();
     startSubscriptionDemoScheduler();

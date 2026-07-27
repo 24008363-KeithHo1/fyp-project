@@ -13,6 +13,44 @@ CREATE TABLE IF NOT EXISTS Users (
   isVerified BOOLEAN DEFAULT FALSE,
   mfaEnabled BOOLEAN DEFAULT FALSE,
   mfaSecret VARCHAR(255),
+  phone VARCHAR(255),
+  title VARCHAR(255),
+  department VARCHAR(255),
+  address VARCHAR(255),
+  bio TEXT,
+  profileImage VARCHAR(255),
+  employeeId VARCHAR(255),
+  createdAt DATETIME DEFAULT CURRENT_TIMESTAMP,
+  updatedAt DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS PasswordResetTokens (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  token VARCHAR(255) NOT NULL UNIQUE,
+  userId INT NOT NULL,
+  expiresAt DATETIME,
+  used BOOLEAN DEFAULT FALSE,
+  createdAt DATETIME DEFAULT CURRENT_TIMESTAMP,
+  CONSTRAINT fk_password_reset_user FOREIGN KEY (userId) REFERENCES Users(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS Requests (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  title VARCHAR(255) NOT NULL,
+  message TEXT NOT NULL,
+  senderId INT NOT NULL,
+  senderName VARCHAR(255),
+  recipient ENUM('HR','Finance','Admin') NOT NULL,
+  status ENUM('Pending','Completed','Incomplete') DEFAULT 'Pending',
+  data JSON,
+  createdAt DATETIME DEFAULT CURRENT_TIMESTAMP,
+  updatedAt DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  CONSTRAINT fk_request_sender FOREIGN KEY (senderId) REFERENCES Users(id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS AutomationSettings (
+  `key` VARCHAR(255) NOT NULL PRIMARY KEY,
+  `value` TEXT,
   createdAt DATETIME DEFAULT CURRENT_TIMESTAMP,
   updatedAt DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
@@ -226,25 +264,83 @@ CREATE TABLE IF NOT EXISTS SubscriptionDemoSchedules (
   createdAt DATETIME DEFAULT CURRENT_TIMESTAMP,
   updatedAt DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   INDEX idx_subscription_demo_due (status, scheduledFor),
-  INDEX idx_subscription_demo_creator (createdBy, createdAt)
+  INDEX idx_subscription_demo_creator (createdBy, createdAt),
+  CONSTRAINT fk_demo_schedule_creator FOREIGN KEY (createdBy) REFERENCES Users(id),
+  CONSTRAINT fk_demo_schedule_run FOREIGN KEY (automationRunId) REFERENCES SubscriptionAutomationRuns(id) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS PayrollPeriods (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  name VARCHAR(255) NOT NULL,
+  periodStart DATE NOT NULL,
+  periodEnd DATE NOT NULL,
+  payrollUploadDeadline DATE NOT NULL,
+  financeApprovalDeadline DATE NOT NULL,
+  salaryReleaseDate DATE NOT NULL,
+  status ENUM('Draft','PayrollUploaded','PendingApproval','Approved','Released','Closed') NOT NULL DEFAULT 'Draft',
+  isActive BOOLEAN NOT NULL DEFAULT TRUE,
+  uploadedBy INT,
+  uploadedAt DATETIME,
+  submittedBy INT,
+  submittedAt DATETIME,
+  submissionNotes TEXT,
+  approvedBy INT,
+  approvedAt DATETIME,
+  rejectedBy INT,
+  rejectedAt DATETIME,
+  rejectionReason TEXT,
+  releasedAt DATETIME,
+  closedBy INT,
+  closedAt DATETIME,
+  createdAt DATETIME DEFAULT CURRENT_TIMESTAMP,
+  updatedAt DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  INDEX payroll_periods_is_active (isActive),
+  INDEX payroll_periods_period_start_period_end (periodStart, periodEnd),
+  CONSTRAINT fk_payroll_period_uploaded_by FOREIGN KEY (uploadedBy) REFERENCES Users(id) ON DELETE SET NULL,
+  CONSTRAINT fk_payroll_period_submitted_by FOREIGN KEY (submittedBy) REFERENCES Users(id) ON DELETE SET NULL,
+  CONSTRAINT fk_payroll_period_approved_by FOREIGN KEY (approvedBy) REFERENCES Users(id) ON DELETE SET NULL,
+  CONSTRAINT fk_payroll_period_rejected_by FOREIGN KEY (rejectedBy) REFERENCES Users(id) ON DELETE SET NULL,
+  CONSTRAINT fk_payroll_period_closed_by FOREIGN KEY (closedBy) REFERENCES Users(id) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- Payrolls
 CREATE TABLE IF NOT EXISTS Payrolls (
   id INT AUTO_INCREMENT PRIMARY KEY,
+  payrollPeriodId INT,
   name VARCHAR(255) NOT NULL,
   email VARCHAR(255) NOT NULL,
   bank_number VARCHAR(100),
   period VARCHAR(100),
   gross DECIMAL(10,2),
   deductions JSON DEFAULT ('{}'),
+  allowances JSON DEFAULT ('{}'),
   net DECIMAL(10,2),
   payment_status ENUM('Pending','Approved','Paid') DEFAULT 'Pending',
   paid_at DATETIME,
   payment_method VARCHAR(100),
+  employee_name VARCHAR(255),
+  employee_email VARCHAR(255),
   data JSON,
   createdAt DATETIME DEFAULT CURRENT_TIMESTAMP,
-  updatedAt DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+  updatedAt DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  INDEX payrolls_payroll_period_id (payrollPeriodId),
+  CONSTRAINT fk_payroll_period FOREIGN KEY (payrollPeriodId) REFERENCES PayrollPeriods(id) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS ReminderDeliveries (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  payrollPeriodId INT,
+  reminderKey VARCHAR(255) NOT NULL,
+  deadline DATE NOT NULL,
+  recipient VARCHAR(255) NOT NULL,
+  status ENUM('sent','failed','skipped') NOT NULL,
+  source VARCHAR(255) NOT NULL DEFAULT 'scheduler',
+  sentAt DATETIME,
+  error TEXT,
+  createdAt DATETIME DEFAULT CURRENT_TIMESTAMP,
+  updatedAt DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  UNIQUE KEY reminder_delivery_unique_recipient (payrollPeriodId, reminderKey, deadline, recipient),
+  CONSTRAINT fk_reminder_period FOREIGN KEY (payrollPeriodId) REFERENCES PayrollPeriods(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- Added: Payment history table for Stripe, PayPal, and NETS confirmations
@@ -261,7 +357,9 @@ CREATE TABLE IF NOT EXISTS Payments (
   recordedBy INT,
   data JSON,
   createdAt DATETIME DEFAULT CURRENT_TIMESTAMP,
-  updatedAt DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+  updatedAt DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  CONSTRAINT fk_payment_invoice FOREIGN KEY (invoiceId) REFERENCES Invoices(id),
+  CONSTRAINT fk_payment_recorded_by FOREIGN KEY (recordedBy) REFERENCES Users(id) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 CREATE TABLE IF NOT EXISTS TestBankAccounts (
@@ -293,7 +391,9 @@ CREATE TABLE IF NOT EXISTS TestBankTransactions (
   data JSON,
   processedAt DATETIME NOT NULL,
   createdAt DATETIME DEFAULT CURRENT_TIMESTAMP,
-  updatedAt DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+  updatedAt DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  CONSTRAINT fk_test_bank_from_account FOREIGN KEY (fromAccountId) REFERENCES TestBankAccounts(id) ON DELETE SET NULL,
+  CONSTRAINT fk_test_bank_to_account FOREIGN KEY (toAccountId) REFERENCES TestBankAccounts(id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- Audit logs

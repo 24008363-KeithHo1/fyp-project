@@ -4,8 +4,7 @@ const { ensureCompanyAccount } = require('../utils/testBank');
 const { sequelize } = require('../config/db');
 
 (async () => {
-  await TestBankAccount.sync();
-  await TestBankTransaction.sync();
+  await sequelize.authenticate();
   await ensureCompanyAccount();
   console.log('Test bank simulation tables are ready');
   await sequelize.close();
