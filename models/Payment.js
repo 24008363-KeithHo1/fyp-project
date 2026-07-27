@@ -5,8 +5,9 @@ const Payment = sequelize.define('Payment', {
   id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
   invoiceId: { type: DataTypes.INTEGER, allowNull: false },
   invoiceNumber: { type: DataTypes.STRING, allowNull: false },
-  // Added: supports all payment methods used in the finance payment workflow.
-  method: { type: DataTypes.ENUM('Stripe', 'PayPal', 'NETS'), allowNull: false },
+  // BankTransfer is retained for historical records; new UI payments use the
+  // three active providers.
+  method: { type: DataTypes.ENUM('Stripe', 'PayPal', 'NETS', 'BankTransfer'), allowNull: false },
   amount: { type: DataTypes.DECIMAL(10, 2), allowNull: false },
   currency: { type: DataTypes.STRING, defaultValue: 'SGD' },
   // Added: records payment result for reports, filters, and recent activity.

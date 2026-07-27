@@ -437,7 +437,7 @@ exports.capturePayPalOrder = async (req, res) => {
     console.error(err);
     if (err.name === 'SequelizeDatabaseError' && /Data truncated|PayPal|enum/i.test(err.message)) {
       return res.status(500).json({
-        error: "Database needs PayPal/NETS enabled in Payments.method. Run: ALTER TABLE Payments MODIFY COLUMN method ENUM('Stripe','PayPal','NETS') NOT NULL;"
+        error: 'Payments.method is not aligned with the application schema. Run: npm run db:migrate'
       });
     }
     res.status(500).json({ error: err.message });

@@ -343,12 +343,13 @@ CREATE TABLE IF NOT EXISTS ReminderDeliveries (
   CONSTRAINT fk_reminder_period FOREIGN KEY (payrollPeriodId) REFERENCES PayrollPeriods(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
--- Added: Payment history table for Stripe, PayPal, and NETS confirmations
+-- Payment history. BankTransfer is retained for historical records; new
+-- payment flows use Stripe, PayPal, or NETS.
 CREATE TABLE IF NOT EXISTS Payments (
   id INT AUTO_INCREMENT PRIMARY KEY,
   invoiceId INT NOT NULL,
   invoiceNumber VARCHAR(100) NOT NULL,
-  method ENUM('Stripe','PayPal','NETS') NOT NULL,
+  method ENUM('Stripe','PayPal','NETS','BankTransfer') NOT NULL,
   amount DECIMAL(10,2) NOT NULL,
   currency VARCHAR(10) DEFAULT 'SGD',
   status ENUM('Paid','Failed','Pending','Refunded') DEFAULT 'Paid',
@@ -430,7 +431,7 @@ ALTER TABLE Payrolls
   ADD COLUMN IF NOT EXISTS paid_at DATETIME,
   ADD COLUMN IF NOT EXISTS payment_method VARCHAR(100);
 ALTER TABLE Payments
-  MODIFY COLUMN method ENUM('Stripe','PayPal','NETS') NOT NULL;
+  MODIFY COLUMN method ENUM('Stripe','PayPal','NETS','BankTransfer') NOT NULL;
 ALTER TABLE Payments
   MODIFY COLUMN status ENUM('Paid','Failed','Pending','Refunded') DEFAULT 'Paid';
 
