@@ -1,5 +1,14 @@
 # Automated Invoicing & Payroll
 
+## Partner Subscription Invoice system
+
+The Partner Subscription Invoice system is a separate billing module for
+business customers. It does not reuse or modify the project's legacy supplier
+invoice and payment records.
+
+- [Architecture, responsibilities, setup, and operations](docs/SUBSCRIPTION_INVOICE_SYSTEM.md)
+- [Demonstration procedure and UAT evidence](docs/SUBSCRIPTION_INVOICE_UAT.md)
+
 ## Database setup
 
 The database schema is versioned. Do not use Sequelize `sync({ alter: true })`
