@@ -103,3 +103,12 @@ test('Finance can monitor the separate subscription payment ledger', () => {
   assert.match(view, /paymentStatusFilter/);
   assert.match(view, /Payment attempts/);
 });
+
+test('Finance can preview and run the isolated subscription overdue check', () => {
+  const routes = fs.readFileSync(path.join(root, 'routes', 'subscriptionInvoices.js'), 'utf8');
+  const view = fs.readFileSync(path.join(root, 'views', 'finance', 'subscription-invoices.ejs'), 'utf8');
+  assert.match(routes, /router\.get\('\/overdue-preview', controller\.overduePreview\)/);
+  assert.match(routes, /router\.post\('\/overdue-check', controller\.runOverdueCheck\)/);
+  assert.match(view, /runOverdueCheck/);
+  assert.match(view, /Check overdue/);
+});

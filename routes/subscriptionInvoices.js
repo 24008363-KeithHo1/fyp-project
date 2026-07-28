@@ -14,6 +14,8 @@ router.get('/demo-schedules', controller.demoSchedules);
 router.post('/demo-schedules', controller.scheduleDemo);
 router.get('/automation-runs', controller.automationHistory);
 router.get('/payments', controller.paymentHistory);
+router.get('/overdue-preview', controller.overduePreview);
+router.post('/overdue-check', controller.runOverdueCheck);
 router.get('/', controller.list);
 router.patch('/:id/draft', controller.updateDraft);
 router.post('/:id/reject', controller.rejectDraft);

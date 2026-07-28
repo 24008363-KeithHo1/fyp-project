@@ -37,7 +37,7 @@
   </section>
 
   <section class="si-panel mb-3">
-    <div class="si-panel-head"><h2 class="si-panel-title"><i class="fa-solid fa-filter me-2 text-success"></i>Review filters</h2></div>
+    <div class="si-panel-head"><h2 class="si-panel-title"><i class="fa-solid fa-filter me-2 text-success"></i>Review filters</h2><button class="btn btn-outline-danger btn-sm" id="runOverdueCheck" type="button"><i class="fa-solid fa-clock me-1"></i>Check overdue <span id="overduePreviewCount"></span></button></div>
     <div class="si-panel-body si-filters">
       <div><label for="invoiceSearch" class="form-label">Search invoices</label><input id="invoiceSearch" class="form-control" placeholder="Invoice number, customer, or email"></div>
       <div><label for="periodFilter" class="form-label">Billing period</label><input id="periodFilter" class="form-control" type="month"></div>
@@ -189,6 +189,26 @@ async function loadSubscriptionInvoices() {
   subscriptionInvoices = await subscriptionApi(`/api/subscription-invoices?${params}`);
   updateSubscriptionSummary();
   renderSubscriptionInvoices();
+}
+async function loadOverduePreview() {
+  const preview = await subscriptionApi('/api/subscription-invoices/overdue-preview');
+  document.getElementById('overduePreviewCount').textContent = preview.count ? `(${preview.count})` : '';
+  return preview;
+}
+async function runOverdueCheck() {
+  const preview = await loadOverduePreview();
+  if (!preview.count) {
+    document.getElementById('subscriptionAlerts').innerHTML = '<div class="alert alert-info">No unpaid Subscription Invoices are past their due date.</div>';
+    return;
+  }
+  if (!confirm(`Mark ${preview.count} unpaid Subscription Invoice(s) as Overdue?`)) return;
+  const response = await subscriptionApi('/api/subscription-invoices/overdue-check', {
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body:'{}'
+  });
+  await Promise.all([loadSubscriptionInvoices(),loadOverduePreview()]);
+  document.getElementById('subscriptionAlerts').innerHTML = `<div class="alert alert-success">${escapeSubscriptionHtml(response.message)}</div>`;
 }
 function selectedDemoPeriod() {
   const period = document.getElementById('demoPeriod').value;
@@ -387,7 +407,8 @@ document.getElementById('demoPeriod').value = `${todaySg.year}-${todaySg.month}`
 let paymentSearchTimer;
 document.getElementById('paymentSearch').addEventListener('input',()=>{clearTimeout(paymentSearchTimer);paymentSearchTimer=setTimeout(()=>loadSubscriptionPayments().catch(showSubscriptionError),250)});
 document.getElementById('paymentStatusFilter').addEventListener('change',()=>loadSubscriptionPayments().catch(showSubscriptionError));
-Promise.all([loadSubscriptionInvoices(), loadSubscriptionPayments(), loadSubscriptionRuns(), loadDemoSchedules()]).catch(showSubscriptionError);
+document.getElementById('runOverdueCheck').addEventListener('click',()=>runOverdueCheck().catch(showSubscriptionError));
+Promise.all([loadSubscriptionInvoices(), loadSubscriptionPayments(), loadSubscriptionRuns(), loadDemoSchedules(), loadOverduePreview()]).catch(showSubscriptionError);
 </script>
 
 <%- include('../partials/footer') %>

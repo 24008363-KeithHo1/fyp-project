@@ -24,6 +24,10 @@ const { sendSubscriptionInvoiceEmail } = require('../services/subscriptionInvoic
 const {
   createDemoSchedule
 } = require('../services/subscriptionInvoiceDemoScheduler');
+const {
+  previewSubscriptionOverdue,
+  markSubscriptionInvoicesOverdue
+} = require('../services/subscriptionInvoiceOverdue');
 
 exports.reviewPage = (req, res) => res.render('finance/subscription-invoices', {
   title: 'Subscription Invoices',
@@ -132,6 +136,36 @@ exports.paymentHistory = async (req, res) => {
       limit: 100
     });
     res.json(payments);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+exports.overduePreview = async (req, res) => {
+  try {
+    res.json(await previewSubscriptionOverdue());
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+exports.runOverdueCheck = async (req, res) => {
+  try {
+    const result = await markSubscriptionInvoicesOverdue({
+      triggeredBy: req.user.id,
+      triggerSource: 'FinanceManual'
+    });
+    await logAction(req, 'run_subscription_overdue_check', 'SubscriptionInvoice', null, {
+      evaluated: result.evaluated,
+      marked: result.marked.length,
+      today: result.today
+    });
+    res.json({
+      result,
+      message: result.marked.length
+        ? `${result.marked.length} Subscription Invoice(s) marked Overdue.`
+        : 'Overdue check completed. No invoice status changes were required.'
+    });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
