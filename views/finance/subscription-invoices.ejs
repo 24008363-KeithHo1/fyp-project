@@ -37,7 +37,7 @@
   </section>
 
   <section class="si-panel mb-3">
-    <div class="si-panel-head"><h2 class="si-panel-title"><i class="fa-solid fa-filter me-2 text-success"></i>Review filters</h2><button class="btn btn-outline-danger btn-sm" id="runOverdueCheck" type="button"><i class="fa-solid fa-clock me-1"></i>Check overdue <span id="overduePreviewCount"></span></button></div>
+    <div class="si-panel-head"><h2 class="si-panel-title"><i class="fa-solid fa-filter me-2 text-success"></i>Review filters</h2><div class="d-flex gap-2 flex-wrap"><button class="btn btn-outline-danger btn-sm" id="runOverdueCheck" type="button"><i class="fa-solid fa-clock me-1"></i>Check overdue <span id="overduePreviewCount"></span></button><button class="btn btn-outline-primary btn-sm" id="sendOverdueReminders" type="button"><i class="fa-solid fa-envelope me-1"></i>Send due reminders <span id="reminderPreviewCount"></span></button></div></div>
     <div class="si-panel-body si-filters">
       <div><label for="invoiceSearch" class="form-label">Search invoices</label><input id="invoiceSearch" class="form-control" placeholder="Invoice number, customer, or email"></div>
       <div><label for="periodFilter" class="form-label">Billing period</label><input id="periodFilter" class="form-control" type="month"></div>
@@ -207,8 +207,28 @@ async function runOverdueCheck() {
     headers:{'Content-Type':'application/json'},
     body:'{}'
   });
-  await Promise.all([loadSubscriptionInvoices(),loadOverduePreview()]);
+  await Promise.all([loadSubscriptionInvoices(),loadOverduePreview(),loadReminderPreview()]);
   document.getElementById('subscriptionAlerts').innerHTML = `<div class="alert alert-success">${escapeSubscriptionHtml(response.message)}</div>`;
+}
+async function loadReminderPreview() {
+  const preview = await subscriptionApi('/api/subscription-invoices/reminder-preview');
+  document.getElementById('reminderPreviewCount').textContent = preview.count ? `(${preview.count})` : '';
+  return preview;
+}
+async function sendOverdueReminders() {
+  const preview = await loadReminderPreview();
+  if (!preview.count) {
+    document.getElementById('subscriptionAlerts').innerHTML = '<div class="alert alert-info">No 1, 7, or 14-day overdue reminders are currently due.</div>';
+    return;
+  }
+  if (!confirm(`Send ${preview.count} overdue reminder email(s)?`)) return;
+  const response = await subscriptionApi('/api/subscription-invoices/send-reminders', {
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body:'{}'
+  });
+  await Promise.all([loadSubscriptionInvoices(),loadReminderPreview()]);
+  document.getElementById('subscriptionAlerts').innerHTML = `<div class="alert ${response.result.failed ? 'alert-warning' : 'alert-success'}">${escapeSubscriptionHtml(response.message)}</div>`;
 }
 function selectedDemoPeriod() {
   const period = document.getElementById('demoPeriod').value;
@@ -408,7 +428,8 @@ let paymentSearchTimer;
 document.getElementById('paymentSearch').addEventListener('input',()=>{clearTimeout(paymentSearchTimer);paymentSearchTimer=setTimeout(()=>loadSubscriptionPayments().catch(showSubscriptionError),250)});
 document.getElementById('paymentStatusFilter').addEventListener('change',()=>loadSubscriptionPayments().catch(showSubscriptionError));
 document.getElementById('runOverdueCheck').addEventListener('click',()=>runOverdueCheck().catch(showSubscriptionError));
-Promise.all([loadSubscriptionInvoices(), loadSubscriptionPayments(), loadSubscriptionRuns(), loadDemoSchedules(), loadOverduePreview()]).catch(showSubscriptionError);
+document.getElementById('sendOverdueReminders').addEventListener('click',()=>sendOverdueReminders().catch(showSubscriptionError));
+Promise.all([loadSubscriptionInvoices(), loadSubscriptionPayments(), loadSubscriptionRuns(), loadDemoSchedules(), loadOverduePreview(), loadReminderPreview()]).catch(showSubscriptionError);
 </script>
 
 <%- include('../partials/footer') %>

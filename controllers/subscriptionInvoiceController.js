@@ -28,6 +28,10 @@ const {
   previewSubscriptionOverdue,
   markSubscriptionInvoicesOverdue
 } = require('../services/subscriptionInvoiceOverdue');
+const {
+  previewOverdueReminders,
+  sendOverdueReminders
+} = require('../services/subscriptionInvoiceReminder');
 
 exports.reviewPage = (req, res) => res.render('finance/subscription-invoices', {
   title: 'Subscription Invoices',
@@ -165,6 +169,46 @@ exports.runOverdueCheck = async (req, res) => {
       message: result.marked.length
         ? `${result.marked.length} Subscription Invoice(s) marked Overdue.`
         : 'Overdue check completed. No invoice status changes were required.'
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+exports.reminderPreview = async (req, res) => {
+  try {
+    const preview = await previewOverdueReminders();
+    res.json({
+      today: preview.today,
+      count: preview.count,
+      candidates: preview.candidates.map(candidate => ({
+        invoiceId: candidate.invoice.id,
+        number: candidate.invoice.number,
+        businessName: candidate.invoice.businessNameSnapshot,
+        billingEmail: candidate.invoice.billingEmailSnapshot,
+        dueDate: candidate.invoice.dueDate,
+        milestone: candidate.milestone,
+        daysOverdue: candidate.daysOverdue
+      }))
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+exports.sendReminders = async (req, res) => {
+  try {
+    const appUrl = process.env.APP_URL || `${req.protocol}://${req.get('host')}`;
+    const result = await sendOverdueReminders({ appUrl, triggeredBy: req.user.id });
+    await logAction(req, 'send_subscription_overdue_reminders', 'SubscriptionEmailDelivery', null, {
+      eligible: result.eligible,
+      sent: result.sent,
+      skipped: result.skipped,
+      failed: result.failed
+    });
+    res.status(result.failed ? 207 : 200).json({
+      result,
+      message: `Reminder run completed: ${result.sent} sent, ${result.skipped} skipped, ${result.failed} failed.`
     });
   } catch (error) {
     res.status(500).json({ error: error.message });

@@ -16,6 +16,8 @@ router.get('/automation-runs', controller.automationHistory);
 router.get('/payments', controller.paymentHistory);
 router.get('/overdue-preview', controller.overduePreview);
 router.post('/overdue-check', controller.runOverdueCheck);
+router.get('/reminder-preview', controller.reminderPreview);
+router.post('/send-reminders', controller.sendReminders);
 router.get('/', controller.list);
 router.patch('/:id/draft', controller.updateDraft);
 router.post('/:id/reject', controller.rejectDraft);

@@ -14,6 +14,7 @@ const SubscriptionEmailDelivery = sequelize.define('SubscriptionEmailDelivery', 
     allowNull: false,
     defaultValue: 'Invoice'
   },
+  reminderKey: { type: DataTypes.STRING(80) },
   recipient: { type: DataTypes.STRING(255), allowNull: false },
   subject: { type: DataTypes.STRING(255), allowNull: false },
   status: {
@@ -33,6 +34,7 @@ const SubscriptionEmailDelivery = sequelize.define('SubscriptionEmailDelivery', 
   tableName: 'SubscriptionEmailDeliveries',
   indexes: [
     { fields: ['subscriptionInvoiceId', 'emailType'] },
+    { unique: true, fields: ['subscriptionInvoiceId', 'emailType', 'reminderKey'] },
     { fields: ['status', 'attemptedAt'] },
     { fields: ['recipient'] }
   ]

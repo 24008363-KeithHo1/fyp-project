@@ -112,3 +112,12 @@ test('Finance can preview and run the isolated subscription overdue check', () =
   assert.match(view, /runOverdueCheck/);
   assert.match(view, /Check overdue/);
 });
+
+test('Finance controls milestone-based subscription overdue reminders', () => {
+  const routes = fs.readFileSync(path.join(root, 'routes', 'subscriptionInvoices.js'), 'utf8');
+  const view = fs.readFileSync(path.join(root, 'views', 'finance', 'subscription-invoices.ejs'), 'utf8');
+  assert.match(routes, /router\.get\('\/reminder-preview', controller\.reminderPreview\)/);
+  assert.match(routes, /router\.post\('\/send-reminders', controller\.sendReminders\)/);
+  assert.match(view, /Send due reminders/);
+  assert.match(view, /loadReminderPreview/);
+});

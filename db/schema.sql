@@ -230,6 +230,7 @@ CREATE TABLE IF NOT EXISTS SubscriptionEmailDeliveries (
   id INT AUTO_INCREMENT PRIMARY KEY,
   subscriptionInvoiceId INT NOT NULL,
   emailType ENUM('Invoice','Reminder') NOT NULL DEFAULT 'Invoice',
+  reminderKey VARCHAR(80),
   recipient VARCHAR(255) NOT NULL,
   subject VARCHAR(255) NOT NULL,
   status ENUM('Pending','Sent','Delivered','Failed','Skipped') NOT NULL DEFAULT 'Pending',
@@ -245,6 +246,7 @@ CREATE TABLE IF NOT EXISTS SubscriptionEmailDeliveries (
   updatedAt DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   CONSTRAINT fk_subscription_delivery_invoice FOREIGN KEY (subscriptionInvoiceId) REFERENCES SubscriptionInvoices(id) ON DELETE CASCADE,
   INDEX idx_subscription_delivery_invoice_type (subscriptionInvoiceId, emailType),
+  UNIQUE KEY subscription_reminder_milestone_unique (subscriptionInvoiceId, emailType, reminderKey),
   INDEX idx_subscription_delivery_status (status, attemptedAt),
   INDEX idx_subscription_delivery_recipient (recipient)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
