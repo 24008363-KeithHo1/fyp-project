@@ -4,7 +4,8 @@ const SubscriptionPayment = require('../models/SubscriptionPayment');
 const { assertSubscriptionInvoiceTransition } = require('../services/subscriptionInvoiceLifecycle');
 const {
   settleStripeSubscriptionPayment,
-  failStripeSubscriptionPayment
+  failStripeSubscriptionPayment,
+  stripeReconciliationState
 } = require('../services/subscriptionPayment');
 const { logAudit } = require('../utils/audit');
 
@@ -180,5 +181,75 @@ exports.stripeWebhook = async (req, res) => {
     res.json({ received: true });
   } catch (error) {
     res.status(500).json({ error: error.message });
+  }
+};
+
+exports.reconcileStripePayment = async (req, res) => {
+  try {
+    if (!stripe || !stripeSecretKey.startsWith('sk_test_')) {
+      return res.status(503).json({ error: 'Stripe sandbox is not configured.' });
+    }
+    const payment = await SubscriptionPayment.findByPk(req.params.paymentId, {
+      include: [{
+        model: SubscriptionInvoice,
+        as: 'subscriptionInvoice',
+        required: true
+      }]
+    });
+    if (!payment) return res.status(404).json({ error: 'Subscription payment not found.' });
+    if (payment.provider !== 'Stripe' || !['Pending', 'Failed'].includes(payment.status)) {
+      return res.status(409).json({ error: 'Only Pending or Failed Stripe subscription payments can be reconciled.' });
+    }
+    if (!payment.checkoutSessionId) {
+      return res.status(409).json({ error: 'This payment has no Stripe Checkout session to reconcile.' });
+    }
+
+    const session = await stripe.checkout.sessions.retrieve(payment.checkoutSessionId);
+    const providerState = stripeReconciliationState(session);
+    if (providerState === 'Paid') {
+      const result = await settleStripeSubscriptionPayment({ paymentId: payment.id, session });
+      await logAudit({
+        userId: req.user.id,
+        action: 'subscription_payment_reconciled_paid',
+        entity: 'SubscriptionPayment',
+        entityId: payment.id,
+        meta: {
+          subscriptionInvoiceId: result.invoice.id,
+          invoiceNumber: result.invoice.number,
+          provider: 'Stripe'
+        },
+        ip: req.ip,
+        userAgent: req.get('user-agent')
+      });
+      return res.json({
+        status: 'Paid',
+        message: 'Stripe confirmed payment. The Subscription Invoice is now Paid.'
+      });
+    }
+    if (providerState === 'Failed') {
+      await failStripeSubscriptionPayment({
+        paymentId: payment.id,
+        reason: 'Stripe Checkout session expired before payment'
+      });
+      await logAudit({
+        userId: req.user.id,
+        action: 'subscription_payment_reconciled_failed',
+        entity: 'SubscriptionPayment',
+        entityId: payment.id,
+        meta: { subscriptionInvoiceId: payment.subscriptionInvoiceId, provider: 'Stripe' },
+        ip: req.ip,
+        userAgent: req.get('user-agent')
+      });
+      return res.json({
+        status: 'Failed',
+        message: 'Stripe reports that the Checkout session expired without payment.'
+      });
+    }
+    res.status(409).json({
+      status: 'Pending',
+      error: 'Stripe has not confirmed payment yet. No status was changed.'
+    });
+  } catch (error) {
+    res.status(502).json({ error: `Unable to reconcile with Stripe: ${error.message}` });
   }
 };

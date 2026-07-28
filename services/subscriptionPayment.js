@@ -11,6 +11,12 @@ function cents(value) {
   return Math.round(Number(value) * 100);
 }
 
+function stripeReconciliationState(session) {
+  if (session && session.payment_status === 'paid') return 'Paid';
+  if (session && session.status === 'expired') return 'Failed';
+  return 'Pending';
+}
+
 function validateStripeSettlement({ invoice, payment, session }) {
   if (!invoice || !payment || !session) throw new Error('Incomplete Stripe settlement data.');
   if (String(session.metadata && session.metadata.module) !== 'subscription_invoice') {
@@ -50,6 +56,9 @@ async function settleStripeSubscriptionPayment({ paymentId, session }) {
     if (payment.status === 'Paid' && invoice.status === 'Paid') {
       await transaction.commit();
       return { payment, invoice, alreadyPaid: true };
+    }
+    if (invoice.status === 'Paid' && payment.status !== 'Paid') {
+      throw new Error('Subscription Invoice was already paid by another payment attempt.');
     }
 
     validateStripeSettlement({ invoice, payment, session });
@@ -115,6 +124,7 @@ async function failStripeSubscriptionPayment({ paymentId, reason }) {
 module.exports = {
   normalizeCurrency,
   cents,
+  stripeReconciliationState,
   validateStripeSettlement,
   settleStripeSubscriptionPayment,
   failStripeSubscriptionPayment

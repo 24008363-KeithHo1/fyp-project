@@ -127,3 +127,14 @@ test('subscription reminder scheduler is started independently from other automa
   assert.match(app, /startSubscriptionReminderScheduler/);
   assert.match(app, /startSubscriptionOverdueScheduler\(\);[\s\S]*startSubscriptionReminderScheduler\(\);/);
 });
+
+test('Finance can reconcile pending subscription payments with Stripe sandbox', () => {
+  const routes = fs.readFileSync(path.join(root, 'routes', 'subscriptionInvoices.js'), 'utf8');
+  const paymentController = fs.readFileSync(path.join(root, 'controllers', 'subscriptionPaymentController.js'), 'utf8');
+  const view = fs.readFileSync(path.join(root, 'views', 'finance', 'subscription-invoices.ejs'), 'utf8');
+  assert.match(routes, /router\.post\('\/payments\/:paymentId\/reconcile'/);
+  assert.match(paymentController, /exports\.reconcileStripePayment/);
+  assert.match(paymentController, /Only Pending or Failed Stripe subscription payments can be reconciled/);
+  assert.match(view, /data-reconcile-payment-id/);
+  assert.match(view, /reconcileSubscriptionPayment/);
+});

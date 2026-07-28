@@ -4,7 +4,8 @@ const fs = require('fs');
 const path = require('path');
 const {
   cents,
-  validateStripeSettlement
+  validateStripeSettlement,
+  stripeReconciliationState
 } = require('../services/subscriptionPayment');
 
 function settlement(overrides = {}) {
@@ -62,4 +63,17 @@ test('subscription payment implementation remains separate from legacy models an
   assert.match(controller, /sk_test_/);
   assert.match(controller, /constructEvent/);
   assert.match(routes, /stripe-checkout/);
+});
+
+test('classifies Stripe reconciliation results without treating incomplete checkout as paid', () => {
+  assert.equal(stripeReconciliationState({ payment_status: 'paid', status: 'complete' }), 'Paid');
+  assert.equal(stripeReconciliationState({ payment_status: 'unpaid', status: 'expired' }), 'Failed');
+  assert.equal(stripeReconciliationState({ payment_status: 'unpaid', status: 'open' }), 'Pending');
+  assert.equal(stripeReconciliationState(null), 'Pending');
+});
+
+test('settlement service guards against a second paid attempt', () => {
+  const source = fs.readFileSync(path.join(__dirname, '..', 'services', 'subscriptionPayment.js'), 'utf8');
+  assert.match(source, /invoice\.status === 'Paid' && payment\.status !== 'Paid'/);
+  assert.match(source, /already paid by another payment attempt/);
 });

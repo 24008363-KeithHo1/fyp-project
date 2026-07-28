@@ -2,6 +2,7 @@ const express = require('express');
 const auth = require('../middlewares/auth');
 const requireRole = require('../middlewares/roles');
 const controller = require('../controllers/subscriptionInvoiceController');
+const subscriptionPaymentController = require('../controllers/subscriptionPaymentController');
 
 const router = express.Router();
 router.use(auth);
@@ -14,6 +15,7 @@ router.get('/demo-schedules', controller.demoSchedules);
 router.post('/demo-schedules', controller.scheduleDemo);
 router.get('/automation-runs', controller.automationHistory);
 router.get('/payments', controller.paymentHistory);
+router.post('/payments/:paymentId/reconcile', subscriptionPaymentController.reconcileStripePayment);
 router.get('/overdue-preview', controller.overduePreview);
 router.post('/overdue-check', controller.runOverdueCheck);
 router.get('/reminder-preview', controller.reminderPreview);

@@ -80,7 +80,7 @@
       </div>
     </div>
     <div class="table-responsive">
-      <table class="table si-table"><thead><tr><th>Attempt</th><th>Invoice</th><th>Customer</th><th>Provider</th><th>Expected</th><th>Received</th><th>Status</th><th>Reference / Result</th></tr></thead><tbody id="paymentRows"><tr><td colspan="8" class="si-empty">Loading subscription payments…</td></tr></tbody></table>
+      <table class="table si-table"><thead><tr><th>Attempt</th><th>Invoice</th><th>Customer</th><th>Provider</th><th>Expected</th><th>Received</th><th>Status</th><th>Reference / Result</th><th>Action</th></tr></thead><tbody id="paymentRows"><tr><td colspan="9" class="si-empty">Loading subscription payments…</td></tr></tbody></table>
     </div>
   </section>
 
@@ -151,7 +151,7 @@ function renderSubscriptionPayments() {
   const collected = paid.reduce((sum,payment) => sum + Number(payment.receivedAmount || 0), 0);
   document.getElementById('paymentCollected').textContent = subscriptionMoney(collected, paid[0]?.currency || 'SGD');
   if (!subscriptionPayments.length) {
-    rows.innerHTML = '<tr><td colspan="8" class="si-empty"><i class="fa-regular fa-credit-card"></i>No subscription payment attempts match these filters.</td></tr>';
+    rows.innerHTML = '<tr><td colspan="9" class="si-empty"><i class="fa-regular fa-credit-card"></i>No subscription payment attempts match these filters.</td></tr>';
     return;
   }
   rows.innerHTML = subscriptionPayments.map(payment => {
@@ -166,6 +166,7 @@ function renderSubscriptionPayments() {
       <td data-label="Received">${payment.receivedAmount == null ? '—' : subscriptionMoney(payment.receivedAmount,payment.currency)}</td>
       <td data-label="Status"><span class="si-status si-status-${payment.status === 'Failed' ? 'PaymentFailed' : payment.status}">${escapeSubscriptionHtml(payment.status)}</span></td>
       <td data-label="Reference / Result"><span class="si-muted">${escapeSubscriptionHtml(result)}</span></td>
+      <td data-label="Action">${['Pending','Failed'].includes(payment.status) ? `<button class="btn btn-outline-primary btn-sm" data-reconcile-payment-id="${payment.id}"><i class="fa-solid fa-rotate me-1"></i>Reconcile</button>` : '—'}</td>
     </tr>`;
   }).join('');
 }
@@ -177,6 +178,23 @@ async function loadSubscriptionPayments() {
   if (status) params.set('status',status);
   subscriptionPayments = await subscriptionApi(`/api/subscription-invoices/payments?${params}`);
   renderSubscriptionPayments();
+}
+async function reconcileSubscriptionPayment(id, button) {
+  if (!confirm('Check this payment directly with Stripe sandbox?')) return;
+  button.disabled = true;
+  button.innerHTML = '<i class="fa-solid fa-spinner fa-spin me-1"></i>Checking';
+  try {
+    const response = await subscriptionApi(`/api/subscription-invoices/payments/${id}/reconcile`, {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:'{}'
+    });
+    await Promise.all([loadSubscriptionPayments(),loadSubscriptionInvoices()]);
+    document.getElementById('subscriptionAlerts').innerHTML = `<div class="alert alert-success">${escapeSubscriptionHtml(response.message)}</div>`;
+  } catch (error) {
+    await loadSubscriptionPayments();
+    throw error;
+  }
 }
 async function loadSubscriptionInvoices() {
   const params = new URLSearchParams();
@@ -405,6 +423,7 @@ document.getElementById('invoiceSearch').addEventListener('input', () => { clear
 ['periodFilter','statusFilter'].forEach(id => document.getElementById(id).addEventListener('change', () => loadSubscriptionInvoices().catch(showSubscriptionError)));
 document.getElementById('invoiceRows').addEventListener('click', event => { const button = event.target.closest('[data-review-id]'); if (button) reviewSubscriptionInvoice(button.dataset.reviewId).catch(showSubscriptionError); });
 document.getElementById('paymentRows').addEventListener('click', event => { const button = event.target.closest('[data-review-id]'); if (button) reviewSubscriptionInvoice(button.dataset.reviewId).catch(showSubscriptionError); });
+document.getElementById('paymentRows').addEventListener('click', event => { const button = event.target.closest('[data-reconcile-payment-id]'); if (button) reconcileSubscriptionPayment(button.dataset.reconcilePaymentId,button).catch(showSubscriptionError); });
 document.getElementById('invoiceDetails').addEventListener('click', event => {
   const id = document.getElementById('invoiceDialog').dataset.invoiceId;
   if (event.target.closest('#saveDraftChanges')) saveSubscriptionDraft(id).catch(showSubscriptionError);
