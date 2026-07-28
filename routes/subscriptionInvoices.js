@@ -15,6 +15,8 @@ router.get('/demo-schedules', controller.demoSchedules);
 router.post('/demo-schedules', controller.scheduleDemo);
 router.get('/automation-runs', controller.automationHistory);
 router.get('/payments', controller.paymentHistory);
+router.get('/revenue-report', controller.revenueReport);
+router.get('/revenue-export.csv', controller.revenueExport);
 router.post('/payments/:paymentId/reconcile', subscriptionPaymentController.reconcileStripePayment);
 router.post('/payments/:paymentId/refund', subscriptionPaymentController.refundStripePayment);
 router.get('/payments/:paymentId/receipt', subscriptionPaymentController.financeReceipt);

@@ -15,9 +15,10 @@
   .si-run-list{display:grid;gap:.65rem}.si-run{display:grid;grid-template-columns:minmax(130px,.7fr) minmax(130px,.7fr) minmax(0,1.4fr);gap:.75rem;align-items:center;padding:.75rem;border:1px solid #e6eee9;border-radius:10px;background:#fbfefc}.si-run-result{font-size:.78rem;color:#475569}.si-run-empty{color:var(--si-muted);font-size:.82rem}
   .si-demo-grid{display:grid;grid-template-columns:minmax(180px,.7fr) minmax(230px,1fr) auto;gap:.75rem;align-items:end}.si-demo-actions{display:flex;gap:.5rem;flex-wrap:wrap}.si-preview{margin-top:1rem;padding:1rem;border:1px solid #bfdbfe;border-radius:12px;background:#f5f9ff}.si-preview-summary{display:flex;gap:.55rem;flex-wrap:wrap}.si-preview-pill{padding:.35rem .65rem;border-radius:999px;background:#e0f2fe;color:#075985;font-size:.73rem;font-weight:800}.si-demo-note{font-size:.77rem;color:#52665b}.si-schedule-list{display:grid;gap:.5rem;margin-top:.8rem}.si-schedule{display:flex;justify-content:space-between;gap:1rem;padding:.65rem .75rem;border:1px solid #e4ede7;border-radius:9px;background:#fbfefc;font-size:.78rem}
   .si-payment-kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:.65rem;margin-bottom:1rem}.si-payment-kpi{padding:.75rem;border:1px solid #e1e9e4;border-radius:11px;background:#fbfefc}.si-payment-kpi span{display:block;color:var(--si-muted);font-size:.68rem;font-weight:800;text-transform:uppercase}.si-payment-kpi strong{display:block;margin-top:.2rem;font-size:1.08rem}.si-payment-filters{display:grid;grid-template-columns:1fr minmax(150px,220px);gap:.65rem;margin-bottom:.8rem}
+  .si-report-controls{display:grid;grid-template-columns:repeat(2,minmax(150px,220px)) auto;gap:.65rem;align-items:end}.si-report-summary{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:.65rem;margin-top:1rem}
   .si-dialog{width:min(760px,calc(100% - 2rem));max-height:90vh;padding:0;border:0;border-radius:18px;box-shadow:0 28px 70px rgba(0,0,0,.28)}.si-dialog::backdrop{background:rgba(4,25,18,.58);backdrop-filter:blur(4px)}.si-dialog-head{display:flex;justify-content:space-between;gap:1rem;padding:1.2rem 1.3rem;color:#fff;background:linear-gradient(135deg,#0f2942,#0f766e)}.si-dialog-body{padding:1.2rem 1.3rem;overflow:auto}.si-detail-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:.75rem}.si-detail{padding:.75rem;border:1px solid #e3ece7;border-radius:10px;background:#f9fcfa}.si-detail span{display:block;color:var(--si-muted);font-size:.68rem;font-weight:800;text-transform:uppercase}.si-detail strong{display:block;margin-top:.2rem;font-size:.88rem}.si-dialog-close{border:1px solid rgba(255,255,255,.35);border-radius:8px;background:rgba(255,255,255,.12);color:#fff}
   .si-edit-panel{padding:1rem;border:1px solid #bfdbfe;border-radius:12px;background:#f0f7ff}.si-edit-panel h3{font-size:.85rem;font-weight:800;color:#1e3a8a}.si-edit-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:.75rem}.si-edit-grid .wide{grid-column:1/-1}.si-edit-grid label{font-size:.72rem;font-weight:800;color:#53657a}.si-edit-grid .form-control{min-height:41px;border-color:#cbdbea}.si-dialog-actions{display:flex;justify-content:flex-end;gap:.55rem;flex-wrap:wrap}.si-reject-box{padding:.85rem;border:1px solid #fecaca;border-radius:10px;background:#fff7f7}.si-rejected-note{padding:.8rem;border-left:4px solid #dc2626;background:#fef2f2;color:#7f1d1d;font-size:.8rem}
-  @media(max-width:900px){.si-kpis,.si-payment-kpis{grid-template-columns:repeat(2,1fr)}.si-filters{grid-template-columns:1fr 1fr}.si-filters>div:first-child{grid-column:1/-1}.si-run{grid-template-columns:1fr 1fr}.si-run-result{grid-column:1/-1}.si-demo-grid{grid-template-columns:1fr 1fr}.si-demo-actions{grid-column:1/-1}}
+  @media(max-width:900px){.si-kpis,.si-payment-kpis,.si-report-summary{grid-template-columns:repeat(2,1fr)}.si-filters{grid-template-columns:1fr 1fr}.si-filters>div:first-child{grid-column:1/-1}.si-run{grid-template-columns:1fr 1fr}.si-run-result{grid-column:1/-1}.si-demo-grid{grid-template-columns:1fr 1fr}.si-demo-actions{grid-column:1/-1}}
   @media(max-width:640px){.si-hero{align-items:flex-start;flex-direction:column;padding:1.1rem}.si-kpis{grid-template-columns:1fr 1fr}.si-filters{grid-template-columns:1fr}.si-filters>div:first-child{grid-column:auto}.si-panel.table-panel{border:0;background:transparent;box-shadow:none}.si-panel.table-panel .si-panel-head{border:1px solid var(--si-line);border-radius:12px;background:#fff}.si-table thead{display:none}.si-table,.si-table tbody,.si-table tr,.si-table td{display:block;width:100%}.si-table tbody{display:grid;gap:.7rem;margin-top:.7rem}.si-table tr{padding:.85rem;border:1px solid var(--si-line);border-radius:13px;background:#fff}.si-table td{display:flex;justify-content:space-between;gap:1rem;padding:.42rem 0;border:0}.si-table td::before{content:attr(data-label);color:#687a70;font-size:.67rem;font-weight:800;text-transform:uppercase}.si-table td:last-child{padding-top:.7rem}.si-view-btn{width:100%;justify-content:center}.si-detail-grid,.si-edit-grid{grid-template-columns:1fr}.si-edit-grid .wide{grid-column:auto}.si-dialog-actions .btn{flex:1}}
 </style>
 
@@ -81,6 +82,23 @@
     </div>
     <div class="table-responsive">
       <table class="table si-table"><thead><tr><th>Attempt</th><th>Invoice</th><th>Customer</th><th>Provider</th><th>Expected</th><th>Received</th><th>Status</th><th>Reference / Result</th><th>Action</th></tr></thead><tbody id="paymentRows"><tr><td colspan="9" class="si-empty">Loading subscription payments…</td></tr></tbody></table>
+    </div>
+  </section>
+
+  <section class="si-panel mb-3">
+    <div class="si-panel-head"><div><h2 class="si-panel-title"><i class="fa-solid fa-chart-line me-2 text-success"></i>Subscription revenue report</h2><div class="si-muted mt-1">Paid Stripe subscription transactions only; kept separate from legacy reports</div></div></div>
+    <div class="si-panel-body">
+      <div class="si-report-controls">
+        <div><label class="form-label small fw-bold" for="revenueFrom">Paid from</label><input class="form-control" id="revenueFrom" type="date"></div>
+        <div><label class="form-label small fw-bold" for="revenueTo">Paid to</label><input class="form-control" id="revenueTo" type="date"></div>
+        <div class="d-flex gap-2"><button class="btn btn-outline-primary" id="loadRevenueReport" type="button"><i class="fa-solid fa-filter me-1"></i>Apply</button><button class="btn btn-success" id="exportRevenueCsv" type="button"><i class="fa-solid fa-file-csv me-1"></i>Export CSV</button></div>
+      </div>
+      <div class="si-report-summary">
+        <div class="si-payment-kpi"><span>Transactions</span><strong id="revenueTransactions">0</strong></div>
+        <div class="si-payment-kpi"><span>Gross received</span><strong id="revenueGross">SGD 0.00</strong></div>
+        <div class="si-payment-kpi"><span>Refunded</span><strong id="revenueRefunded">SGD 0.00</strong></div>
+        <div class="si-payment-kpi"><span>Net revenue</span><strong id="revenueNet">SGD 0.00</strong></div>
+      </div>
     </div>
   </section>
 
@@ -184,6 +202,39 @@ async function loadSubscriptionPayments() {
   if (status) params.set('status',status);
   subscriptionPayments = await subscriptionApi(`/api/subscription-invoices/payments?${params}`);
   renderSubscriptionPayments();
+}
+function revenueQuery() {
+  const params = new URLSearchParams();
+  const from = document.getElementById('revenueFrom').value;
+  const to = document.getElementById('revenueTo').value;
+  if (from) params.set('from',from);
+  if (to) params.set('to',to);
+  return params;
+}
+async function loadRevenueReport() {
+  const report = await subscriptionApi(`/api/subscription-invoices/revenue-report?${revenueQuery()}`);
+  const summary = report.summary;
+  document.getElementById('revenueTransactions').textContent = summary.transactions;
+  document.getElementById('revenueGross').textContent = subscriptionMoney(summary.grossReceived,summary.currency);
+  document.getElementById('revenueRefunded').textContent = subscriptionMoney(summary.refunded,summary.currency);
+  document.getElementById('revenueNet').textContent = subscriptionMoney(summary.netRevenue,summary.currency);
+}
+async function exportRevenueCsv() {
+  const response = await fetch(`/api/subscription-invoices/revenue-export.csv?${revenueQuery()}`, {
+    headers:{Authorization:`Bearer ${subscriptionToken}`}
+  });
+  if (!response.ok) {
+    const error = await response.json().catch(()=>({}));
+    throw new Error(error.error || 'Unable to export subscription revenue');
+  }
+  const disposition = response.headers.get('content-disposition') || '';
+  const filename = /filename="([^"]+)"/.exec(disposition)?.[1] || 'subscription-revenue.csv';
+  const url = URL.createObjectURL(await response.blob());
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = filename;
+  link.click();
+  setTimeout(()=>URL.revokeObjectURL(url),30000);
 }
 async function reconcileSubscriptionPayment(id, button) {
   if (!confirm('Check this payment directly with Stripe sandbox?')) return;
@@ -475,7 +526,9 @@ document.getElementById('paymentSearch').addEventListener('input',()=>{clearTime
 document.getElementById('paymentStatusFilter').addEventListener('change',()=>loadSubscriptionPayments().catch(showSubscriptionError));
 document.getElementById('runOverdueCheck').addEventListener('click',()=>runOverdueCheck().catch(showSubscriptionError));
 document.getElementById('sendOverdueReminders').addEventListener('click',()=>sendOverdueReminders().catch(showSubscriptionError));
-Promise.all([loadSubscriptionInvoices(), loadSubscriptionPayments(), loadSubscriptionRuns(), loadDemoSchedules(), loadOverduePreview(), loadReminderPreview()]).catch(showSubscriptionError);
+document.getElementById('loadRevenueReport').addEventListener('click',()=>loadRevenueReport().catch(showSubscriptionError));
+document.getElementById('exportRevenueCsv').addEventListener('click',()=>exportRevenueCsv().catch(showSubscriptionError));
+Promise.all([loadSubscriptionInvoices(), loadSubscriptionPayments(), loadRevenueReport(), loadSubscriptionRuns(), loadDemoSchedules(), loadOverduePreview(), loadReminderPreview()]).catch(showSubscriptionError);
 </script>
 
 <%- include('../partials/footer') %>

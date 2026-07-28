@@ -169,3 +169,13 @@ test('all confirmed Stripe paths trigger duplicate-safe subscription receipt ema
   assert.ok((controller.match(/deliverPaymentConfirmation\(req, result\.invoice, result\.payment\)/g) || []).length >= 3);
   assert.match(model, /DataTypes\.ENUM\('Invoice', 'Reminder', 'Receipt'\)/);
 });
+
+test('Finance has a separate subscription revenue report and CSV export', () => {
+  const routes = fs.readFileSync(path.join(root, 'routes', 'subscriptionInvoices.js'), 'utf8');
+  const view = fs.readFileSync(path.join(root, 'views', 'finance', 'subscription-invoices.ejs'), 'utf8');
+  assert.match(routes, /router\.get\('\/revenue-report', controller\.revenueReport\)/);
+  assert.match(routes, /router\.get\('\/revenue-export\.csv', controller\.revenueExport\)/);
+  assert.match(view, /Subscription revenue report/);
+  assert.match(view, /exportRevenueCsv/);
+  assert.match(view, /Net revenue/);
+});

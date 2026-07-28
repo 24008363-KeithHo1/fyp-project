@@ -34,6 +34,11 @@ const {
   REMINDER_CRON,
   REMINDER_TIMEZONE
 } = require('../services/subscriptionInvoiceReminder');
+const {
+  parseReportDates,
+  summarizeSubscriptionRevenue,
+  buildSubscriptionRevenueCsv
+} = require('../services/subscriptionRevenueReport');
 
 exports.reviewPage = (req, res) => res.render('finance/subscription-invoices', {
   title: 'Subscription Invoices',
@@ -151,6 +156,62 @@ exports.paymentHistory = async (req, res) => {
     res.json(payments);
   } catch (error) {
     res.status(500).json({ error: error.message });
+  }
+};
+
+async function revenuePayments(query = {}) {
+  const dates = parseReportDates(
+    String(query.from || '').trim(),
+    String(query.to || '').trim()
+  );
+  const where = { status: { [Op.in]: ['Paid', 'Refunded'] } };
+  if (dates.from || dates.to) {
+    where.paidAt = {};
+    if (dates.from) where.paidAt[Op.gte] = new Date(`${dates.from}T00:00:00.000+08:00`);
+    if (dates.to) where.paidAt[Op.lte] = new Date(`${dates.to}T23:59:59.999+08:00`);
+  }
+  const payments = await SubscriptionPayment.findAll({
+    where,
+    attributes: [
+      'id', 'provider', 'status', 'receivedAmount', 'currency',
+      'providerReference', 'paidAt', 'refundReference', 'refundAmount',
+      'refundReason', 'refundedAt'
+    ],
+    include: [{
+      model: SubscriptionInvoice,
+      as: 'subscriptionInvoice',
+      required: true,
+      attributes: ['id', 'number', 'customerCodeSnapshot', 'businessNameSnapshot']
+    }],
+    order: [['paidAt', 'DESC'], ['id', 'DESC']]
+  });
+  return { dates, payments };
+}
+
+exports.revenueReport = async (req, res) => {
+  try {
+    const { dates, payments } = await revenuePayments(req.query);
+    res.json({
+      dates,
+      summary: summarizeSubscriptionRevenue(payments),
+      payments
+    });
+  } catch (error) {
+    res.status(400).json({ error: error.message });
+  }
+};
+
+exports.revenueExport = async (req, res) => {
+  try {
+    const { dates, payments } = await revenuePayments(req.query);
+    const suffix = dates.from || dates.to
+      ? `${dates.from || 'start'}-to-${dates.to || 'today'}`
+      : 'all-dates';
+    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+    res.setHeader('Content-Disposition', `attachment; filename="subscription-revenue-${suffix}.csv"`);
+    res.send(`\uFEFF${buildSubscriptionRevenueCsv(payments)}`);
+  } catch (error) {
+    res.status(400).json({ error: error.message });
   }
 };
 
