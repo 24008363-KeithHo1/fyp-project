@@ -30,12 +30,19 @@ const {
 } = require('../services/subscriptionInvoiceOverdue');
 const {
   previewOverdueReminders,
-  sendOverdueReminders
+  sendOverdueReminders,
+  REMINDER_CRON,
+  REMINDER_TIMEZONE
 } = require('../services/subscriptionInvoiceReminder');
 
 exports.reviewPage = (req, res) => res.render('finance/subscription-invoices', {
   title: 'Subscription Invoices',
-  statuses: SUBSCRIPTION_INVOICE_STATUSES
+  statuses: SUBSCRIPTION_INVOICE_STATUSES,
+  reminderAutomation: {
+    enabled: process.env.SUBSCRIPTION_REMINDER_AUTOMATION_ENABLED !== 'false',
+    cron: REMINDER_CRON,
+    timezone: REMINDER_TIMEZONE
+  }
 });
 
 exports.list = async (req, res) => {

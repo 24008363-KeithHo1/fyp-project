@@ -16,6 +16,7 @@ require('./models/SubscriptionPayment');
 const { startSubscriptionInvoiceScheduler } = require('./services/subscriptionInvoiceAutomation');
 const { startSubscriptionDemoScheduler } = require('./services/subscriptionInvoiceDemoScheduler');
 const { startSubscriptionOverdueScheduler } = require('./services/subscriptionInvoiceOverdue');
+const { startSubscriptionReminderScheduler } = require('./services/subscriptionInvoiceReminder');
 
 // Register the separate Partner Subscription Billing master-data model with
 // Sequelize. It intentionally has no relationship to the existing invoices.
@@ -104,6 +105,7 @@ async function start() {
     startSubscriptionInvoiceScheduler();
     startSubscriptionDemoScheduler();
     startSubscriptionOverdueScheduler();
+    startSubscriptionReminderScheduler();
     app.listen(PORT, () => {
       console.log(`Server running at http://localhost:${PORT}`);
     });

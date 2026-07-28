@@ -1,10 +1,14 @@
+const cron = require('node-cron');
 const SubscriptionInvoice = require('../models/SubscriptionInvoice');
 const SubscriptionEmailDelivery = require('../models/SubscriptionEmailDelivery');
 const { sendEmail } = require('../utils/email');
 const { escapeHtml } = require('./subscriptionInvoiceEmail');
 const { singaporeDateKey } = require('./subscriptionInvoiceOverdue');
+const { logAudit } = require('../utils/audit');
 
 const OVERDUE_REMINDER_MILESTONES = Object.freeze([1, 7, 14]);
+const REMINDER_TIMEZONE = 'Asia/Singapore';
+const REMINDER_CRON = process.env.SUBSCRIPTION_REMINDER_CRON || '20 0 * * *';
 
 function daysBetween(dateString, todayString) {
   const start = Date.parse(`${String(dateString).slice(0, 10)}T00:00:00.000Z`);
@@ -129,12 +133,53 @@ async function sendOverdueReminders({
   return result;
 }
 
+async function runScheduledOverdueReminders(now = new Date()) {
+  const appUrl = process.env.APP_URL || `http://localhost:${process.env.PORT || 3000}`;
+  const result = await sendOverdueReminders({
+    appUrl,
+    triggeredBy: null,
+    today: singaporeDateKey(now)
+  });
+  await logAudit({
+    userId: null,
+    action: 'subscription_overdue_reminder_run_completed',
+    entity: 'SubscriptionEmailDelivery',
+    entityId: null,
+    meta: {
+      triggerSource: 'Scheduler',
+      eligible: result.eligible,
+      sent: result.sent,
+      skipped: result.skipped,
+      failed: result.failed
+    }
+  });
+  return result;
+}
+
+function startSubscriptionReminderScheduler() {
+  if (process.env.SUBSCRIPTION_REMINDER_AUTOMATION_ENABLED === 'false') {
+    console.log('Subscription reminder automation disabled');
+    return null;
+  }
+  const task = cron.schedule(REMINDER_CRON, () => {
+    runScheduledOverdueReminders().catch((error) => {
+      console.error('Subscription reminder scheduler failed:', error);
+    });
+  }, { timezone: REMINDER_TIMEZONE });
+  console.log(`Subscription reminder scheduler active (${REMINDER_CRON}, ${REMINDER_TIMEZONE})`);
+  return task;
+}
+
 module.exports = {
   OVERDUE_REMINDER_MILESTONES,
+  REMINDER_TIMEZONE,
+  REMINDER_CRON,
   daysBetween,
   reminderKeyFor,
   nextReminderMilestone,
   composeOverdueReminder,
   previewOverdueReminders,
-  sendOverdueReminders
+  sendOverdueReminders,
+  runScheduledOverdueReminders,
+  startSubscriptionReminderScheduler
 };

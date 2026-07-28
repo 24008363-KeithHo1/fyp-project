@@ -121,3 +121,9 @@ test('Finance controls milestone-based subscription overdue reminders', () => {
   assert.match(view, /Send due reminders/);
   assert.match(view, /loadReminderPreview/);
 });
+
+test('subscription reminder scheduler is started independently from other automation', () => {
+  const app = fs.readFileSync(path.join(root, 'app.js'), 'utf8');
+  assert.match(app, /startSubscriptionReminderScheduler/);
+  assert.match(app, /startSubscriptionOverdueScheduler\(\);[\s\S]*startSubscriptionReminderScheduler\(\);/);
+});

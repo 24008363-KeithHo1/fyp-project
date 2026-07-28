@@ -4,6 +4,8 @@ const fs = require('fs');
 const path = require('path');
 const {
   OVERDUE_REMINDER_MILESTONES,
+  REMINDER_CRON,
+  REMINDER_TIMEZONE,
   daysBetween,
   reminderKeyFor,
   nextReminderMilestone,
@@ -27,6 +29,8 @@ function overdueInvoice(overrides = {}) {
 
 test('uses controlled 1, 7 and 14-day overdue milestones', () => {
   assert.deepEqual(OVERDUE_REMINDER_MILESTONES, [1, 7, 14]);
+  assert.equal(REMINDER_CRON, '20 0 * * *');
+  assert.equal(REMINDER_TIMEZONE, 'Asia/Singapore');
   assert.equal(daysBetween('2026-07-01', '2026-07-08'), 7);
   assert.equal(nextReminderMilestone(overdueInvoice(), [], '2026-07-02'), 1);
   assert.equal(nextReminderMilestone(overdueInvoice(), [], '2026-07-08'), 7);
@@ -61,4 +65,5 @@ test('subscription reminder service remains separate from payroll and legacy inv
   const source = fs.readFileSync(path.join(__dirname, '..', 'services', 'subscriptionInvoiceReminder.js'), 'utf8');
   assert.doesNotMatch(source, /Payroll|ReminderDelivery|models\/Invoice|models\/Payment/);
   assert.match(source, /SubscriptionEmailDelivery/);
+  assert.match(source, /SUBSCRIPTION_REMINDER_AUTOMATION_ENABLED/);
 });
