@@ -17,6 +17,7 @@ const { recordSubscriptionBankTransfer } = require('../services/subscriptionBank
 
 const stripeSecretKey = process.env.STRIPE_SECRET_KEY || process.env.STRIPE_SECRET;
 const stripe = stripeSecretKey ? Stripe(stripeSecretKey) : null;
+const subscriptionStripeWebhookSecret = process.env.SUBSCRIPTION_STRIPE_WEBHOOK_SECRET;
 
 function baseUrl(req) {
   return process.env.APP_URL || `${req.protocol}://${req.get('host')}`;
@@ -192,7 +193,7 @@ exports.stripeSuccess = async (req, res) => {
 };
 
 exports.stripeWebhook = async (req, res) => {
-  if (!stripe || !process.env.STRIPE_WEBHOOK_SECRET) {
+  if (!stripe || !subscriptionStripeWebhookSecret) {
     return res.status(503).json({ error: 'Subscription Stripe webhook is not configured.' });
   }
   let event;
@@ -200,7 +201,7 @@ exports.stripeWebhook = async (req, res) => {
     event = stripe.webhooks.constructEvent(
       req.body,
       req.headers['stripe-signature'],
-      process.env.STRIPE_WEBHOOK_SECRET
+      subscriptionStripeWebhookSecret
     );
   } catch (error) {
     return res.status(400).send(`Webhook error: ${error.message}`);

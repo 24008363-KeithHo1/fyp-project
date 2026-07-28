@@ -156,7 +156,7 @@ test('paid subscription receipts have separate customer and Finance routes', () 
   const publicRoutes = fs.readFileSync(path.join(root, 'routes', 'subscriptionPayments.js'), 'utf8');
   const customerView = fs.readFileSync(path.join(root, 'views', 'subscription-invoices', 'view.ejs'), 'utf8');
   const financeView = fs.readFileSync(path.join(root, 'views', 'finance', 'subscription-invoices.ejs'), 'utf8');
-  assert.match(publicRoutes, /router\.get\('\/:token\/receipt', controller\.publicReceipt\)/);
+  assert.match(publicRoutes, /router\.get\('\/:token\/receipt', publicInvoiceLimiter, controller\.publicReceipt\)/);
   assert.match(financeRoutes, /router\.get\('\/payments\/:paymentId\/receipt'/);
   assert.match(customerView, /Download payment receipt/);
   assert.match(financeView, /fa-receipt/);
@@ -196,7 +196,7 @@ test('subscription payments match the required Stripe, bank transfer and webhook
   const controller = fs.readFileSync(path.join(root, 'controllers', 'subscriptionPaymentController.js'), 'utf8');
   const customerView = fs.readFileSync(path.join(root, 'views', 'subscription-invoices', 'view.ejs'), 'utf8');
   const model = fs.readFileSync(path.join(root, 'models', 'SubscriptionPayment.js'), 'utf8');
-  assert.match(routes, /router\.post\('\/:token\/stripe-checkout', controller\.createStripeCheckout\)/);
+  assert.match(routes, /router\.post\('\/:token\/stripe-checkout', checkoutLimiter, controller\.createStripeCheckout\)/);
   assert.match(controller, /exports\.stripeWebhook/);
   assert.match(customerView, /Bank transfer instructions/);
   assert.match(customerView, /Finance will verify the transfer/);
