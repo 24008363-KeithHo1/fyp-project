@@ -79,12 +79,59 @@ exports.get = async (req, res) => {
       }, {
         model: SubscriptionPayment,
         as: 'subscriptionPayments',
+        attributes: [
+          'id', 'provider', 'status', 'expectedAmount', 'receivedAmount',
+          'currency', 'providerReference', 'attemptedAt', 'paidAt',
+          'failedAt', 'failureReason'
+        ],
         separate: true,
         order: [['attemptedAt', 'DESC'], ['id', 'DESC']]
       }]
     });
     if (!invoice) return res.status(404).json({ error: 'Subscription invoice not found' });
     res.json(invoice);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+exports.paymentHistory = async (req, res) => {
+  try {
+    const where = {};
+    const allowedStatuses = ['Pending', 'Paid', 'Failed', 'Refunded'];
+    if (req.query.status) {
+      if (!allowedStatuses.includes(req.query.status)) {
+        return res.status(400).json({ error: 'Invalid subscription payment status.' });
+      }
+      where.status = req.query.status;
+    }
+    const invoiceWhere = {};
+    const search = String(req.query.search || '').trim();
+    if (search) {
+      invoiceWhere[Op.or] = [
+        { number: { [Op.like]: `%${search}%` } },
+        { customerCodeSnapshot: { [Op.like]: `%${search}%` } },
+        { businessNameSnapshot: { [Op.like]: `%${search}%` } }
+      ];
+    }
+    const payments = await SubscriptionPayment.findAll({
+      where,
+      attributes: [
+        'id', 'subscriptionInvoiceId', 'provider', 'status', 'expectedAmount',
+        'receivedAmount', 'currency', 'providerReference', 'attemptedAt',
+        'paidAt', 'failedAt', 'failureReason'
+      ],
+      include: [{
+        model: SubscriptionInvoice,
+        as: 'subscriptionInvoice',
+        required: true,
+        where: invoiceWhere,
+        attributes: ['id', 'number', 'customerCodeSnapshot', 'businessNameSnapshot', 'status']
+      }],
+      order: [['attemptedAt', 'DESC'], ['id', 'DESC']],
+      limit: 100
+    });
+    res.json(payments);
   } catch (error) {
     res.status(500).json({ error: error.message });
   }

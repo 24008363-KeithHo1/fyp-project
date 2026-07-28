@@ -90,3 +90,16 @@ test('Finance has isolated immediate and scheduled demo generation controls', ()
   assert.match(scheduler, /demo-subscription-invoices:scheduled:/);
   assert.doesNotMatch(scheduler, /models\/Invoice|models\/Payment/);
 });
+
+test('Finance can monitor the separate subscription payment ledger', () => {
+  const routes = fs.readFileSync(path.join(root, 'routes', 'subscriptionInvoices.js'), 'utf8');
+  const controller = fs.readFileSync(path.join(root, 'controllers', 'subscriptionInvoiceController.js'), 'utf8');
+  const view = fs.readFileSync(path.join(root, 'views', 'finance', 'subscription-invoices.ejs'), 'utf8');
+  assert.match(routes, /router\.get\('\/payments', controller\.paymentHistory\)/);
+  assert.match(controller, /exports\.paymentHistory/);
+  assert.match(controller, /'providerReference'[\s\S]*?'failureReason'/);
+  assert.doesNotMatch(controller, /paymentHistory[\s\S]*checkoutSessionId/);
+  assert.match(view, /Subscription payment tracking/);
+  assert.match(view, /paymentStatusFilter/);
+  assert.match(view, /Payment attempts/);
+});
