@@ -12,6 +12,7 @@ const {
 } = require('../services/subscriptionPayment');
 const { logAudit } = require('../utils/audit');
 const { generateSubscriptionPaymentReceiptPDF } = require('../utils/subscriptionPaymentReceiptPdf');
+const { sendSubscriptionPaymentConfirmation } = require('../services/subscriptionPaymentEmail');
 
 const stripeSecretKey = process.env.STRIPE_SECRET_KEY || process.env.STRIPE_SECRET;
 const stripe = stripeSecretKey ? Stripe(stripeSecretKey) : null;
@@ -33,6 +34,36 @@ function pipeReceipt(res, invoice, payment) {
     else res.destroy(error);
   });
   receipt.pipe(res);
+}
+
+async function deliverPaymentConfirmation(req, invoice, payment) {
+  try {
+    const publicUrl = `${baseUrl(req)}/subscription-invoices/view/${encodeURIComponent(invoice.publicToken)}`;
+    const outcome = await sendSubscriptionPaymentConfirmation({ invoice, payment, publicUrl });
+    if (outcome.failed) {
+      await logAudit({
+        userId: req.user ? req.user.id : null,
+        action: 'subscription_payment_confirmation_email_failed',
+        entity: 'SubscriptionEmailDelivery',
+        entityId: outcome.delivery ? outcome.delivery.id : null,
+        meta: { subscriptionInvoiceId: invoice.id, subscriptionPaymentId: payment.id, error: outcome.error },
+        ip: req.ip || 'webhook',
+        userAgent: req.get ? req.get('user-agent') : 'stripe'
+      });
+    }
+    return outcome;
+  } catch (error) {
+    await logAudit({
+      userId: req.user ? req.user.id : null,
+      action: 'subscription_payment_confirmation_email_failed',
+      entity: 'SubscriptionEmailDelivery',
+      entityId: null,
+      meta: { subscriptionInvoiceId: invoice.id, subscriptionPaymentId: payment.id, error: error.message },
+      ip: req.ip || 'webhook',
+      userAgent: req.get ? req.get('user-agent') : 'stripe'
+    });
+    return { failed: true, error: error.message };
+  }
 }
 
 exports.createStripeCheckout = async (req, res) => {
@@ -143,6 +174,7 @@ exports.stripeSuccess = async (req, res) => {
       throw new Error('Stripe session does not match the secure invoice link.');
     }
     const result = await settleStripeSubscriptionPayment({ paymentId, session });
+    await deliverPaymentConfirmation(req, result.invoice, result.payment);
     await logAudit({
       userId: null,
       action: 'subscription_payment_received',
@@ -181,6 +213,7 @@ exports.stripeWebhook = async (req, res) => {
     const paymentId = session.metadata.subscriptionPaymentId;
     if (event.type === 'checkout.session.completed' || event.type === 'checkout.session.async_payment_succeeded') {
       const result = await settleStripeSubscriptionPayment({ paymentId, session });
+      await deliverPaymentConfirmation(req, result.invoice, result.payment);
       await logAudit({
         userId: null,
         action: 'subscription_payment_received',
@@ -223,6 +256,7 @@ exports.reconcileStripePayment = async (req, res) => {
     const providerState = stripeReconciliationState(session);
     if (providerState === 'Paid') {
       const result = await settleStripeSubscriptionPayment({ paymentId: payment.id, session });
+      await deliverPaymentConfirmation(req, result.invoice, result.payment);
       await logAudit({
         userId: req.user.id,
         action: 'subscription_payment_reconciled_paid',

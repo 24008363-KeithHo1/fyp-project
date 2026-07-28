@@ -10,7 +10,7 @@ const SubscriptionEmailDelivery = sequelize.define('SubscriptionEmailDelivery', 
     references: { model: SubscriptionInvoice, key: 'id' }
   },
   emailType: {
-    type: DataTypes.ENUM('Invoice', 'Reminder'),
+    type: DataTypes.ENUM('Invoice', 'Reminder', 'Receipt'),
     allowNull: false,
     defaultValue: 'Invoice'
   },

@@ -161,3 +161,11 @@ test('paid subscription receipts have separate customer and Finance routes', () 
   assert.match(customerView, /Download payment receipt/);
   assert.match(financeView, /fa-receipt/);
 });
+
+test('all confirmed Stripe paths trigger duplicate-safe subscription receipt email', () => {
+  const controller = fs.readFileSync(path.join(root, 'controllers', 'subscriptionPaymentController.js'), 'utf8');
+  const model = fs.readFileSync(path.join(root, 'models', 'SubscriptionEmailDelivery.js'), 'utf8');
+  assert.match(controller, /sendSubscriptionPaymentConfirmation/);
+  assert.ok((controller.match(/deliverPaymentConfirmation\(req, result\.invoice, result\.payment\)/g) || []).length >= 3);
+  assert.match(model, /DataTypes\.ENUM\('Invoice', 'Reminder', 'Receipt'\)/);
+});

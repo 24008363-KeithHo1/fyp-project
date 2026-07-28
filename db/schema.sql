@@ -229,7 +229,7 @@ CREATE TABLE IF NOT EXISTS SubscriptionAutomationRuns (
 CREATE TABLE IF NOT EXISTS SubscriptionEmailDeliveries (
   id INT AUTO_INCREMENT PRIMARY KEY,
   subscriptionInvoiceId INT NOT NULL,
-  emailType ENUM('Invoice','Reminder') NOT NULL DEFAULT 'Invoice',
+  emailType ENUM('Invoice','Reminder','Receipt') NOT NULL DEFAULT 'Invoice',
   reminderKey VARCHAR(80),
   recipient VARCHAR(255) NOT NULL,
   subject VARCHAR(255) NOT NULL,
