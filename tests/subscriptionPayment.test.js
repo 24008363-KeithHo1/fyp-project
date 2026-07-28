@@ -5,7 +5,8 @@ const path = require('path');
 const {
   cents,
   validateStripeSettlement,
-  stripeReconciliationState
+  stripeReconciliationState,
+  validateRefundableSubscriptionPayment
 } = require('../services/subscriptionPayment');
 
 function settlement(overrides = {}) {
@@ -76,4 +77,27 @@ test('settlement service guards against a second paid attempt', () => {
   const source = fs.readFileSync(path.join(__dirname, '..', 'services', 'subscriptionPayment.js'), 'utf8');
   assert.match(source, /invoice\.status === 'Paid' && payment\.status !== 'Paid'/);
   assert.match(source, /already paid by another payment attempt/);
+});
+
+test('allows refunds only for a confirmed paid Stripe payment and invoice', () => {
+  const payment = {
+    provider: 'Stripe',
+    status: 'Paid',
+    providerReference: 'pi_test_123',
+    receivedAmount: 99,
+    expectedAmount: 99
+  };
+  assert.equal(validateRefundableSubscriptionPayment(payment, { status: 'Paid' }), 99);
+  assert.throws(
+    () => validateRefundableSubscriptionPayment({ ...payment, status: 'Pending' }, { status: 'Paid' }),
+    /confirmed Paid/
+  );
+  assert.throws(
+    () => validateRefundableSubscriptionPayment(payment, { status: 'Refunded' }),
+    /confirmed Paid/
+  );
+  assert.throws(
+    () => validateRefundableSubscriptionPayment({ ...payment, providerReference: 'cs_test_123' }, { status: 'Paid' }),
+    /PaymentIntent/
+  );
 });

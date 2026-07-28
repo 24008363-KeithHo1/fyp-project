@@ -97,7 +97,8 @@ exports.get = async (req, res) => {
         attributes: [
           'id', 'provider', 'status', 'expectedAmount', 'receivedAmount',
           'currency', 'providerReference', 'attemptedAt', 'paidAt',
-          'failedAt', 'failureReason'
+          'failedAt', 'failureReason', 'refundedAt', 'refundReference',
+          'refundAmount', 'refundReason'
         ],
         separate: true,
         order: [['attemptedAt', 'DESC'], ['id', 'DESC']]
@@ -134,7 +135,8 @@ exports.paymentHistory = async (req, res) => {
       attributes: [
         'id', 'subscriptionInvoiceId', 'provider', 'status', 'expectedAmount',
         'receivedAmount', 'currency', 'providerReference', 'attemptedAt',
-        'paidAt', 'failedAt', 'failureReason'
+        'paidAt', 'failedAt', 'failureReason', 'refundedAt',
+        'refundReference', 'refundAmount', 'refundReason'
       ],
       include: [{
         model: SubscriptionInvoice,

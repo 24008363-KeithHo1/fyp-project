@@ -16,6 +16,7 @@ router.post('/demo-schedules', controller.scheduleDemo);
 router.get('/automation-runs', controller.automationHistory);
 router.get('/payments', controller.paymentHistory);
 router.post('/payments/:paymentId/reconcile', subscriptionPaymentController.reconcileStripePayment);
+router.post('/payments/:paymentId/refund', subscriptionPaymentController.refundStripePayment);
 router.get('/overdue-preview', controller.overduePreview);
 router.post('/overdue-check', controller.runOverdueCheck);
 router.get('/reminder-preview', controller.reminderPreview);

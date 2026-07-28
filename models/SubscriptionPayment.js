@@ -31,6 +31,10 @@ const SubscriptionPayment = sequelize.define('SubscriptionPayment', {
   paidAt: { type: DataTypes.DATE },
   failedAt: { type: DataTypes.DATE },
   failureReason: { type: DataTypes.TEXT },
+  refundedAt: { type: DataTypes.DATE },
+  refundReference: { type: DataTypes.STRING(255), unique: true },
+  refundAmount: { type: DataTypes.DECIMAL(10, 2) },
+  refundReason: { type: DataTypes.TEXT },
   data: { type: DataTypes.JSON, defaultValue: {} }
 }, {
   tableName: 'SubscriptionPayments',

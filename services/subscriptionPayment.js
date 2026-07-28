@@ -17,6 +17,21 @@ function stripeReconciliationState(session) {
   return 'Pending';
 }
 
+function validateRefundableSubscriptionPayment(payment, invoice) {
+  if (!payment || !invoice) throw new Error('Subscription payment and invoice are required.');
+  if (payment.provider !== 'Stripe' || payment.status !== 'Paid' || invoice.status !== 'Paid') {
+    throw new Error('Only a confirmed Paid Stripe subscription payment can be refunded.');
+  }
+  if (!payment.providerReference || !String(payment.providerReference).startsWith('pi_')) {
+    throw new Error('Stripe PaymentIntent reference is missing; refund cannot be submitted safely.');
+  }
+  const amount = Number(payment.receivedAmount || payment.expectedAmount);
+  if (!Number.isFinite(amount) || amount <= 0) {
+    throw new Error('Refund amount must be greater than zero.');
+  }
+  return amount;
+}
+
 function validateStripeSettlement({ invoice, payment, session }) {
   if (!invoice || !payment || !session) throw new Error('Incomplete Stripe settlement data.');
   if (String(session.metadata && session.metadata.module) !== 'subscription_invoice') {
@@ -125,6 +140,7 @@ module.exports = {
   normalizeCurrency,
   cents,
   stripeReconciliationState,
+  validateRefundableSubscriptionPayment,
   validateStripeSettlement,
   settleStripeSubscriptionPayment,
   failStripeSubscriptionPayment

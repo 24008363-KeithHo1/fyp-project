@@ -138,3 +138,15 @@ test('Finance can reconcile pending subscription payments with Stripe sandbox', 
   assert.match(view, /data-reconcile-payment-id/);
   assert.match(view, /reconcileSubscriptionPayment/);
 });
+
+test('Finance can issue a guarded full Stripe sandbox refund', () => {
+  const routes = fs.readFileSync(path.join(root, 'routes', 'subscriptionInvoices.js'), 'utf8');
+  const paymentController = fs.readFileSync(path.join(root, 'controllers', 'subscriptionPaymentController.js'), 'utf8');
+  const view = fs.readFileSync(path.join(root, 'views', 'finance', 'subscription-invoices.ejs'), 'utf8');
+  assert.match(routes, /router\.post\('\/payments\/:paymentId\/refund'/);
+  assert.match(paymentController, /exports\.refundStripePayment/);
+  assert.match(paymentController, /idempotencyKey:\s*`subscription-refund-/);
+  assert.match(paymentController, /refund\.status !== 'succeeded'/);
+  assert.match(view, /data-refund-payment-id/);
+  assert.match(view, /refundSubscriptionPayment/);
+});

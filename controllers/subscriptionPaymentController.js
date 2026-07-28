@@ -1,11 +1,13 @@
 const Stripe = require('stripe');
+const { sequelize } = require('../config/db');
 const SubscriptionInvoice = require('../models/SubscriptionInvoice');
 const SubscriptionPayment = require('../models/SubscriptionPayment');
 const { assertSubscriptionInvoiceTransition } = require('../services/subscriptionInvoiceLifecycle');
 const {
   settleStripeSubscriptionPayment,
   failStripeSubscriptionPayment,
-  stripeReconciliationState
+  stripeReconciliationState,
+  validateRefundableSubscriptionPayment
 } = require('../services/subscriptionPayment');
 const { logAudit } = require('../utils/audit');
 
@@ -251,5 +253,97 @@ exports.reconcileStripePayment = async (req, res) => {
     });
   } catch (error) {
     res.status(502).json({ error: `Unable to reconcile with Stripe: ${error.message}` });
+  }
+};
+
+exports.refundStripePayment = async (req, res) => {
+  try {
+    if (!stripe || !stripeSecretKey.startsWith('sk_test_')) {
+      return res.status(503).json({ error: 'Stripe sandbox is not configured.' });
+    }
+    const reason = String((req.body && req.body.reason) || '').trim();
+    if (reason.length < 3) {
+      return res.status(400).json({ error: 'A refund reason of at least 3 characters is required.' });
+    }
+    const payment = await SubscriptionPayment.findByPk(req.params.paymentId, {
+      include: [{
+        model: SubscriptionInvoice,
+        as: 'subscriptionInvoice',
+        required: true
+      }]
+    });
+    if (!payment) return res.status(404).json({ error: 'Subscription payment not found.' });
+    const amount = validateRefundableSubscriptionPayment(payment, payment.subscriptionInvoice);
+    const refund = await stripe.refunds.create({
+      payment_intent: payment.providerReference,
+      amount: Math.round(amount * 100),
+      metadata: {
+        module: 'subscription_invoice',
+        subscriptionInvoiceId: String(payment.subscriptionInvoiceId),
+        subscriptionPaymentId: String(payment.id)
+      }
+    }, {
+      idempotencyKey: `subscription-refund-${payment.id}`
+    });
+    if (refund.status !== 'succeeded') {
+      return res.status(202).json({
+        status: refund.status,
+        message: 'Stripe accepted the refund request, but it is not confirmed yet. No local status was changed.'
+      });
+    }
+
+    const transaction = await sequelize.transaction();
+    let lockedPayment;
+    let lockedInvoice;
+    try {
+      lockedPayment = await SubscriptionPayment.findByPk(payment.id, {
+        transaction,
+        lock: transaction.LOCK.UPDATE
+      });
+      lockedInvoice = await SubscriptionInvoice.findByPk(payment.subscriptionInvoiceId, {
+        transaction,
+        lock: transaction.LOCK.UPDATE
+      });
+      validateRefundableSubscriptionPayment(lockedPayment, lockedInvoice);
+      assertSubscriptionInvoiceTransition(lockedInvoice.status, 'Refunded');
+      const refundedAt = new Date();
+      await lockedPayment.update({
+        status: 'Refunded',
+        refundedAt,
+        refundReference: refund.id,
+        refundAmount: Number(refund.amount) / 100,
+        refundReason: reason,
+        data: { ...(lockedPayment.data || {}), stripeRefundStatus: refund.status }
+      }, { transaction });
+      await lockedInvoice.update({ status: 'Refunded', refundedAt }, { transaction });
+      await transaction.commit();
+    } catch (error) {
+      if (!transaction.finished) await transaction.rollback();
+      throw error;
+    }
+
+    await logAudit({
+      userId: req.user.id,
+      action: 'subscription_payment_refunded',
+      entity: 'SubscriptionPayment',
+      entityId: payment.id,
+      meta: {
+        subscriptionInvoiceId: payment.subscriptionInvoiceId,
+        invoiceNumber: payment.subscriptionInvoice.number,
+        refundReference: refund.id,
+        amount,
+        currency: payment.currency,
+        reason
+      },
+      ip: req.ip,
+      userAgent: req.get('user-agent')
+    });
+    res.json({
+      status: 'Refunded',
+      message: `Stripe sandbox refund ${refund.id} completed successfully.`
+    });
+  } catch (error) {
+    const status = /Only a confirmed Paid|PaymentIntent|Refund amount/.test(error.message) ? 409 : 502;
+    res.status(status).json({ error: error.message });
   }
 };
