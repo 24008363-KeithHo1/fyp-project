@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title><%= title %></title>
   <style>
-    :root{font-family:Inter,system-ui,sans-serif;color:#102033;background:#eef7f1}*{box-sizing:border-box}body{margin:0;padding:24px}.page{max-width:820px;margin:auto}.hero,.card{border:1px solid #d9e8df;border-radius:18px;background:#fff;box-shadow:0 14px 35px rgba(15,41,66,.08)}.hero{padding:28px;color:#fff;background:linear-gradient(125deg,#0f2942,#0f766e 58%,#22a85a)}.hero p{margin:.35rem 0 0;opacity:.8}.card{margin-top:16px;padding:24px}.meta{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}.meta div{padding:12px;border-radius:10px;background:#f6faf7}.meta span{display:block;color:#66786e;font-size:.72rem;text-transform:uppercase}.meta strong{display:block;margin-top:4px}table{width:100%;margin-top:22px;border-collapse:collapse}th,td{padding:12px;border-bottom:1px solid #e6eee9;text-align:left}th:last-child,td:last-child{text-align:right}.totals{margin:18px 0 0 auto;width:min(100%,320px)}.totals div{display:flex;justify-content:space-between;padding:7px}.total{font-size:1.15rem;font-weight:800;color:#08743a}.notice{margin-top:18px;padding:13px;border-radius:10px;background:#e8f7ee;color:#17653a}.notice.error{background:#fff1f2;color:#9f1239}.pay-box{margin-top:22px;padding:18px;border:1px solid #bbf7d0;border-radius:14px;background:#f0fdf4}.pay-box h2{margin:0 0 5px;font-size:1rem}.pay-box p{margin:0;color:#557064;font-size:.82rem}.pay-actions{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:15px}.pay-button{padding:13px 18px;border:0;border-radius:10px;background:#635bff;color:white;font-weight:800;cursor:pointer}.pay-button.paypal{background:#0070ba}.pay-button:disabled{opacity:.6;cursor:wait}.paid{margin-top:22px;padding:18px;border-radius:14px;background:#dcfce7;color:#166534;text-align:center;font-weight:800}.receipt-link{display:inline-block;margin-top:10px;padding:9px 14px;border-radius:8px;background:#075f46;color:#fff;text-decoration:none}.history{margin-top:18px;font-size:.8rem;color:#607269}@media(max-width:600px){body{padding:12px}.hero,.card{padding:18px}.meta{grid-template-columns:1fr}table{font-size:.85rem}.pay-actions{grid-template-columns:1fr}.pay-button{width:100%}}
+    :root{font-family:Inter,system-ui,sans-serif;color:#102033;background:#eef7f1}*{box-sizing:border-box}body{margin:0;padding:24px}.page{max-width:820px;margin:auto}.hero,.card{border:1px solid #d9e8df;border-radius:18px;background:#fff;box-shadow:0 14px 35px rgba(15,41,66,.08)}.hero{padding:28px;color:#fff;background:linear-gradient(125deg,#0f2942,#0f766e 58%,#22a85a)}.hero p{margin:.35rem 0 0;opacity:.8}.card{margin-top:16px;padding:24px}.meta{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}.meta div{padding:12px;border-radius:10px;background:#f6faf7}.meta span{display:block;color:#66786e;font-size:.72rem;text-transform:uppercase}.meta strong{display:block;margin-top:4px}table{width:100%;margin-top:22px;border-collapse:collapse}th,td{padding:12px;border-bottom:1px solid #e6eee9;text-align:left}th:last-child,td:last-child{text-align:right}.totals{margin:18px 0 0 auto;width:min(100%,320px)}.totals div{display:flex;justify-content:space-between;padding:7px}.total{font-size:1.15rem;font-weight:800;color:#08743a}.notice{margin-top:18px;padding:13px;border-radius:10px;background:#e8f7ee;color:#17653a}.notice.error{background:#fff1f2;color:#9f1239}.pay-box,.bank-box{margin-top:22px;padding:18px;border:1px solid #bbf7d0;border-radius:14px;background:#f0fdf4}.pay-box h2,.bank-box h2{margin:0 0 5px;font-size:1rem}.pay-box p,.bank-box p{margin:0;color:#557064;font-size:.82rem}.pay-button{width:100%;margin-top:15px;padding:13px 18px;border:0;border-radius:10px;background:#635bff;color:white;font-weight:800;cursor:pointer}.pay-button:disabled{opacity:.6;cursor:wait}.bank-box{border-color:#bfdbfe;background:#f0f7ff}.bank-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-top:14px}.bank-grid div{padding:10px;border-radius:8px;background:#fff}.bank-grid span{display:block;color:#64748b;font-size:.68rem;text-transform:uppercase}.bank-grid strong{display:block;margin-top:3px;font-size:.86rem}.bank-note{margin-top:12px!important;font-weight:700;color:#1e3a8a!important}.paid{margin-top:22px;padding:18px;border-radius:14px;background:#dcfce7;color:#166534;text-align:center;font-weight:800}.receipt-link{display:inline-block;margin-top:10px;padding:9px 14px;border-radius:8px;background:#075f46;color:#fff;text-decoration:none}.history{margin-top:18px;font-size:.8rem;color:#607269}@media(max-width:600px){body{padding:12px}.hero,.card{padding:18px}.meta,.bank-grid{grid-template-columns:1fr}table{font-size:.85rem}.pay-button{width:100%}}
   </style>
 </head>
 <body>
@@ -27,20 +27,28 @@
         <div><span>Tax</span><strong><%= invoice.currency %> <%= Number(invoice.taxAmount).toFixed(2) %></strong></div>
         <div class="total"><span>Total</span><strong><%= invoice.currency %> <%= Number(invoice.totalAmount).toFixed(2) %></strong></div>
       </div>
-      <% if (paymentNotice === 'paid') { %><div class="notice">Your <%= paymentProvider %> sandbox payment was confirmed successfully.</div><% } %>
+      <% if (paymentNotice === 'paid') { %><div class="notice">Your Stripe sandbox payment was confirmed successfully.</div><% } %>
       <% if (paymentNotice === 'cancelled') { %><div class="notice error">Payment was cancelled. No payment was recorded; you may try again.</div><% } %>
-      <% if (paymentNotice === 'error') { %><div class="notice error">We could not verify the <%= paymentProvider %> payment. Please retry or contact Finance.</div><% } %>
+      <% if (paymentNotice === 'error') { %><div class="notice error">We could not verify the Stripe payment. Please retry or contact Finance.</div><% } %>
       <% if (invoice.status === 'Paid') { %>
         <div class="paid">Payment received · Thank you<br><a class="receipt-link" href="/subscription-payments/<%= encodeURIComponent(invoice.publicToken) %>/receipt" target="_blank" rel="noopener">Download payment receipt</a></div>
       <% } else if (invoice.status === 'Refunded') { %>
         <div class="paid">Payment refunded<br><a class="receipt-link" href="/subscription-payments/<%= encodeURIComponent(invoice.publicToken) %>/receipt" target="_blank" rel="noopener">View payment and refund receipt</a></div>
       <% } else if (['Sent','Viewed','PendingPayment','PaymentFailed','Overdue'].includes(invoice.status)) { %>
         <div class="pay-box">
-          <div><h2>Choose a secure sandbox payment</h2><p>Both options use test accounts. No real money will be transferred.</p></div>
-          <div class="pay-actions">
-            <button class="pay-button" id="stripePayButton" type="button">Pay by Stripe</button>
-            <button class="pay-button paypal" id="paypalPayButton" type="button">Pay by PayPal</button>
+          <div><h2>Pay securely by credit card</h2><p>This demonstration uses Stripe test mode. No real money will be transferred.</p></div>
+          <button class="pay-button" id="stripePayButton" type="button">Pay <%= invoice.currency %> <%= Number(invoice.totalAmount).toFixed(2) %> by Stripe</button>
+        </div>
+        <div class="bank-box">
+          <h2>Bank transfer instructions</h2>
+          <p>Alternatively, transfer the exact invoice total using these demonstration details.</p>
+          <div class="bank-grid">
+            <div><span>Bank</span><strong><%= bankTransferInstructions.bankName %></strong></div>
+            <div><span>Account name</span><strong><%= bankTransferInstructions.accountName %></strong></div>
+            <div><span>Account number</span><strong><%= bankTransferInstructions.accountNumber %></strong></div>
+            <div><span>Payment reference</span><strong><%= invoice.number %></strong></div>
           </div>
+          <p class="bank-note">Finance will verify the transfer and update the payment status. Demonstration details only—do not transfer real funds.</p>
         </div>
       <% } %>
       <% if (invoice.subscriptionPayments && invoice.subscriptionPayments.length) { %>
@@ -65,25 +73,6 @@
       } catch (error) {
         payButton.disabled = false;
         payButton.textContent = 'Try Stripe payment again';
-        alert(error.message);
-      }
-    });
-    const paypalButton = document.getElementById('paypalPayButton');
-    if (paypalButton) paypalButton.addEventListener('click', async () => {
-      paypalButton.disabled = true;
-      paypalButton.textContent = 'Opening PayPal sandbox…';
-      try {
-        const response = await fetch('/subscription-payments/<%= encodeURIComponent(invoice.publicToken) %>/paypal-checkout', {
-          method: 'POST',
-          headers: {'Content-Type':'application/json'},
-          body: '{}'
-        });
-        const data = await response.json().catch(() => ({}));
-        if (!response.ok || !data.url) throw new Error(data.error || 'Unable to start PayPal checkout.');
-        window.location.href = data.url;
-      } catch (error) {
-        paypalButton.disabled = false;
-        paypalButton.textContent = 'Try PayPal payment again';
         alert(error.message);
       }
     });

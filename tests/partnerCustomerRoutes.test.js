@@ -191,13 +191,15 @@ test('Finance can record guarded subscription bank transfers', () => {
   assert.match(view, /recordBankTransfer/);
 });
 
-test('customers can use an isolated PayPal sandbox subscription checkout', () => {
+test('subscription payments match the required Stripe, bank transfer and webhook scope', () => {
   const routes = fs.readFileSync(path.join(root, 'routes', 'subscriptionPayments.js'), 'utf8');
   const controller = fs.readFileSync(path.join(root, 'controllers', 'subscriptionPaymentController.js'), 'utf8');
   const customerView = fs.readFileSync(path.join(root, 'views', 'subscription-invoices', 'view.ejs'), 'utf8');
-  assert.match(routes, /router\.post\('\/:token\/paypal-checkout', controller\.createPayPalCheckout\)/);
-  assert.match(routes, /router\.get\('\/paypal\/return', controller\.payPalReturn\)/);
-  assert.match(controller, /subscription_paypal_checkout_created/);
-  assert.match(customerView, /Pay by PayPal/);
-  assert.match(customerView, /paypal-checkout/);
+  const model = fs.readFileSync(path.join(root, 'models', 'SubscriptionPayment.js'), 'utf8');
+  assert.match(routes, /router\.post\('\/:token\/stripe-checkout', controller\.createStripeCheckout\)/);
+  assert.match(controller, /exports\.stripeWebhook/);
+  assert.match(customerView, /Bank transfer instructions/);
+  assert.match(customerView, /Finance will verify the transfer/);
+  assert.match(model, /DataTypes\.ENUM\('Stripe', 'BankTransfer'\)/);
+  assert.doesNotMatch(`${routes}\n${customerView}\n${model}`, /PayPal|paypal|NETS|nets/);
 });

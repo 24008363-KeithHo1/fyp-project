@@ -614,7 +614,11 @@ exports.publicView = async (req, res) => {
       title: `Subscription Invoice ${invoice.number}`,
       invoice,
       paymentNotice: String(req.query.payment || ''),
-      paymentProvider: String(req.query.provider || 'stripe') === 'paypal' ? 'PayPal' : 'Stripe'
+      bankTransferInstructions: {
+        bankName: process.env.SUBSCRIPTION_BANK_NAME || 'Demo Bank Singapore',
+        accountName: process.env.SUBSCRIPTION_BANK_ACCOUNT_NAME || 'Vaniday Singapore Demo',
+        accountNumber: process.env.SUBSCRIPTION_BANK_ACCOUNT_NUMBER || 'DEMO-ACCOUNT-001'
+      }
     });
   } catch (error) {
     res.status(500).send('Unable to display this subscription invoice.');
