@@ -179,3 +179,14 @@ test('Finance has a separate subscription revenue report and CSV export', () => 
   assert.match(view, /exportRevenueCsv/);
   assert.match(view, /Net revenue/);
 });
+
+test('Finance can record guarded subscription bank transfers', () => {
+  const routes = fs.readFileSync(path.join(root, 'routes', 'subscriptionInvoices.js'), 'utf8');
+  const controller = fs.readFileSync(path.join(root, 'controllers', 'subscriptionPaymentController.js'), 'utf8');
+  const view = fs.readFileSync(path.join(root, 'views', 'finance', 'subscription-invoices.ejs'), 'utf8');
+  assert.match(routes, /router\.post\('\/payments\/bank-transfer', subscriptionPaymentController\.recordBankTransfer\)/);
+  assert.match(controller, /recordSubscriptionBankTransfer/);
+  assert.match(controller, /subscription_bank_transfer_recorded/);
+  assert.match(view, /Record bank transfer/);
+  assert.match(view, /recordBankTransfer/);
+});

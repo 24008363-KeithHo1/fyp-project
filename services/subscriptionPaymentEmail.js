@@ -9,9 +9,10 @@ function receiptDeliveryKey(payment) {
 
 function composePaymentConfirmationEmail(invoice, payment, publicUrl) {
   const subject = `Payment received for subscription invoice ${invoice.number}`;
+  const method = payment.provider === 'BankTransfer' ? 'bank transfer' : 'Stripe sandbox payment';
   const html = `
     <p>Dear ${escapeHtml(invoice.businessNameSnapshot)},</p>
-    <p>We have received your Stripe sandbox payment of
+    <p>We have received your ${escapeHtml(method)} of
     <strong>${escapeHtml(payment.currency)} ${Number(payment.receivedAmount).toFixed(2)}</strong>
     for subscription invoice <strong>${escapeHtml(invoice.number)}</strong>.</p>
     <p><a href="${escapeHtml(publicUrl)}">View your paid invoice securely</a></p>

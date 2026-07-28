@@ -13,6 +13,7 @@ const {
 const { logAudit } = require('../utils/audit');
 const { generateSubscriptionPaymentReceiptPDF } = require('../utils/subscriptionPaymentReceiptPdf');
 const { sendSubscriptionPaymentConfirmation } = require('../services/subscriptionPaymentEmail');
+const { recordSubscriptionBankTransfer } = require('../services/subscriptionBankTransfer');
 
 const stripeSecretKey = process.env.STRIPE_SECRET_KEY || process.env.STRIPE_SECRET;
 const stripe = stripeSecretKey ? Stripe(stripeSecretKey) : null;
@@ -392,6 +393,42 @@ exports.refundStripePayment = async (req, res) => {
   } catch (error) {
     const status = /Only a confirmed Paid|PaymentIntent|Refund amount/.test(error.message) ? 409 : 502;
     res.status(status).json({ error: error.message });
+  }
+};
+
+exports.recordBankTransfer = async (req, res) => {
+  try {
+    const result = await recordSubscriptionBankTransfer({
+      invoiceId: req.body && req.body.invoiceId,
+      input: req.body || {},
+      recordedBy: req.user.id
+    });
+    const confirmation = await deliverPaymentConfirmation(req, result.invoice, result.payment);
+    await logAudit({
+      userId: req.user.id,
+      action: 'subscription_bank_transfer_recorded',
+      entity: 'SubscriptionPayment',
+      entityId: result.payment.id,
+      meta: {
+        subscriptionInvoiceId: result.invoice.id,
+        invoiceNumber: result.invoice.number,
+        provider: 'BankTransfer',
+        reference: result.payment.providerReference,
+        amount: result.payment.receivedAmount,
+        currency: result.payment.currency
+      },
+      ip: req.ip,
+      userAgent: req.get('user-agent')
+    });
+    res.status(201).json({
+      payment: result.payment,
+      message: confirmation.failed
+        ? 'Bank transfer recorded. The receipt email could not be delivered; check email history.'
+        : 'Bank transfer recorded and the payment receipt was emailed.'
+    });
+  } catch (error) {
+    const conflict = /already|pending|Only an unpaid/.test(error.message);
+    res.status(conflict ? 409 : 400).json({ error: error.message });
   }
 };
 
