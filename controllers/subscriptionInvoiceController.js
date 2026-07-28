@@ -613,7 +613,8 @@ exports.publicView = async (req, res) => {
     res.render('subscription-invoices/view', {
       title: `Subscription Invoice ${invoice.number}`,
       invoice,
-      paymentNotice: String(req.query.payment || '')
+      paymentNotice: String(req.query.payment || ''),
+      paymentProvider: String(req.query.provider || 'stripe') === 'paypal' ? 'PayPal' : 'Stripe'
     });
   } catch (error) {
     res.status(500).send('Unable to display this subscription invoice.');

@@ -12,7 +12,7 @@ const SubscriptionPayment = sequelize.define('SubscriptionPayment', {
     references: { model: SubscriptionInvoice, key: 'id' }
   },
   provider: {
-    type: DataTypes.ENUM('Stripe', 'BankTransfer'),
+    type: DataTypes.ENUM('Stripe', 'PayPal', 'BankTransfer'),
     allowNull: false,
     defaultValue: 'Stripe'
   },

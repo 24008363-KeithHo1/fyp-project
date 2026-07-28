@@ -190,3 +190,14 @@ test('Finance can record guarded subscription bank transfers', () => {
   assert.match(view, /Record bank transfer/);
   assert.match(view, /recordBankTransfer/);
 });
+
+test('customers can use an isolated PayPal sandbox subscription checkout', () => {
+  const routes = fs.readFileSync(path.join(root, 'routes', 'subscriptionPayments.js'), 'utf8');
+  const controller = fs.readFileSync(path.join(root, 'controllers', 'subscriptionPaymentController.js'), 'utf8');
+  const customerView = fs.readFileSync(path.join(root, 'views', 'subscription-invoices', 'view.ejs'), 'utf8');
+  assert.match(routes, /router\.post\('\/:token\/paypal-checkout', controller\.createPayPalCheckout\)/);
+  assert.match(routes, /router\.get\('\/paypal\/return', controller\.payPalReturn\)/);
+  assert.match(controller, /subscription_paypal_checkout_created/);
+  assert.match(customerView, /Pay by PayPal/);
+  assert.match(customerView, /paypal-checkout/);
+});
