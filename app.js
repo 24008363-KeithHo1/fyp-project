@@ -12,6 +12,7 @@ require('./models/SubscriptionInvoiceItem');
 require('./models/SubscriptionAutomationRun');
 require('./models/SubscriptionEmailDelivery');
 require('./models/SubscriptionDemoSchedule');
+require('./models/SubscriptionPayment');
 const { startSubscriptionInvoiceScheduler } = require('./services/subscriptionInvoiceAutomation');
 const { startSubscriptionDemoScheduler } = require('./services/subscriptionInvoiceDemoScheduler');
 
@@ -25,6 +26,7 @@ app.set('view engine', 'ejs');
 
 app.use(cors());
 app.post('/payment/webhook', express.raw({ type: 'application/json' }), require('./controllers/paymentController').handleWebhook);
+app.post('/subscription-payment/webhook', express.raw({ type: 'application/json' }), require('./controllers/subscriptionPaymentController').stripeWebhook);
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 
@@ -69,6 +71,7 @@ app.use('/api/auth', require('./routes/auth'));
 app.use('/api/invoices', require('./routes/invoice'));
 app.use('/api/partner-customers', require('./routes/partnerCustomers'));
 app.use('/api/subscription-invoices', require('./routes/subscriptionInvoices'));
+app.use('/subscription-payments', require('./routes/subscriptionPayments'));
 app.use('/api/payroll', require('./routes/payroll'));
 app.use('/api/reports', require('./routes/report'));
 app.use('/api/requests', require('./routes/requestsApi'));

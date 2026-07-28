@@ -13,6 +13,7 @@ const SubscriptionInvoice = require('../models/SubscriptionInvoice');
 const SubscriptionInvoiceItem = require('../models/SubscriptionInvoiceItem');
 const SubscriptionEmailDelivery = require('../models/SubscriptionEmailDelivery');
 const SubscriptionDemoSchedule = require('../models/SubscriptionDemoSchedule');
+const SubscriptionPayment = require('../models/SubscriptionPayment');
 const {
   SUBSCRIPTION_INVOICE_STATUSES,
   assertSubscriptionInvoiceTransition
@@ -73,6 +74,11 @@ exports.get = async (req, res) => {
       }, {
         model: SubscriptionEmailDelivery,
         as: 'emailDeliveries',
+        separate: true,
+        order: [['attemptedAt', 'DESC'], ['id', 'DESC']]
+      }, {
+        model: SubscriptionPayment,
+        as: 'subscriptionPayments',
         separate: true,
         order: [['attemptedAt', 'DESC'], ['id', 'DESC']]
       }]
@@ -279,6 +285,11 @@ exports.sendApproved = async (req, res) => {
         as: 'items',
         separate: true,
         order: [['lineNumber', 'ASC']]
+      }, {
+        model: SubscriptionPayment,
+        as: 'subscriptionPayments',
+        separate: true,
+        order: [['attemptedAt', 'DESC'], ['id', 'DESC']]
       }],
       transaction,
       lock: transaction.LOCK.UPDATE
@@ -386,6 +397,11 @@ exports.publicView = async (req, res) => {
         as: 'items',
         separate: true,
         order: [['lineNumber', 'ASC']]
+      }, {
+        model: SubscriptionPayment,
+        as: 'subscriptionPayments',
+        separate: true,
+        order: [['attemptedAt', 'DESC'], ['id', 'DESC']]
       }]
     });
     if (!invoice || !['Sent', 'Viewed', 'PendingPayment', 'Paid', 'PaymentFailed', 'Overdue', 'Refunded'].includes(invoice.status)) {
@@ -401,7 +417,8 @@ exports.publicView = async (req, res) => {
     }
     res.render('subscription-invoices/view', {
       title: `Subscription Invoice ${invoice.number}`,
-      invoice
+      invoice,
+      paymentNotice: String(req.query.payment || '')
     });
   } catch (error) {
     res.status(500).send('Unable to display this subscription invoice.');
