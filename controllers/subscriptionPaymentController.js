@@ -1,4 +1,5 @@
 const Stripe = require('stripe');
+const { Op } = require('sequelize');
 const { sequelize } = require('../config/db');
 const SubscriptionInvoice = require('../models/SubscriptionInvoice');
 const SubscriptionPayment = require('../models/SubscriptionPayment');
@@ -10,6 +11,7 @@ const {
   validateRefundableSubscriptionPayment
 } = require('../services/subscriptionPayment');
 const { logAudit } = require('../utils/audit');
+const { generateSubscriptionPaymentReceiptPDF } = require('../utils/subscriptionPaymentReceiptPdf');
 
 const stripeSecretKey = process.env.STRIPE_SECRET_KEY || process.env.STRIPE_SECRET;
 const stripe = stripeSecretKey ? Stripe(stripeSecretKey) : null;
@@ -20,6 +22,17 @@ function baseUrl(req) {
 
 async function invoiceForToken(token) {
   return SubscriptionInvoice.findOne({ where: { publicToken: token } });
+}
+
+function pipeReceipt(res, invoice, payment) {
+  const receipt = generateSubscriptionPaymentReceiptPDF(invoice, payment);
+  res.setHeader('Content-Type', 'application/pdf');
+  res.setHeader('Content-Disposition', `inline; filename="${invoice.number}-receipt.pdf"`);
+  receipt.on('error', (error) => {
+    if (!res.headersSent) res.status(500).json({ error: error.message });
+    else res.destroy(error);
+  });
+  receipt.pipe(res);
 }
 
 exports.createStripeCheckout = async (req, res) => {
@@ -345,5 +358,45 @@ exports.refundStripePayment = async (req, res) => {
   } catch (error) {
     const status = /Only a confirmed Paid|PaymentIntent|Refund amount/.test(error.message) ? 409 : 502;
     res.status(status).json({ error: error.message });
+  }
+};
+
+exports.publicReceipt = async (req, res) => {
+  try {
+    const invoice = await SubscriptionInvoice.findOne({
+      where: { publicToken: req.params.token }
+    });
+    if (!invoice || !['Paid', 'Refunded'].includes(invoice.status)) {
+      return res.status(404).send('Payment receipt not found.');
+    }
+    const payment = await SubscriptionPayment.findOne({
+      where: {
+        subscriptionInvoiceId: invoice.id,
+        status: { [Op.in]: ['Paid', 'Refunded'] }
+      },
+      order: [['paidAt', 'DESC'], ['id', 'DESC']]
+    });
+    if (!payment) return res.status(404).send('Payment receipt not found.');
+    pipeReceipt(res, invoice, payment);
+  } catch (error) {
+    res.status(500).json({ error: 'Unable to generate payment receipt.' });
+  }
+};
+
+exports.financeReceipt = async (req, res) => {
+  try {
+    const payment = await SubscriptionPayment.findByPk(req.params.paymentId, {
+      include: [{
+        model: SubscriptionInvoice,
+        as: 'subscriptionInvoice',
+        required: true
+      }]
+    });
+    if (!payment || !['Paid', 'Refunded'].includes(payment.status)) {
+      return res.status(404).json({ error: 'Completed Subscription Payment receipt not found.' });
+    }
+    pipeReceipt(res, payment.subscriptionInvoice, payment);
+  } catch (error) {
+    res.status(500).json({ error: 'Unable to generate payment receipt.' });
   }
 };

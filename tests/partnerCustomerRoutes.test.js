@@ -150,3 +150,14 @@ test('Finance can issue a guarded full Stripe sandbox refund', () => {
   assert.match(view, /data-refund-payment-id/);
   assert.match(view, /refundSubscriptionPayment/);
 });
+
+test('paid subscription receipts have separate customer and Finance routes', () => {
+  const financeRoutes = fs.readFileSync(path.join(root, 'routes', 'subscriptionInvoices.js'), 'utf8');
+  const publicRoutes = fs.readFileSync(path.join(root, 'routes', 'subscriptionPayments.js'), 'utf8');
+  const customerView = fs.readFileSync(path.join(root, 'views', 'subscription-invoices', 'view.ejs'), 'utf8');
+  const financeView = fs.readFileSync(path.join(root, 'views', 'finance', 'subscription-invoices.ejs'), 'utf8');
+  assert.match(publicRoutes, /router\.get\('\/:token\/receipt', controller\.publicReceipt\)/);
+  assert.match(financeRoutes, /router\.get\('\/payments\/:paymentId\/receipt'/);
+  assert.match(customerView, /Download payment receipt/);
+  assert.match(financeView, /fa-receipt/);
+});
