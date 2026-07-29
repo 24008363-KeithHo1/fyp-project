@@ -64,6 +64,14 @@ exports.list = async (req, res) => {
       where.billingPeriodStart = period.start;
       where.billingPeriodEnd = period.end;
     }
+    if (req.query.plan) {
+      const plan = String(req.query.plan).trim().toUpperCase();
+      const allowedPlans = ['BASIC', 'STANDARD', 'PREMIUM'];
+      if (!allowedPlans.includes(plan)) {
+        return res.status(400).json({ error: 'Invalid subscription plan filter.' });
+      }
+      where.planCodeSnapshot = plan;
+    }
     const search = String(req.query.search || '').trim();
     if (search) {
       where[Op.or] = [

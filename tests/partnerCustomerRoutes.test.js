@@ -68,6 +68,20 @@ test('subscription invoice review UI exposes the Finance approval and sending wo
   assert.match(controller, /invoice remains Approved and can be retried/);
 });
 
+test('invoice register supports search, period, plan and status filters', () => {
+  const view = fs.readFileSync(path.join(root, 'views', 'finance', 'subscription-invoices.ejs'), 'utf8');
+  const controller = fs.readFileSync(path.join(root, 'controllers', 'subscriptionInvoiceController.js'), 'utf8');
+  assert.match(view, /Invoice register filters/);
+  assert.match(view, /id="invoiceSearch"/);
+  assert.match(view, /id="periodFilter"/);
+  assert.match(view, /id="planFilter"/);
+  assert.match(view, /id="statusFilter"/);
+  assert.match(view, /id="clearInvoiceFilters"/);
+  assert.match(view, /params\.set\('plan', plan\)/);
+  assert.match(controller, /where\.planCodeSnapshot = plan/);
+  assert.match(controller, /Invalid subscription plan filter/);
+});
+
 test('subscription customer view uses its own secure token route', () => {
   const app = fs.readFileSync(path.join(root, 'app.js'), 'utf8');
   const controller = fs.readFileSync(path.join(root, 'controllers', 'subscriptionInvoiceController.js'), 'utf8');

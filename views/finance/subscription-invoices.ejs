@@ -8,7 +8,7 @@
   .si-eyebrow{font-size:.72rem;font-weight:800;letter-spacing:.1em;text-transform:uppercase;opacity:.72}.si-hero h1{font-weight:800;letter-spacing:-.025em}.si-readonly{display:inline-flex;align-items:center;gap:.45rem;padding:.5rem .75rem;border:1px solid rgba(255,255,255,.28);border-radius:999px;background:rgba(255,255,255,.12);font-size:.76rem;font-weight:700}
   .si-kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:.85rem}.si-kpi{padding:1rem;border:1px solid var(--si-line);border-radius:14px;background:#fff;box-shadow:0 8px 22px rgba(15,23,42,.05)}.si-kpi span{display:block;color:var(--si-muted);font-size:.72rem;font-weight:800;text-transform:uppercase}.si-kpi strong{display:block;margin-top:.3rem;color:var(--si-navy);font-size:1.5rem}
   .si-panel{border:1px solid var(--si-line);border-radius:16px;background:#fff;box-shadow:0 10px 28px rgba(15,23,42,.055)}.si-panel-head{display:flex;align-items:center;justify-content:space-between;gap:1rem;padding:1rem 1.15rem;border-bottom:1px solid #edf3ef}.si-panel-title{margin:0;font-size:.95rem;font-weight:800}.si-panel-body{padding:1rem 1.15rem}
-  .si-filters{display:grid;grid-template-columns:minmax(220px,1fr) minmax(150px,220px) minmax(160px,220px);gap:.75rem}.si-filters label{font-size:.76rem;font-weight:700;color:#52665b}.si-filters .form-control,.si-filters .form-select{min-height:43px;border-color:#d8e5dd}
+  .si-filters{display:grid;grid-template-columns:minmax(220px,1fr) repeat(3,minmax(145px,200px)) auto;gap:.75rem;align-items:end}.si-filters label{font-size:.76rem;font-weight:700;color:#52665b}.si-filters .form-control,.si-filters .form-select{min-height:43px;border-color:#d8e5dd}.si-filter-clear{min-height:43px;white-space:nowrap}
   .si-table{margin:0}.si-table th{padding:.75rem;background:#f1f8f4;color:#53675c;font-size:.7rem;text-transform:uppercase;letter-spacing:.055em}.si-table td{padding:.85rem .75rem;vertical-align:middle;border-color:#edf3ef}.si-table tbody tr:hover>*{background:#f8fcfa}.si-number{font-family:monospace;font-weight:800}.si-muted{color:var(--si-muted);font-size:.75rem}
   .si-status{display:inline-flex;padding:.3rem .6rem;border-radius:999px;font-size:.7rem;font-weight:800}.si-status-Draft{background:#e0f2fe;color:#075985}.si-status-Approved{background:#ede9fe;color:#5b21b6}.si-status-Sent,.si-status-Viewed{background:#dbeafe;color:#1d4ed8}.si-status-PendingPayment{background:#fef3c7;color:#92400e}.si-status-Paid{background:#dcfce7;color:#166534}.si-status-PaymentFailed,.si-status-Rejected,.si-status-Overdue{background:#fee2e2;color:#991b1b}.si-status-Refunded{background:#e2e8f0;color:#475569}
   .si-view-btn{display:inline-flex;align-items:center;gap:.35rem;border:1px solid #bae6fd;border-radius:8px;background:#e0f2fe;color:#075985;font-size:.72rem;font-weight:800}.si-empty{padding:2.3rem!important;text-align:center;color:var(--si-muted)}.si-empty i{display:block;margin-bottom:.55rem;font-size:1.5rem;color:#0f766e}
@@ -38,11 +38,13 @@
   </section>
 
   <section class="si-panel mb-3">
-    <div class="si-panel-head"><h2 class="si-panel-title"><i class="fa-solid fa-filter me-2 text-success"></i>Review filters</h2><div class="d-flex gap-2 flex-wrap"><button class="btn btn-outline-danger btn-sm" id="runOverdueCheck" type="button"><i class="fa-solid fa-clock me-1"></i>Check overdue <span id="overduePreviewCount"></span></button><button class="btn btn-outline-primary btn-sm" id="sendOverdueReminders" type="button"><i class="fa-solid fa-envelope me-1"></i>Send due reminders <span id="reminderPreviewCount"></span></button></div></div>
+    <div class="si-panel-head"><h2 class="si-panel-title"><i class="fa-solid fa-filter me-2 text-success"></i>Invoice register filters</h2><div class="d-flex gap-2 flex-wrap"><button class="btn btn-outline-danger btn-sm" id="runOverdueCheck" type="button"><i class="fa-solid fa-clock me-1"></i>Check overdue <span id="overduePreviewCount"></span></button><button class="btn btn-outline-primary btn-sm" id="sendOverdueReminders" type="button"><i class="fa-solid fa-envelope me-1"></i>Send due reminders <span id="reminderPreviewCount"></span></button></div></div>
     <div class="si-panel-body si-filters">
       <div><label for="invoiceSearch" class="form-label">Search invoices</label><input id="invoiceSearch" class="form-control" placeholder="Invoice number, customer, or email"></div>
       <div><label for="periodFilter" class="form-label">Billing period</label><input id="periodFilter" class="form-control" type="month"></div>
+      <div><label for="planFilter" class="form-label">Subscription plan</label><select id="planFilter" class="form-select"><option value="">All plans</option><option value="BASIC">Basic</option><option value="STANDARD">Standard</option><option value="PREMIUM">Premium</option></select></div>
       <div><label for="statusFilter" class="form-label">Status</label><select id="statusFilter" class="form-select"><option value="">All statuses</option><% statuses.forEach(status => { %><option value="<%= status %>"><%= status.replace(/([a-z])([A-Z])/g, '$1 $2') %></option><% }) %></select></div>
+      <button class="btn btn-outline-secondary si-filter-clear" id="clearInvoiceFilters" type="button"><i class="fa-solid fa-rotate-left me-1"></i>Clear</button>
     </div>
   </section>
 
@@ -343,9 +345,11 @@ async function loadSubscriptionInvoices() {
   const params = new URLSearchParams();
   const search = document.getElementById('invoiceSearch').value.trim();
   const period = document.getElementById('periodFilter').value;
+  const plan = document.getElementById('planFilter').value;
   const status = document.getElementById('statusFilter').value;
   if (search) params.set('search', search);
   if (period) params.set('period', period);
+  if (plan) params.set('plan', plan);
   if (status) params.set('status', status);
   subscriptionInvoices = await subscriptionApi(`/api/subscription-invoices?${params}`);
   updateSubscriptionSummary();
@@ -563,7 +567,14 @@ async function loadSubscriptionRuns() {
 }
 let subscriptionSearchTimer;
 document.getElementById('invoiceSearch').addEventListener('input', () => { clearTimeout(subscriptionSearchTimer); subscriptionSearchTimer = setTimeout(() => loadSubscriptionInvoices().catch(showSubscriptionError), 250); });
-['periodFilter','statusFilter'].forEach(id => document.getElementById(id).addEventListener('change', () => loadSubscriptionInvoices().catch(showSubscriptionError)));
+['periodFilter','planFilter','statusFilter'].forEach(id => document.getElementById(id).addEventListener('change', () => loadSubscriptionInvoices().catch(showSubscriptionError)));
+document.getElementById('clearInvoiceFilters').addEventListener('click', () => {
+  document.getElementById('invoiceSearch').value = '';
+  document.getElementById('periodFilter').value = '';
+  document.getElementById('planFilter').value = '';
+  document.getElementById('statusFilter').value = '';
+  loadSubscriptionInvoices().catch(showSubscriptionError);
+});
 document.getElementById('invoiceRows').addEventListener('click', event => { const button = event.target.closest('[data-review-id]'); if (button) reviewSubscriptionInvoice(button.dataset.reviewId).catch(showSubscriptionError); });
 document.getElementById('paymentRows').addEventListener('click', event => { const button = event.target.closest('[data-review-id]'); if (button) reviewSubscriptionInvoice(button.dataset.reviewId).catch(showSubscriptionError); });
 document.getElementById('paymentRows').addEventListener('click', event => { const button = event.target.closest('[data-reconcile-payment-id]'); if (button) reconcileSubscriptionPayment(button.dataset.reconcilePaymentId,button).catch(showSubscriptionError); });
