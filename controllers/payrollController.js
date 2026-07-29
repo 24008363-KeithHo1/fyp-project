@@ -72,6 +72,23 @@ async function assertPayrollRecordEditable(payroll) {
 }
 exports.uploadMiddleware = upload.single('file');
 
+exports.activePeriod = async (req, res) => {
+  try {
+    const period = await getActivePayrollPeriod();
+    const roleCanImport = ['Admin', 'HR'].includes(req.user.role);
+    const workflowCanImport = canImportPayroll(period);
+
+    res.json({
+      period,
+      canImport: roleCanImport && workflowCanImport,
+      roleCanImport,
+      workflowCanImport
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+
 exports.upload = async (req, res) => {
   try {
     if (!req.file) {

@@ -11,6 +11,18 @@ test('restricts payroll file imports to HR and Admin', () => {
   assert.doesNotMatch(routes, /router\.post\('\/upload'.*Finance/);
 });
 
+test('exposes active payroll workflow state and disables unavailable imports in the UI', () => {
+  const routes = fs.readFileSync(path.join(root, 'routes', 'payroll.js'), 'utf8');
+  const controller = fs.readFileSync(path.join(root, 'controllers', 'payrollController.js'), 'utf8');
+  const view = fs.readFileSync(path.join(root, 'views', 'payroll.ejs'), 'utf8');
+  assert.match(routes, /router\.get\('\/active-period'/);
+  assert.match(controller, /exports\.activePeriod/);
+  assert.match(controller, /roleCanImport/);
+  assert.match(view, /loadActivePeriod/);
+  assert.match(view, /only HR or Admin can import payroll files/);
+  assert.match(view, /importPayrollButton\.disabled = !payrollImportAllowed/);
+});
+
 test('links payroll records to a payroll period', () => {
   const Payroll = require('../models/Payroll');
   assert.ok(Payroll.rawAttributes.payrollPeriodId);

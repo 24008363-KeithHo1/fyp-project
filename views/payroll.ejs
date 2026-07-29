@@ -24,6 +24,9 @@
           <p class="payroll-upload-instructions">
             Required fields: ID, name, email, bank number, period, gross, deductions, and net.
           </p>
+          <div id="payrollImportState" class="alert alert-secondary py-2" role="status">
+            Checking the active payroll period…
+          </div>
           <form id="upload" enctype="multipart/form-data" class="payroll-upload-form">
             <input type="file" id="file" accept=".xlsx,.xls,.csv" required class="payroll-file-input">
             <label class="payroll-file-dropzone" for="file">
@@ -34,7 +37,7 @@
               </span>
               <span class="payroll-file-browse">Browse</span>
             </label>
-            <button type="submit" class="btn btn-primary payroll-upload-submit">
+            <button type="submit" id="importPayrollButton" class="btn btn-primary payroll-upload-submit">
               <i class="fas fa-upload" aria-hidden="true"></i> Import Payroll
             </button>
           </form>
@@ -171,6 +174,50 @@
   <script>
   const payrollFileInput = document.getElementById('file');
   const selectedFileName = document.getElementById('selectedFileName');
+  const importPayrollButton = document.getElementById('importPayrollButton');
+  const payrollImportState = document.getElementById('payrollImportState');
+  let payrollImportAllowed = false;
+
+  function payrollPeriodGuidance(period) {
+    if (!period) return 'Create an active payroll period before importing payroll data.';
+    if (period.status === 'PendingApproval') return 'Payroll has been submitted to Finance. Importing is locked until Finance requests changes.';
+    if (period.status === 'Approved') return 'Payroll is approved. Release every salary, close this period, and then create the next payroll schedule.';
+    if (period.status === 'Released') return 'All salaries are released. Close this period before creating the next payroll schedule.';
+    if (period.status === 'Closed') return 'This payroll period is closed. Create a new active period before importing.';
+    return `Payroll importing is unavailable while this period is ${period.status}.`;
+  }
+
+  async function loadActivePeriod() {
+    try {
+      const res = await fetch('/api/payroll/active-period', {
+        headers: { authorization: 'Bearer ' + token }
+      });
+      const data = await readResponse(res);
+      if (!res.ok) throw new Error(data.error || 'Unable to load the active payroll period');
+
+      payrollImportAllowed = Boolean(data.canImport);
+      payrollFileInput.disabled = !payrollImportAllowed;
+      importPayrollButton.disabled = !payrollImportAllowed;
+
+      const period = data.period;
+      const periodLabel = period ? `${period.name} (${period.status})` : 'No active payroll period';
+      if (payrollImportAllowed) {
+        payrollImportState.className = 'alert alert-success py-2';
+        payrollImportState.textContent = `${periodLabel}: payroll importing is open.`;
+      } else {
+        payrollImportState.className = 'alert alert-warning py-2';
+        payrollImportState.textContent = data.roleCanImport
+          ? `${periodLabel}: ${payrollPeriodGuidance(period)}`
+          : `${periodLabel}: only HR or Admin can import payroll files. Finance can review, approve and release payroll.`;
+      }
+    } catch (err) {
+      payrollImportAllowed = false;
+      payrollFileInput.disabled = true;
+      importPayrollButton.disabled = true;
+      payrollImportState.className = 'alert alert-danger py-2';
+      payrollImportState.textContent = err.message;
+    }
+  }
 
   payrollFileInput.addEventListener('change', () => {
     const selectedFile = payrollFileInput.files[0];
@@ -179,6 +226,10 @@
 
   document.getElementById('upload').addEventListener('submit', async e => {
     e.preventDefault();
+    if (!payrollImportAllowed) {
+      await loadActivePeriod();
+      return;
+    }
     const file = document.getElementById('file').files[0];
     if (!file) {
       alert('Please select a file');
@@ -201,6 +252,7 @@
       alert(msg);
       payrollFileInput.value = '';
       selectedFileName.textContent = 'No file selected';
+      await loadActivePeriod();
       load();
     } catch (err) { alert('Upload failed: ' + err.message); }
   });
@@ -449,6 +501,7 @@
     }
   });
 
+  loadActivePeriod();
   load();
   </script>
 
