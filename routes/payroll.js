@@ -4,10 +4,10 @@ const auth = require('../middlewares/auth');
 const checkRole = require('../middlewares/roles');
 const ctrl = require('../controllers/payrollController');
 
-router.post('/upload', auth, checkRole(['Admin','HR']), ctrl.uploadMiddleware, ctrl.upload);
+router.post('/upload', auth, checkRole(['Admin','HR','Finance']), ctrl.uploadMiddleware, ctrl.upload);
 router.get('/', auth, checkRole(['Admin','HR','Finance']), ctrl.list);
-router.put('/:id', auth, checkRole(['Admin','HR']), ctrl.update);
-router.delete('/:id', auth, checkRole(['Admin','HR']), ctrl.remove);
+router.put('/:id', auth, checkRole(['Admin','HR','Finance']), ctrl.update);
+router.delete('/:id', auth, checkRole(['Admin','HR','Finance']), ctrl.remove);
 router.post('/:id/approve', auth, checkRole(['Admin','Finance']), ctrl.approvePayroll);
 router.post('/:id/release', auth, checkRole(['Admin','Finance']), ctrl.releaseSalary);
 router.get('/myslips', auth, ctrl.myslips);
