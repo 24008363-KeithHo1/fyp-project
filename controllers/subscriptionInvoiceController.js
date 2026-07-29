@@ -39,6 +39,10 @@ const {
   summarizeSubscriptionRevenue,
   buildSubscriptionRevenueCsv
 } = require('../services/subscriptionRevenueReport');
+const {
+  calculateTaxFromRate,
+  taxRateForInvoice
+} = require('../services/subscriptionInvoiceTax');
 
 exports.reviewPage = (req, res) => res.render('finance/subscription-invoices', {
   title: 'Subscription Invoices',
@@ -309,7 +313,7 @@ exports.updateDraft = async (req, res) => {
       return res.status(409).json({ error: 'Only Draft subscription invoices can be edited.' });
     }
 
-    const allowedFields = ['billingEmailSnapshot', 'description', 'dueDate', 'subtotal', 'taxAmount'];
+    const allowedFields = ['billingEmailSnapshot', 'description', 'dueDate', 'subtotal', 'taxRate'];
     const suppliedFields = Object.keys(req.body || {});
     const forbiddenFields = suppliedFields.filter((field) => !allowedFields.includes(field));
     if (forbiddenFields.length) {
@@ -347,14 +351,18 @@ exports.updateDraft = async (req, res) => {
     }
 
     const subtotal = req.body.subtotal === undefined ? Number(invoice.subtotal) : Number(req.body.subtotal);
-    const taxAmount = req.body.taxAmount === undefined ? Number(invoice.taxAmount) : Number(req.body.taxAmount);
-    if (!Number.isFinite(subtotal) || subtotal < 0 || !Number.isFinite(taxAmount) || taxAmount < 0) {
+    const taxRate = req.body.taxRate === undefined ? taxRateForInvoice(invoice) : Number(req.body.taxRate);
+    let totals;
+    try {
+      totals = calculateTaxFromRate(subtotal, taxRate);
+    } catch (validationError) {
       await transaction.rollback();
-      return res.status(400).json({ error: 'Subtotal and tax must be valid non-negative amounts.' });
+      return res.status(400).json({ error: validationError.message });
     }
-    changes.subtotal = Math.round((subtotal + Number.EPSILON) * 100) / 100;
-    changes.taxAmount = Math.round((taxAmount + Number.EPSILON) * 100) / 100;
-    changes.totalAmount = Math.round((changes.subtotal + changes.taxAmount + Number.EPSILON) * 100) / 100;
+    changes.subtotal = totals.subtotal;
+    changes.taxAmount = totals.taxAmount;
+    changes.totalAmount = totals.totalAmount;
+    changes.data = { ...(invoice.data || {}), taxRate: totals.taxRate };
 
     await invoice.update(changes, { transaction });
     let item = await SubscriptionInvoiceItem.findOne({

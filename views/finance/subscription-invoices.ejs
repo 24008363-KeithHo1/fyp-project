@@ -8,7 +8,8 @@
   .si-eyebrow{font-size:.72rem;font-weight:800;letter-spacing:.1em;text-transform:uppercase;opacity:.72}.si-hero h1{font-weight:800;letter-spacing:-.025em}.si-readonly{display:inline-flex;align-items:center;gap:.45rem;padding:.5rem .75rem;border:1px solid rgba(255,255,255,.28);border-radius:999px;background:rgba(255,255,255,.12);font-size:.76rem;font-weight:700}
   .si-kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:.85rem}.si-kpi{padding:1rem;border:1px solid var(--si-line);border-radius:14px;background:#fff;box-shadow:0 8px 22px rgba(15,23,42,.05)}.si-kpi span{display:block;color:var(--si-muted);font-size:.72rem;font-weight:800;text-transform:uppercase}.si-kpi strong{display:block;margin-top:.3rem;color:var(--si-navy);font-size:1.5rem}
   .si-panel{border:1px solid var(--si-line);border-radius:16px;background:#fff;box-shadow:0 10px 28px rgba(15,23,42,.055)}.si-panel-head{display:flex;align-items:center;justify-content:space-between;gap:1rem;padding:1rem 1.15rem;border-bottom:1px solid #edf3ef}.si-panel-title{margin:0;font-size:.95rem;font-weight:800}.si-panel-body{padding:1rem 1.15rem}
-  .si-filters{display:grid;grid-template-columns:minmax(220px,1fr) repeat(3,minmax(145px,200px)) auto;gap:.75rem;align-items:end}.si-filters label{font-size:.76rem;font-weight:700;color:#52665b}.si-filters .form-control,.si-filters .form-select{min-height:43px;border-color:#d8e5dd}.si-filter-clear{min-height:43px;white-space:nowrap}
+  .si-filters{display:grid;grid-template-columns:minmax(220px,1fr) repeat(3,minmax(145px,200px)) auto;gap:.75rem;align-items:end}.si-filters label{font-size:.76rem;font-weight:700;color:#52665b}.si-filters .form-control,.si-filters .form-select{min-height:43px;border-color:#d8e5dd}.si-filter-actions{display:flex;gap:.5rem}.si-filter-actions .btn{min-height:43px;white-space:nowrap}
+  .subscription-review .btn-outline-primary{background:#fff;color:#0d6efd;border:1px solid #0d6efd}.subscription-review .btn-outline-danger{background:#fff;color:#dc3545;border:1px solid #dc3545}.subscription-review .btn-outline-secondary{background:#fff;color:#5f6b76;border:1px solid #9aa5af}.subscription-review .btn-outline-primary:hover{background:#0d6efd;color:#fff}.subscription-review .btn-outline-danger:hover{background:#dc3545;color:#fff}.subscription-review .btn-outline-secondary:hover{background:#5f6b76;color:#fff}
   .si-table{margin:0}.si-table th{padding:.75rem;background:#f1f8f4;color:#53675c;font-size:.7rem;text-transform:uppercase;letter-spacing:.055em}.si-table td{padding:.85rem .75rem;vertical-align:middle;border-color:#edf3ef}.si-table tbody tr:hover>*{background:#f8fcfa}.si-number{font-family:monospace;font-weight:800}.si-muted{color:var(--si-muted);font-size:.75rem}
   .si-status{display:inline-flex;padding:.3rem .6rem;border-radius:999px;font-size:.7rem;font-weight:800}.si-status-Draft{background:#e0f2fe;color:#075985}.si-status-Approved{background:#ede9fe;color:#5b21b6}.si-status-Sent,.si-status-Viewed{background:#dbeafe;color:#1d4ed8}.si-status-PendingPayment{background:#fef3c7;color:#92400e}.si-status-Paid{background:#dcfce7;color:#166534}.si-status-PaymentFailed,.si-status-Rejected,.si-status-Overdue{background:#fee2e2;color:#991b1b}.si-status-Refunded{background:#e2e8f0;color:#475569}
   .si-view-btn{display:inline-flex;align-items:center;gap:.35rem;border:1px solid #bae6fd;border-radius:8px;background:#e0f2fe;color:#075985;font-size:.72rem;font-weight:800}.si-empty{padding:2.3rem!important;text-align:center;color:var(--si-muted)}.si-empty i{display:block;margin-bottom:.55rem;font-size:1.5rem;color:#0f766e}
@@ -38,17 +39,6 @@
   </section>
 
   <section class="si-panel mb-3">
-    <div class="si-panel-head"><h2 class="si-panel-title"><i class="fa-solid fa-filter me-2 text-success"></i>Invoice register filters</h2><div class="d-flex gap-2 flex-wrap"><button class="btn btn-outline-danger btn-sm" id="runOverdueCheck" type="button"><i class="fa-solid fa-clock me-1"></i>Check overdue <span id="overduePreviewCount"></span></button><button class="btn btn-outline-primary btn-sm" id="sendOverdueReminders" type="button"><i class="fa-solid fa-envelope me-1"></i>Send due reminders <span id="reminderPreviewCount"></span></button></div></div>
-    <div class="si-panel-body si-filters">
-      <div><label for="invoiceSearch" class="form-label">Search invoices</label><input id="invoiceSearch" class="form-control" placeholder="Invoice number, customer, or email"></div>
-      <div><label for="periodFilter" class="form-label">Billing period</label><input id="periodFilter" class="form-control" type="month"></div>
-      <div><label for="planFilter" class="form-label">Subscription plan</label><select id="planFilter" class="form-select"><option value="">All plans</option><option value="BASIC">Basic</option><option value="STANDARD">Standard</option><option value="PREMIUM">Premium</option></select></div>
-      <div><label for="statusFilter" class="form-label">Status</label><select id="statusFilter" class="form-select"><option value="">All statuses</option><% statuses.forEach(status => { %><option value="<%= status %>"><%= status.replace(/([a-z])([A-Z])/g, '$1 $2') %></option><% }) %></select></div>
-      <button class="btn btn-outline-secondary si-filter-clear" id="clearInvoiceFilters" type="button"><i class="fa-solid fa-rotate-left me-1"></i>Clear</button>
-    </div>
-  </section>
-
-  <section class="si-panel mb-3">
     <div class="si-panel-head"><div><h2 class="si-panel-title"><i class="fa-solid fa-wand-magic-sparkles me-2 text-success"></i>Finance demo generation</h2><div class="si-demo-note mt-1">Uses the real customer eligibility and duplicate checks. Times below are Singapore time (SGT).</div></div><span class="si-status si-status-Approved">Demo control</span></div>
     <div class="si-panel-body">
       <div class="si-demo-grid">
@@ -62,8 +52,16 @@
   </section>
 
   <section class="si-panel table-panel mb-3">
-    <div class="si-panel-head"><h2 class="si-panel-title"><i class="fa-solid fa-file-invoice me-2 text-success"></i>Invoice register</h2><span class="si-muted" id="resultLabel">Loading…</span></div>
+    <div class="si-panel-head"><h2 class="si-panel-title"><i class="fa-solid fa-file-invoice me-2 text-success"></i>Invoice register</h2><div class="d-flex justify-content-end align-items-center gap-2 flex-wrap"><span class="si-muted me-1" id="resultLabel">Loading…</span><button class="btn btn-outline-danger btn-sm si-secondary-action" id="runOverdueCheck" type="button"><i class="fa-solid fa-clock me-1"></i>Check overdue <span id="overduePreviewCount"></span></button><button class="btn btn-outline-primary btn-sm si-secondary-action" id="sendOverdueReminders" type="button"><i class="fa-solid fa-envelope me-1"></i>Send due reminders <span id="reminderPreviewCount"></span></button></div></div>
     <div class="table-responsive">
+      <form class="si-panel-body si-filters" id="invoiceRegisterFilters">
+        <div><label for="invoiceSearch" class="form-label">Search invoices</label><input id="invoiceSearch" class="form-control" placeholder="Invoice number, customer, or email"></div>
+        <div><label for="periodFilter" class="form-label">Billing period</label><input id="periodFilter" class="form-control" type="month"></div>
+        <div><label for="planFilter" class="form-label">Subscription plan</label><select id="planFilter" class="form-select"><option value="">All plans</option><option value="BASIC">Basic</option><option value="STANDARD">Standard</option><option value="PREMIUM">Premium</option></select></div>
+        <div><label for="statusFilter" class="form-label">Status</label><select id="statusFilter" class="form-select"><option value="">All statuses</option><% statuses.forEach(status => { %><option value="<%= status %>"><%= status.replace(/([a-z])([A-Z])/g, '$1 $2') %></option><% }) %></select></div>
+        <div class="si-filter-actions"><button class="btn btn-success" id="applyInvoiceFilters" type="submit"><i class="fa-solid fa-filter me-1"></i>Apply</button><button class="btn btn-outline-secondary" id="clearInvoiceFilters" type="button"><i class="fa-solid fa-rotate-left me-1"></i>Clear</button></div>
+      </form>
+      <div class="px-3 pb-3" id="invoiceRegisterAlerts" aria-live="polite"></div>
       <table class="table si-table"><thead><tr><th>Invoice</th><th>Customer</th><th>Period</th><th>Plan</th><th>Amount</th><th>Due</th><th>Status</th><th>Review</th></tr></thead><tbody id="invoiceRows"><tr><td colspan="8" class="si-empty">Loading subscription invoices...</td></tr></tbody></table>
     </div>
   </section>
@@ -357,13 +355,13 @@ async function loadSubscriptionInvoices() {
 }
 async function loadOverduePreview() {
   const preview = await subscriptionApi('/api/subscription-invoices/overdue-preview');
-  document.getElementById('overduePreviewCount').textContent = preview.count ? `(${preview.count})` : '';
+  document.getElementById('overduePreviewCount').textContent = `(${preview.count})`;
   return preview;
 }
 async function runOverdueCheck() {
   const preview = await loadOverduePreview();
   if (!preview.count) {
-    document.getElementById('subscriptionAlerts').innerHTML = '<div class="alert alert-info">No unpaid Subscription Invoices are past their due date.</div>';
+    document.getElementById('invoiceRegisterAlerts').innerHTML = '<div class="alert alert-info mb-0">Nothing to update: no sent or payment-pending subscription invoice is past its due date.</div>';
     return;
   }
   if (!confirm(`Mark ${preview.count} unpaid Subscription Invoice(s) as Overdue?`)) return;
@@ -373,17 +371,17 @@ async function runOverdueCheck() {
     body:'{}'
   });
   await Promise.all([loadSubscriptionInvoices(),loadOverduePreview(),loadReminderPreview()]);
-  document.getElementById('subscriptionAlerts').innerHTML = `<div class="alert alert-success">${escapeSubscriptionHtml(response.message)}</div>`;
+  document.getElementById('invoiceRegisterAlerts').innerHTML = `<div class="alert alert-success mb-0">${escapeSubscriptionHtml(response.message)}</div>`;
 }
 async function loadReminderPreview() {
   const preview = await subscriptionApi('/api/subscription-invoices/reminder-preview');
-  document.getElementById('reminderPreviewCount').textContent = preview.count ? `(${preview.count})` : '';
+  document.getElementById('reminderPreviewCount').textContent = `(${preview.count})`;
   return preview;
 }
 async function sendOverdueReminders() {
   const preview = await loadReminderPreview();
   if (!preview.count) {
-    document.getElementById('subscriptionAlerts').innerHTML = '<div class="alert alert-info">No 1, 7, or 14-day overdue reminders are currently due.</div>';
+    document.getElementById('invoiceRegisterAlerts').innerHTML = '<div class="alert alert-info mb-0">Nothing to send: reminders are available only when an invoice is Overdue by at least 1, 7 or 14 days.</div>';
     return;
   }
   if (!confirm(`Send ${preview.count} overdue reminder email(s)?`)) return;
@@ -393,7 +391,7 @@ async function sendOverdueReminders() {
     body:'{}'
   });
   await Promise.all([loadSubscriptionInvoices(),loadReminderPreview()]);
-  document.getElementById('subscriptionAlerts').innerHTML = `<div class="alert ${response.result.failed ? 'alert-warning' : 'alert-success'}">${escapeSubscriptionHtml(response.message)}</div>`;
+  document.getElementById('invoiceRegisterAlerts').innerHTML = `<div class="alert ${response.result.failed ? 'alert-warning' : 'alert-success'} mb-0">${escapeSubscriptionHtml(response.message)}</div>`;
 }
 function selectedDemoPeriod() {
   const period = document.getElementById('demoPeriod').value;
@@ -445,6 +443,11 @@ async function loadDemoSchedules() {
 async function reviewSubscriptionInvoice(id) {
   const invoice = await subscriptionApi(`/api/subscription-invoices/${id}`);
   document.getElementById('dialogTitle').textContent = invoice.number;
+  const invoiceSubtotal = Number(invoice.subtotal || 0);
+  const storedTaxRate = Number(invoice.data && invoice.data.taxRate);
+  const invoiceTaxRate = Number.isFinite(storedTaxRate)
+    ? storedTaxRate
+    : (invoiceSubtotal > 0 ? Number(invoice.taxAmount || 0) / invoiceSubtotal * 100 : 0);
   const features = Array.isArray(invoice.planFeaturesSnapshot) ? invoice.planFeaturesSnapshot.join(', ') : '';
   const itemRows = (invoice.items || []).map(item => `<tr><td>${escapeSubscriptionHtml(item.description)}</td><td class="text-end">${Number(item.quantity).toFixed(2)}</td><td class="text-end">${subscriptionMoney(item.unitPrice, invoice.currency)}</td><td class="text-end">${subscriptionMoney(item.lineAmount, invoice.currency)}</td></tr>`).join('');
   const draftControls = invoice.status === 'Draft' ? `
@@ -455,7 +458,7 @@ async function reviewSubscriptionInvoice(id) {
         <div class="wide"><label class="form-label" for="editDescription">Description</label><input class="form-control" id="editDescription" value="${escapeSubscriptionHtml(invoice.description)}"></div>
         <div><label class="form-label" for="editDueDate">Due date</label><input class="form-control" id="editDueDate" type="date" value="${escapeSubscriptionHtml(String(invoice.dueDate).slice(0,10))}"></div>
         <div><label class="form-label" for="editSubtotal">Subtotal (${escapeSubscriptionHtml(invoice.currency)})</label><input class="form-control" id="editSubtotal" type="number" min="0" step="0.01" value="${Number(invoice.subtotal).toFixed(2)}"></div>
-        <div><label class="form-label" for="editTaxAmount">Tax (${escapeSubscriptionHtml(invoice.currency)})</label><input class="form-control" id="editTaxAmount" type="number" min="0" step="0.01" value="${Number(invoice.taxAmount).toFixed(2)}"></div>
+        <div><label class="form-label" for="editTaxRate">Tax rate (%)</label><input class="form-control" id="editTaxRate" type="number" min="0" max="100" step="0.01" value="${invoiceTaxRate.toFixed(2)}"><small class="text-muted" id="editTaxPreview">Calculated tax: ${subscriptionMoney(invoice.taxAmount, invoice.currency)}</small></div>
       </div>
       <div class="alert alert-warning py-2 mt-3 mb-2"><i class="fa-solid fa-triangle-exclamation me-1"></i>Approval locks draft editing. PDF generation and email sending happen in a later step.</div>
       <div class="si-dialog-actions"><button class="btn btn-outline-danger" id="showRejectDraft" type="button"><i class="fa-solid fa-ban me-1"></i>Reject draft</button><button class="btn btn-primary" id="saveDraftChanges" type="button"><i class="fa-solid fa-floppy-disk me-1"></i>Save changes</button><button class="btn btn-success" id="approveDraft" type="button"><i class="fa-solid fa-circle-check me-1"></i>Approve draft</button></div>
@@ -481,6 +484,16 @@ async function reviewSubscriptionInvoice(id) {
     ${paymentHistory}
     ${invoice.status !== 'Draft' && invoice.status !== 'Rejected' ? '<div class="alert alert-info mb-0"><i class="fa-solid fa-lock me-1"></i>This invoice is no longer editable because it has left Draft status.</div>' : ''}`;
   document.getElementById('invoiceDialog').dataset.invoiceId = invoice.id;
+  if (invoice.status === 'Draft') {
+    const refreshTaxPreview = () => {
+      const subtotal = Number(document.getElementById('editSubtotal').value || 0);
+      const rate = Number(document.getElementById('editTaxRate').value || 0);
+      const tax = Math.round((subtotal * rate / 100 + Number.EPSILON) * 100) / 100;
+      document.getElementById('editTaxPreview').textContent = `Calculated tax: ${subscriptionMoney(tax, invoice.currency)}`;
+    };
+    document.getElementById('editSubtotal').addEventListener('input', refreshTaxPreview);
+    document.getElementById('editTaxRate').addEventListener('input', refreshTaxPreview);
+  }
   if (!document.getElementById('invoiceDialog').open) document.getElementById('invoiceDialog').showModal();
 }
 async function saveSubscriptionDraft(id) {
@@ -492,7 +505,7 @@ async function saveSubscriptionDraft(id) {
       description:document.getElementById('editDescription').value,
       dueDate:document.getElementById('editDueDate').value,
       subtotal:Number(document.getElementById('editSubtotal').value),
-      taxAmount:Number(document.getElementById('editTaxAmount').value)
+      taxRate:Number(document.getElementById('editTaxRate').value)
     })
   });
   await loadSubscriptionInvoices();
@@ -565,9 +578,10 @@ async function loadSubscriptionRuns() {
   if (!runs.length) { container.innerHTML = '<div class="si-run-empty">No subscription automation runs recorded yet.</div>'; return; }
   container.innerHTML = runs.map(run => `<div class="si-run"><div><strong>${escapeSubscriptionHtml(run.billingPeriod)}</strong><div class="si-muted">${escapeSubscriptionHtml(run.triggerSource)}</div></div><div><span class="si-status si-status-${run.status === 'Success' ? 'Paid' : run.status === 'Failed' ? 'Rejected' : 'Draft'}">${escapeSubscriptionHtml(run.status)}</span><div class="si-muted">${run.completedAt ? new Date(run.completedAt).toLocaleString('en-SG') : 'In progress'}</div></div><div class="si-run-result">Generated ${Number(run.generatedCount)} · Skipped ${Number(run.skippedCount)} · Failed ${Number(run.failedCount)} · ${subscriptionMoney(run.totalAmount, run.currency)}</div></div>`).join('');
 }
-let subscriptionSearchTimer;
-document.getElementById('invoiceSearch').addEventListener('input', () => { clearTimeout(subscriptionSearchTimer); subscriptionSearchTimer = setTimeout(() => loadSubscriptionInvoices().catch(showSubscriptionError), 250); });
-['periodFilter','planFilter','statusFilter'].forEach(id => document.getElementById(id).addEventListener('change', () => loadSubscriptionInvoices().catch(showSubscriptionError)));
+document.getElementById('invoiceRegisterFilters').addEventListener('submit', event => {
+  event.preventDefault();
+  loadSubscriptionInvoices().catch(showSubscriptionError);
+});
 document.getElementById('clearInvoiceFilters').addEventListener('click', () => {
   document.getElementById('invoiceSearch').value = '';
   document.getElementById('periodFilter').value = '';
