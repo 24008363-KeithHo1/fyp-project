@@ -6,6 +6,7 @@ const {
   canImportPayroll,
   canClosePayrollPeriod,
   isPayrollPeriodFullyReleased,
+  requiresCorrectedPayrollUpload,
   validatePayrollRecordsForSubmission,
   validatePeriod
 } = require('../services/payrollPeriod');
@@ -39,6 +40,18 @@ test('allows payroll imports only during editable workflow stages', () => {
   assert.equal(canImportPayroll({ isActive: true, status: 'PayrollUploaded' }), true);
   assert.equal(canImportPayroll({ isActive: true, status: 'PendingApproval' }), false);
   assert.equal(canImportPayroll({ isActive: false, status: 'Draft' }), false);
+});
+
+test('requires a newer payroll upload after Finance requests changes', () => {
+  assert.equal(requiresCorrectedPayrollUpload({
+    uploadedAt: '2026-07-20T08:00:00Z',
+    rejectedAt: '2026-07-21T08:00:00Z'
+  }), true);
+  assert.equal(requiresCorrectedPayrollUpload({
+    uploadedAt: '2026-07-22T08:00:00Z',
+    rejectedAt: '2026-07-21T08:00:00Z'
+  }), false);
+  assert.equal(requiresCorrectedPayrollUpload({ rejectedAt: null }), false);
 });
 
 test('requires complete pending payroll records before Finance submission', () => {

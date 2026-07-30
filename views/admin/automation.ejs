@@ -572,13 +572,19 @@
   </form>
 
   <% if (period && period.status === 'PayrollUploaded') { %>
-    <form method="post" action="<%= automationBasePath %>/period/<%= period.id %>/submit" class="automation-card automation-submit-card">
+    <form method="post" action="<%= automationBasePath %>/period/<%= period.id %>/submit" class="automation-card automation-submit-card" id="payrollFinanceSubmitForm">
       <div class="automation-card-heading mb-0">
         <span class="automation-icon"><i class="fa-solid fa-paper-plane"></i></span>
         <div><h3>Submit payroll to Finance</h3><p>The imported records will be validated and locked while Finance reviews the payroll batch.</p></div>
       </div>
       <% if (period.rejectionReason) { %>
         <div class="alert alert-danger"><strong>Finance requested changes:</strong> <%= period.rejectionReason %></div>
+        <div class="automation-field">
+          <label class="form-label" for="correctedPayrollFile">Corrected payroll file</label>
+          <input class="form-control" id="correctedPayrollFile" type="file" accept=".xlsx,.xls,.csv" required>
+          <small>Upload the corrected CSV or Excel payroll file. It will replace matching employee records in this active period before resubmission.</small>
+          <div id="correctedPayrollStatus" class="mt-2" aria-live="polite"></div>
+        </div>
       <% } %>
       <div class="automation-field automation-submit-notes">
         <label class="form-label" for="submissionNotes">Notes for Finance (optional)</label>
@@ -651,5 +657,39 @@
     <% } %>
   </div>
 </div>
+
+<% if (period && period.status === 'PayrollUploaded' && period.rejectionReason) { %>
+<script>
+document.getElementById('payrollFinanceSubmitForm').addEventListener('submit', async event => {
+  event.preventDefault();
+  const form = event.currentTarget;
+  const fileInput = document.getElementById('correctedPayrollFile');
+  const status = document.getElementById('correctedPayrollStatus');
+  const submitButton = form.querySelector('button[type="submit"]');
+  const file = fileInput.files[0];
+  if (!file) {
+    status.innerHTML = '<span class="text-danger">Select the corrected payroll file before resubmitting.</span>';
+    return;
+  }
+
+  submitButton.disabled = true;
+  status.innerHTML = '<span class="text-muted">Validating and importing the corrected payroll file…</span>';
+  try {
+    const body = new FormData();
+    body.append('file', file);
+    const savedToken = localStorage.getItem('token');
+    const headers = savedToken ? { authorization: `Bearer ${savedToken}` } : {};
+    const response = await fetch('/api/payroll/upload', { method: 'POST', headers, body });
+    const result = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(result.error || 'Corrected payroll import failed');
+    status.innerHTML = `<span class="text-success">Replaced the rejected batch: removed ${Number(result.removed || 0)} old record(s) and imported ${Number(result.total || 0)} corrected record(s). Submitting to Finance…</span>`;
+    form.submit();
+  } catch (error) {
+    submitButton.disabled = false;
+    status.innerHTML = `<span class="text-danger">${String(error.message || error).replace(/[&<>"']/g, character => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[character]))}</span>`;
+  }
+});
+</script>
+<% } %>
 
 <%- include('../partials/footer') %>

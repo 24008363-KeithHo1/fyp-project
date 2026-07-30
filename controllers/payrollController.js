@@ -5,6 +5,7 @@ const {
   canImportPayroll,
   getActivePayrollPeriod,
   recordPayrollUpload,
+  requiresCorrectedPayrollUpload,
   refreshPayrollPeriodReleaseStatus
 } = require('../services/payrollPeriod');
 const multer = require('multer');
@@ -106,16 +107,33 @@ exports.upload = async (req, res) => {
     }
     
     const { rows, errors } = await parsePayrollExcel(req.file.path);
+    const replacesRejectedBatch = requiresCorrectedPayrollUpload(activePeriod);
     
     // Never advance the payroll workflow for an empty or entirely invalid file.
     if (rows.length === 0) {
       return res.status(400).json({ error: 'No valid payroll rows were found', details: errors });
     }
+    // A corrected resubmission is a complete replacement, so accepting only
+    // the valid subset would silently drop employees with invalid rows.
+    if (replacesRejectedBatch && errors.length > 0) {
+      return res.status(400).json({
+        error: 'Correct every validation issue before replacing the rejected payroll batch',
+        details: errors
+      });
+    }
     
     const created = [];
     const updated = [];
+    let removed = 0;
     
     await sequelize.transaction(async (transaction) => {
+      if (replacesRejectedBatch) {
+        removed = await Payroll.destroy({
+          where: { payrollPeriodId: activePeriod.id },
+          transaction
+        });
+      }
+
       for (const r of rows) {
         // A payroll record belongs to the active period even when the
         // spreadsheet uses a slightly different human-readable period label.
@@ -163,6 +181,8 @@ exports.upload = async (req, res) => {
       imported: created.length, 
       updated: updated.length,
       total: created.length + updated.length,
+      replacedRejectedBatch: replacesRejectedBatch,
+      removed,
       payrollPeriod: { id: activePeriod.id, name: activePeriod.name, status: activePeriod.status }
     };
     
@@ -172,9 +192,11 @@ exports.upload = async (req, res) => {
       response.errorDetails = errors;
     }
     
-    await logAction(req, 'payroll_upload', 'PayrollPeriod', activePeriod.id, {
+    await logAction(req, replacesRejectedBatch ? 'payroll_batch_replaced' : 'payroll_upload', 'PayrollPeriod', activePeriod.id, {
       imported: created.length,
       updated: updated.length,
+      removed,
+      replacedRejectedBatch: replacesRejectedBatch,
       filename: req.file.originalname,
       errors: errors.length,
       status: activePeriod.status

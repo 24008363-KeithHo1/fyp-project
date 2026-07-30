@@ -30,6 +30,12 @@ function canImportPayroll(period) {
   return Boolean(period && period.isActive && ['Draft', 'PayrollUploaded'].includes(period.status));
 }
 
+function requiresCorrectedPayrollUpload(period) {
+  if (!period || !period.rejectedAt) return false;
+  if (!period.uploadedAt) return true;
+  return new Date(period.uploadedAt).getTime() <= new Date(period.rejectedAt).getTime();
+}
+
 async function recordPayrollUpload(period, userId, transaction) {
   if (!canImportPayroll(period)) {
     throw new Error('Payroll can only be imported while the active period is Draft or Payroll Uploaded');
@@ -67,6 +73,9 @@ async function submitPayrollPeriod(periodId, userId, notes = '') {
     if (!period || !period.isActive) throw new Error('Active payroll period not found');
     if (period.status !== 'PayrollUploaded') {
       throw new Error('Only an uploaded payroll period can be submitted to Finance');
+    }
+    if (requiresCorrectedPayrollUpload(period)) {
+      throw new Error('Upload a corrected payroll file after the Finance change request before resubmitting');
     }
 
     const records = await Payroll.findAll({
@@ -233,6 +242,7 @@ module.exports = {
   getActivePayrollPeriod,
   isPayrollPeriodFullyReleased,
   recordPayrollUpload,
+  requiresCorrectedPayrollUpload,
   refreshPayrollPeriodReleaseStatus,
   rejectPayrollPeriod,
   saveActivePayrollPeriod,

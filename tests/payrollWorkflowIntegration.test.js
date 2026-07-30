@@ -50,6 +50,25 @@ test('provides Finance batch approval and request-changes routes', () => {
   assert.match(routes, /requireRole\(\['Admin', 'Finance'\]\)/);
 });
 
+test('requires a corrected payroll file in the HR resubmission interface', () => {
+  const view = fs.readFileSync(path.join(root, 'views', 'admin', 'automation.ejs'), 'utf8');
+  const service = fs.readFileSync(path.join(root, 'services', 'payrollPeriod.js'), 'utf8');
+  assert.match(view, /id="correctedPayrollFile"/);
+  assert.match(view, /\/api\/payroll\/upload/);
+  assert.match(view, /form\.submit\(\)/);
+  assert.match(service, /requiresCorrectedPayrollUpload\(period\)/);
+  assert.match(service, /Upload a corrected payroll file/);
+});
+
+test('corrected payroll upload atomically replaces the rejected batch', () => {
+  const controller = fs.readFileSync(path.join(root, 'controllers', 'payrollController.js'), 'utf8');
+  assert.match(controller, /replacesRejectedBatch = requiresCorrectedPayrollUpload\(activePeriod\)/);
+  assert.match(controller, /if \(replacesRejectedBatch && errors\.length > 0\)/);
+  assert.match(controller, /Payroll\.destroy\(\{[\s\S]*?payrollPeriodId: activePeriod\.id[\s\S]*?transaction/);
+  assert.match(controller, /payroll_batch_replaced/);
+  assert.match(controller, /replacedRejectedBatch: replacesRejectedBatch/);
+});
+
 test('summarizes a submitted payroll batch for Finance review', () => {
   const { summarize } = require('../controllers/payrollApprovalController');
   const records = [
