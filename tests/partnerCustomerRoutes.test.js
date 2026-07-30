@@ -52,6 +52,7 @@ test('subscription invoice review UI exposes the Finance approval and sending wo
   assert.match(view, /Review, approve and send/);
   assert.match(view, /saveDraftChanges/);
   assert.match(view, /confirmRejectDraft/);
+  assert.match(view, /rejectDraftReason'\)\.value = ''/);
   assert.match(view, /approveDraft/);
   assert.match(routes, /router\.patch\('\/:id\/draft'/);
   assert.match(routes, /router\.post\('\/:id\/reject'/);
@@ -119,6 +120,7 @@ test('Finance can monitor the separate subscription payment ledger', () => {
   assert.match(view, /Subscription payment tracking/);
   assert.match(view, /paymentStatusFilter/);
   assert.match(view, /Payment attempts/);
+  assert.match(view, /si-payment-actions/);
 });
 
 test('Finance can preview and run the isolated subscription overdue check', () => {
