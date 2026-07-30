@@ -10,20 +10,51 @@ try{
 }catch(e){ location = '/login'; }
 </script>
 
+<style>
+/* Sticky in-page section navigation, matching the Finance Dashboard's pattern. */
+html { scroll-behavior: smooth; }
+.pmt-section-nav { position: sticky; top: 0; z-index: 20; display: flex; gap: .4rem; overflow-x: auto; margin-bottom: 1rem; padding: .6rem .7rem; border-radius: 8px; border: 1px solid rgba(148,163,184,.18); background: rgba(255,255,255,.92); backdrop-filter: blur(6px); box-shadow: 0 8px 20px rgba(15,23,42,.06); scrollbar-width: thin; }
+.pmt-section-nav a { flex-shrink: 0; padding: .4rem .85rem; border-radius: 999px; font-size: .78rem; font-weight: 600; color: #475569; text-decoration: none; white-space: nowrap; transition: background .15s, color .15s; }
+.pmt-section-nav a:hover { background: #f0fdf4; color: #0b8f3e; }
+.pmt-section-nav a.pmt-section-active { background: linear-gradient(135deg,#0f766e,#22c55e); color: #fff; }
+.pmt-section-nav a i { margin-right: .35rem; }
+
+/* Spin feedback + last-updated timestamp for the existing Refresh button. */
+.payment-refresh-btn i { transition: transform .5s ease; }
+.payment-refresh-btn.pmt-spinning i { animation: pmt-spin .6s linear; }
+@keyframes pmt-spin { to { transform: rotate(360deg); } }
+.pmt-last-updated { display: block; margin-top: .2rem; font-size: .68rem; color: #64748b; font-weight: 500; }
+
+/* Skeleton shimmer for loading states — replaces plain "Loading..." text. */
+.pmt-skeleton-bar { height: 14px; border-radius: 6px; background: linear-gradient(90deg, #eef2f5 25%, #f8fafc 37%, #eef2f5 63%); background-size: 400% 100%; animation: pmt-shimmer 1.4s ease infinite; }
+@keyframes pmt-shimmer { 0% { background-position: 100% 50%; } 100% { background-position: 0 50%; } }
+</style>
+
 <div class="container mt-4 payments-page">
   <div class="payment-page-hero d-flex flex-wrap align-items-end justify-content-between gap-2 mb-3">
     <div>
       <h2>Supplier Payments</h2>
       <p class="text-muted mb-0">Record, review, and reconcile supplier payments for supplier invoices.</p>
     </div>
-    <button class="payment-refresh-btn" type="button" onclick="refreshPayments()" aria-label="Refresh payments">
-      <i class="fa-solid fa-rotate-right" aria-hidden="true"></i>
-      <span>Refresh</span>
-    </button>
+    <div class="text-end">
+      <button class="payment-refresh-btn" id="paymentsRefreshBtn" type="button" onclick="refreshPayments()" aria-label="Refresh payments">
+        <i class="fa-solid fa-rotate-right" aria-hidden="true"></i>
+        <span>Refresh</span>
+      </button>
+      <span class="pmt-last-updated" id="pmtLastUpdated">Loading…</span>
+    </div>
   </div>
 
+  <nav class="pmt-section-nav" aria-label="Jump to section">
+    <a href="#pmt-sec-overview"><i class="fa-solid fa-gauge-high" aria-hidden="true"></i>Overview</a>
+    <a href="#pmt-sec-workspace"><i class="fa-solid fa-credit-card" aria-hidden="true"></i>Pay Supplier</a>
+    <a href="#pmt-sec-filter"><i class="fa-solid fa-filter" aria-hidden="true"></i>Search &amp; Filter</a>
+    <a href="#pmt-sec-history"><i class="fa-solid fa-clock-rotate-left" aria-hidden="true"></i>Payment History</a>
+    <a href="#pmt-sec-activity"><i class="fa-solid fa-list-check" aria-hidden="true"></i>Recent Activity</a>
+  </nav>
+
   <!-- Added: payment KPI cards for finance to monitor daily and provider totals. -->
-  <div class="report-kpis finance-row">
+  <div class="report-kpis finance-row" id="pmt-sec-overview">
     <div class="report-kpi">
       <span>Total Paid Today</span>
       <strong id="totalPaidToday">SGD 0.00</strong>
@@ -45,7 +76,7 @@ try{
   <div id="paymentAlerts" class="finance-alerts mt-3"></div>
 
   <!-- Added: tabbed payment workspace for Stripe, PayPal, and NETS QR. -->
-  <section class="report-panel finance-row payment-workspace-panel">
+  <section class="report-panel finance-row payment-workspace-panel" id="pmt-sec-workspace">
     <ul class="nav nav-tabs payment-tabs" id="paymentMethodTabs" role="tablist">
       <li class="nav-item" role="presentation">
         <button class="nav-link active" id="stripe-tab" data-payment-target="stripePanel" type="button" role="tab" aria-controls="stripePanel" aria-selected="true">Stripe</button>
@@ -121,7 +152,7 @@ try{
   </section>
 
   <!-- Added: filters for searching payment history by method, status, and date range. -->
-  <section class="report-panel finance-row payment-filter-panel">
+  <section class="report-panel finance-row payment-filter-panel" id="pmt-sec-filter">
     <h5>Search and Filter</h5>
     <div class="row g-2">
       <div class="col-md-4">
@@ -154,7 +185,7 @@ try{
   </section>
 
   <!-- Added: payment history table showing recorded payments and invoice links. -->
-  <section class="report-panel finance-row payment-history-panel">
+  <section class="report-panel finance-row payment-history-panel" id="pmt-sec-history">
     <div class="d-flex justify-content-between align-items-center mb-2">
       <h5 class="mb-0">Supplier Payment History</h5>
       <span class="text-muted small" id="paymentCount">0 payments</span>
@@ -174,17 +205,20 @@ try{
           </tr>
         </thead>
         <tbody id="historyBody">
-          <tr><td colspan="8" class="text-muted text-center">Loading...</td></tr>
+          <tr><td><div class="pmt-skeleton-bar" style="width:70%"></div></td><td><div class="pmt-skeleton-bar" style="width:80%"></div></td><td><div class="pmt-skeleton-bar" style="width:60%"></div></td><td><div class="pmt-skeleton-bar" style="width:50%"></div></td><td><div class="pmt-skeleton-bar" style="width:55%;margin-left:auto"></div></td><td><div class="pmt-skeleton-bar" style="width:50%"></div></td><td><div class="pmt-skeleton-bar" style="width:65%"></div></td><td><div class="pmt-skeleton-bar" style="width:50%"></div></td></tr>
+          <tr><td><div class="pmt-skeleton-bar" style="width:65%"></div></td><td><div class="pmt-skeleton-bar" style="width:75%"></div></td><td><div class="pmt-skeleton-bar" style="width:55%"></div></td><td><div class="pmt-skeleton-bar" style="width:45%"></div></td><td><div class="pmt-skeleton-bar" style="width:50%;margin-left:auto"></div></td><td><div class="pmt-skeleton-bar" style="width:55%"></div></td><td><div class="pmt-skeleton-bar" style="width:60%"></div></td><td><div class="pmt-skeleton-bar" style="width:45%"></div></td></tr>
         </tbody>
       </table>
     </div>
   </section>
 
   <!-- Added: recent payment activity summary for quick finance review. -->
-  <section class="report-panel finance-row payment-activity-panel">
+  <section class="report-panel finance-row payment-activity-panel" id="pmt-sec-activity">
     <h5>Recent Payment Activity</h5>
     <div id="recentActivity" class="payment-activity">
-      <div class="text-muted">Loading activity...</div>
+      <div class="pmt-skeleton-bar" style="width:90%;margin-bottom:.5rem"></div>
+      <div class="pmt-skeleton-bar" style="width:75%;margin-bottom:.5rem"></div>
+      <div class="pmt-skeleton-bar" style="width:82%"></div>
     </div>
   </section>
 </div>
@@ -520,9 +554,35 @@ async function loadPayments(){
 }
 
 async function refreshPayments(){
+  const btn = document.getElementById('paymentsRefreshBtn');
+  btn?.classList.add('pmt-spinning');
   clearAlerts();
-  await Promise.all([loadInvoices(), loadPayments()]);
+  try {
+    await Promise.all([loadInvoices(), loadPayments()]);
+    const lastUpdatedEl = document.getElementById('pmtLastUpdated');
+    if (lastUpdatedEl) lastUpdatedEl.textContent = `Updated ${new Date().toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })}`;
+  } catch (err) {
+    const lastUpdatedEl = document.getElementById('pmtLastUpdated');
+    if (lastUpdatedEl) lastUpdatedEl.textContent = 'Update failed — retry';
+  } finally {
+    setTimeout(() => btn?.classList.remove('pmt-spinning'), 600);
+  }
 }
+
+// Scroll-spy for the sticky section nav — same pattern as the Finance Dashboard.
+(function () {
+  const navLinks = Array.from(document.querySelectorAll('.pmt-section-nav a'));
+  if (!navLinks.length || !('IntersectionObserver' in window)) return;
+  const sections = navLinks.map(a => document.getElementById(a.getAttribute('href').slice(1))).filter(Boolean);
+  const setActive = (id) => {
+    navLinks.forEach(a => a.classList.toggle('pmt-section-active', a.getAttribute('href') === `#${id}`));
+  };
+  const observer = new IntersectionObserver((entries) => {
+    const visible = entries.filter(e => e.isIntersecting).sort((a, b) => b.intersectionRatio - a.intersectionRatio);
+    if (visible.length) setActive(visible[0].target.id);
+  }, { rootMargin: '-72px 0px -60% 0px', threshold: [0, .25, .5, .75, 1] });
+  sections.forEach(section => observer.observe(section));
+})();
 
 // Added: starts Stripe Checkout for the selected unpaid invoice.
 async function startStripePayment(){

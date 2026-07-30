@@ -22,24 +22,59 @@
   .si-edit-panel{padding:1rem;border:1px solid #bfdbfe;border-radius:12px;background:#f0f7ff}.si-edit-panel h3{font-size:.85rem;font-weight:800;color:#1e3a8a}.si-edit-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:.75rem}.si-edit-grid .wide{grid-column:1/-1}.si-edit-grid label{font-size:.72rem;font-weight:800;color:#53657a}.si-edit-grid .form-control{min-height:41px;border-color:#cbdbea}.si-dialog-actions{display:flex;justify-content:flex-end;gap:.55rem;flex-wrap:wrap}.si-reject-box{padding:.85rem;border:1px solid #fecaca;border-radius:10px;background:#fff7f7}.si-rejected-note{padding:.8rem;border-left:4px solid #dc2626;background:#fef2f2;color:#7f1d1d;font-size:.8rem}
   @media(max-width:900px){.si-kpis,.si-payment-kpis,.si-report-summary{grid-template-columns:repeat(2,1fr)}.si-filters{grid-template-columns:1fr 1fr}.si-filters>div:first-child{grid-column:1/-1}.si-run{grid-template-columns:1fr 1fr}.si-run-result{grid-column:1/-1}.si-demo-grid{grid-template-columns:1fr 1fr}.si-demo-actions{grid-column:1/-1}}
   @media(max-width:640px){.si-hero{align-items:flex-start;flex-direction:column;padding:1.1rem}.si-kpis{grid-template-columns:1fr 1fr}.si-filters,.si-report-controls{grid-template-columns:1fr}.si-filters>div:first-child{grid-column:auto}.si-panel.table-panel{border:0;background:transparent;box-shadow:none}.si-panel.table-panel .si-panel-head{border:1px solid var(--si-line);border-radius:12px;background:#fff}.si-table thead{display:none}.si-table,.si-table tbody,.si-table tr,.si-table td{display:block;width:100%}.si-table tbody{display:grid;gap:.7rem;margin-top:.7rem}.si-table tr{padding:.85rem;border:1px solid var(--si-line);border-radius:13px;background:#fff}.si-table td{display:flex;justify-content:space-between;gap:1rem;padding:.42rem 0;border:0}.si-table td::before{content:attr(data-label);color:#687a70;font-size:.67rem;font-weight:800;text-transform:uppercase}.si-table td:last-child{padding-top:.7rem}.si-view-btn{width:100%;justify-content:center}.si-detail-grid,.si-edit-grid{grid-template-columns:1fr}.si-edit-grid .wide{grid-column:auto}.si-dialog-actions .btn{flex:1}}
+
+  /* Sticky in-page section nav, refresh control, and skeleton loading —
+     matching the same pattern used on the Finance Dashboard and Payments
+     pages, restyled with this page's own si- naming convention. */
+  html { scroll-behavior: smooth; }
+  .si-section-nav { position: sticky; top: 0; z-index: 20; display: flex; gap: .4rem; overflow-x: auto; margin-bottom: 1rem; padding: .6rem .7rem; border-radius: 8px; border: 1px solid var(--si-line); background: rgba(255,255,255,.92); backdrop-filter: blur(6px); box-shadow: 0 8px 20px rgba(15,23,42,.06); scrollbar-width: thin; }
+  .si-section-nav a { flex-shrink: 0; padding: .4rem .85rem; border-radius: 999px; font-size: .78rem; font-weight: 700; color: #475569; text-decoration: none; white-space: nowrap; transition: background .15s, color .15s; }
+  .si-section-nav a:hover { background: #f0fdf4; color: var(--si-green); }
+  .si-section-nav a.si-section-active { background: linear-gradient(135deg,#0f766e,#22c55e); color: #fff; }
+  .si-section-nav a i { margin-right: .35rem; }
+  .si-refresh-btn { display: inline-flex; align-items: center; gap: .45rem; padding: .5rem .8rem; border-radius: 999px; border: 1px solid rgba(255,255,255,.28); background: rgba(255,255,255,.12); color: #fff; font-size: .78rem; font-weight: 700; cursor: pointer; transition: background .15s; }
+  .si-refresh-btn:hover { background: rgba(255,255,255,.22); }
+  .si-refresh-btn i { transition: transform .5s ease; }
+  .si-refresh-btn.si-spinning i { animation: si-spin .6s linear; }
+  @keyframes si-spin { to { transform: rotate(360deg); } }
+  .si-last-updated { display: block; margin-top: .25rem; font-size: .68rem; opacity: .75; text-align: right; }
+  .si-skeleton-bar { height: 14px; border-radius: 6px; background: linear-gradient(90deg, #eef2f5 25%, #f8fafc 37%, #eef2f5 63%); background-size: 400% 100%; animation: si-shimmer 1.4s ease infinite; }
+  @keyframes si-shimmer { 0% { background-position: 100% 50%; } 100% { background-position: 0 50%; } }
 </style>
 
 <section class="subscription-review">
   <header class="si-hero mb-3">
     <div><div class="si-eyebrow">Partner Subscription Billing</div><h1 class="h3 mb-1">Subscription Invoices</h1><p class="mb-0 opacity-75">Review automatically generated subscription drafts and billing history.</p></div>
-    <div><div class="si-readonly"><i class="fa-solid fa-file-signature"></i> Review, approve and send</div><div class="small text-end mt-2 opacity-75"><i class="fa-solid fa-bell me-1"></i>Reminders <%= reminderAutomation.enabled ? 'active daily at 12:20 AM SGT' : 'disabled' %></div></div>
+    <div>
+      <div class="d-flex align-items-center gap-2 justify-content-end">
+        <div class="si-readonly"><i class="fa-solid fa-file-signature"></i> Review, approve and send</div>
+        <button type="button" class="si-refresh-btn" id="siRefreshBtn" onclick="refreshSubscriptionData()" aria-label="Refresh subscription data">
+          <i class="fa-solid fa-arrows-rotate" aria-hidden="true"></i>
+        </button>
+      </div>
+      <div class="small text-end mt-2 opacity-75"><i class="fa-solid fa-bell me-1"></i>Reminders <%= reminderAutomation.enabled ? 'active daily at 12:20 AM SGT' : 'disabled' %></div>
+      <span class="si-last-updated" id="siLastUpdated">Loading…</span>
+    </div>
   </header>
+
+  <nav class="si-section-nav" aria-label="Jump to section">
+    <a href="#si-sec-overview"><i class="fa-solid fa-gauge-high" aria-hidden="true"></i>Overview</a>
+    <a href="#si-sec-demo"><i class="fa-solid fa-wand-magic-sparkles" aria-hidden="true"></i>Demo Generation</a>
+    <a href="#si-sec-invoices"><i class="fa-solid fa-file-invoice" aria-hidden="true"></i>Invoice Register</a>
+    <a href="#si-sec-payments"><i class="fa-solid fa-credit-card" aria-hidden="true"></i>Payment Tracking</a>
+    <a href="#si-sec-revenue"><i class="fa-solid fa-chart-line" aria-hidden="true"></i>Revenue Report</a>
+  </nav>
 
   <div id="subscriptionAlerts"></div>
 
-  <section class="si-kpis mb-3">
+  <section class="si-kpis mb-3" id="si-sec-overview">
     <div class="si-kpi"><span>Invoices</span><strong id="invoiceCount">0</strong></div>
     <div class="si-kpi"><span>Drafts awaiting review</span><strong id="draftCount">0</strong></div>
     <div class="si-kpi"><span>Invoice value</span><strong id="invoiceValue">SGD 0.00</strong></div>
     <div class="si-kpi"><span>Overdue</span><strong id="overdueCount">0</strong></div>
   </section>
 
-  <section class="si-panel mb-3">
+  <section class="si-panel mb-3" id="si-sec-demo">
     <div class="si-panel-head"><div><h2 class="si-panel-title"><i class="fa-solid fa-wand-magic-sparkles me-2 text-success"></i>Finance demo generation</h2><div class="si-demo-note mt-1">Uses the real customer eligibility and duplicate checks. Times below are Singapore time (SGT).</div></div><span class="si-status si-status-Approved">Demo control</span></div>
     <div class="si-panel-body">
       <div class="si-demo-grid">
@@ -52,7 +87,7 @@
     </div>
   </section>
 
-  <section class="si-panel table-panel mb-3">
+  <section class="si-panel table-panel mb-3" id="si-sec-invoices">
     <div class="si-panel-head"><h2 class="si-panel-title"><i class="fa-solid fa-file-invoice me-2 text-success"></i>Invoice register</h2><div class="d-flex justify-content-end align-items-center gap-2 flex-wrap"><span class="si-muted me-1" id="resultLabel">Loading…</span><button class="btn btn-outline-danger btn-sm si-secondary-action" id="runOverdueCheck" type="button"><i class="fa-solid fa-clock me-1"></i>Check overdue <span id="overduePreviewCount"></span></button><button class="btn btn-outline-primary btn-sm si-secondary-action" id="sendOverdueReminders" type="button"><i class="fa-solid fa-envelope me-1"></i>Send due reminders <span id="reminderPreviewCount"></span></button></div></div>
     <div class="table-responsive">
       <form class="si-panel-body si-filters" id="invoiceRegisterFilters">
@@ -63,11 +98,11 @@
         <div class="si-filter-actions"><button class="btn btn-success" id="applyInvoiceFilters" type="submit"><i class="fa-solid fa-filter me-1"></i>Apply</button><button class="btn btn-outline-secondary" id="clearInvoiceFilters" type="button"><i class="fa-solid fa-rotate-left me-1"></i>Clear</button></div>
       </form>
       <div class="px-3 pb-3" id="invoiceRegisterAlerts" aria-live="polite"></div>
-      <table class="table si-table"><thead><tr><th>Invoice</th><th>Customer</th><th>Period</th><th>Plan</th><th>Amount</th><th>Due</th><th>Status</th><th>Review</th></tr></thead><tbody id="invoiceRows"><tr><td colspan="8" class="si-empty">Loading subscription invoices...</td></tr></tbody></table>
+      <table class="table si-table"><thead><tr><th>Invoice</th><th>Customer</th><th>Period</th><th>Plan</th><th>Amount</th><th>Due</th><th>Status</th><th>Review</th></tr></thead><tbody id="invoiceRows"><tr><td colspan="8"><div class="si-skeleton-bar" style="width:90%"></div></td></tr><tr><td colspan="8"><div class="si-skeleton-bar" style="width:75%"></div></td></tr><tr><td colspan="8"><div class="si-skeleton-bar" style="width:82%"></div></td></tr></tbody></table>
     </div>
   </section>
 
-  <section class="si-panel table-panel mb-3">
+  <section class="si-panel table-panel mb-3" id="si-sec-payments">
     <div class="si-panel-head"><div><h2 class="si-panel-title"><i class="fa-solid fa-credit-card me-2 text-success"></i>Subscription payment tracking</h2><div class="si-muted mt-1">Separate Stripe sandbox and bank-transfer ledger</div></div><div class="d-flex align-items-center gap-2 flex-wrap"><button class="btn btn-success btn-sm" id="openBankTransfer" type="button"><i class="fa-solid fa-building-columns me-1"></i>Record bank transfer</button><span class="si-muted" id="paymentResultLabel">Loading…</span></div></div>
     <div class="si-panel-body">
       <div class="si-payment-kpis">
@@ -82,11 +117,11 @@
       </div>
     </div>
     <div class="table-responsive">
-      <table class="table si-table"><thead><tr><th>Attempt</th><th>Invoice</th><th>Customer</th><th>Provider</th><th>Expected</th><th>Received</th><th>Status</th><th>Reference / Result</th><th>Action</th></tr></thead><tbody id="paymentRows"><tr><td colspan="9" class="si-empty">Loading subscription payments…</td></tr></tbody></table>
+      <table class="table si-table"><thead><tr><th>Attempt</th><th>Invoice</th><th>Customer</th><th>Provider</th><th>Expected</th><th>Received</th><th>Status</th><th>Reference / Result</th><th>Action</th></tr></thead><tbody id="paymentRows"><tr><td colspan="9"><div class="si-skeleton-bar" style="width:90%"></div></td></tr><tr><td colspan="9"><div class="si-skeleton-bar" style="width:75%"></div></td></tr></tbody></table>
     </div>
   </section>
 
-  <section class="si-panel mb-3">
+  <section class="si-panel mb-3" id="si-sec-revenue">
     <div class="si-panel-head"><div><h2 class="si-panel-title"><i class="fa-solid fa-chart-line me-2 text-success"></i>Subscription revenue report</h2><div class="si-muted mt-1">Confirmed subscription transactions only; kept separate from legacy reports</div></div></div>
     <div class="si-panel-body">
       <div class="si-report-controls">
@@ -628,7 +663,42 @@ document.getElementById('runOverdueCheck').addEventListener('click',()=>runOverd
 document.getElementById('sendOverdueReminders').addEventListener('click',()=>sendOverdueReminders().catch(showSubscriptionError));
 document.getElementById('loadRevenueReport').addEventListener('click',()=>loadRevenueReport().catch(showSubscriptionError));
 document.getElementById('exportRevenueCsv').addEventListener('click',()=>exportRevenueCsv().catch(showSubscriptionError));
-Promise.all([loadSubscriptionInvoices(), loadSubscriptionPayments(), loadRevenueReport(), loadSubscriptionRuns(), loadDemoSchedules(), loadOverduePreview(), loadReminderPreview()]).catch(showSubscriptionError);
+
+// Wraps the initial data-load calls so the same logic can be re-triggered
+// from the Refresh button, with spin feedback and a last-updated timestamp
+// — matching the pattern already used on the Finance Dashboard.
+async function refreshSubscriptionData() {
+  const btn = document.getElementById('siRefreshBtn');
+  btn?.classList.add('si-spinning');
+  const lastUpdatedEl = document.getElementById('siLastUpdated');
+  try {
+    await Promise.all([loadSubscriptionInvoices(), loadSubscriptionPayments(), loadRevenueReport(), loadSubscriptionRuns(), loadDemoSchedules(), loadOverduePreview(), loadReminderPreview()]);
+    if (lastUpdatedEl) lastUpdatedEl.textContent = `Updated ${new Date().toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })}`;
+  } catch (err) {
+    if (lastUpdatedEl) lastUpdatedEl.textContent = 'Update failed — retry';
+    showSubscriptionError(err);
+  } finally {
+    setTimeout(() => btn?.classList.remove('si-spinning'), 600);
+  }
+}
+
+// Scroll-spy for the sticky section nav — same pattern as the Finance
+// Dashboard and Payments pages.
+(function () {
+  const navLinks = Array.from(document.querySelectorAll('.si-section-nav a'));
+  if (!navLinks.length || !('IntersectionObserver' in window)) return;
+  const sections = navLinks.map(a => document.getElementById(a.getAttribute('href').slice(1))).filter(Boolean);
+  const setActive = (id) => {
+    navLinks.forEach(a => a.classList.toggle('si-section-active', a.getAttribute('href') === `#${id}`));
+  };
+  const observer = new IntersectionObserver((entries) => {
+    const visible = entries.filter(e => e.isIntersecting).sort((a, b) => b.intersectionRatio - a.intersectionRatio);
+    if (visible.length) setActive(visible[0].target.id);
+  }, { rootMargin: '-72px 0px -60% 0px', threshold: [0, .25, .5, .75, 1] });
+  sections.forEach(section => observer.observe(section));
+})();
+
+refreshSubscriptionData();
 </script>
 
 <%- include('../partials/footer') %>
