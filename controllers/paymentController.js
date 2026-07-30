@@ -7,6 +7,7 @@ const Invoice = require('../models/Invoice');
 const Payment = require('../models/Payment');
 const { logAudit, getRequestMetadata } = require('../utils/audit');
 const { simulateRefundDestination } = require('../utils/testBank');
+const supplierPayout = require('../services/supplierPayout');
 
 const paypalEnv = process.env.PAYPAL_ENV || process.env.PAYPAL_MODE || 'sandbox';
 const PAYPAL_API_BASE = process.env.PAYPAL_API_BASE || (
@@ -309,6 +310,22 @@ function requirePayPalConfig() {
   }
 }
 
+function isSupplierPayoutInvoice(invoice) {
+  // Examiner note:
+  // Supplier invoices must not enter PayPal Checkout. Checkout opens a buyer
+  // login popup and uses /v2/checkout/orders, while supplier payout is a
+  // server-to-server outgoing payment using /v1/payments/payouts.
+  return Boolean(
+    invoice &&
+    (
+      invoice.status === 'Approved' ||
+      invoice.paypalEmail ||
+      (invoice.data && invoice.data.paypalEmail) ||
+      (invoice.data && invoice.data.supplierPayout)
+    )
+  );
+}
+
 async function paypalRequest(path, options = {}) {
   requirePayPalConfig();
 
@@ -364,6 +381,11 @@ exports.createPayPalOrder = async (req, res) => {
     if (invoice.status === 'Paid') return res.status(400).json({ error: 'Invoice is already paid' });
     if (!Number.isFinite(Number(invoice.amount)) || Number(invoice.amount) <= 0) {
       return res.status(400).json({ error: 'Invoice amount must be greater than zero' });
+    }
+    if (isSupplierPayoutInvoice(invoice)) {
+      return res.status(409).json({
+        error: 'This is a supplier payout invoice. Use Pay Supplier with PayPal; PayPal Checkout is only for customer payments.'
+      });
     }
 
     const order = await paypalRequest('/v2/checkout/orders', {
@@ -441,6 +463,60 @@ exports.capturePayPalOrder = async (req, res) => {
       });
     }
     res.status(500).json({ error: err.message });
+  }
+};
+
+exports.createSupplierPayout = async (req, res) => {
+  // Finance/Admin endpoint used by the Pay Supplier UI button.
+  // It submits the PayPal payout and stores references, but leaves the invoice
+  // unpaid until status checking confirms PayPal SUCCESS.
+  try {
+    const result = await supplierPayout.submitSupplierPayout(req.params.id, req.user && req.user.id);
+    const { ip, userAgent } = getRequestMetadata(req);
+    await logAudit({
+      userId: req.user ? req.user.id : null,
+      action: 'supplier_paypal_payout_submitted',
+      entity: 'Payment',
+      entityId: result.payment.id,
+      meta: {
+        invoiceId: result.invoice.id,
+        invoiceNumber: result.invoice.number,
+        amount: result.payment.amount,
+        currency: result.payment.currency,
+        paypalPayoutBatchId: result.payout.payoutBatchId,
+        recipientPaypalEmail: result.payout.recipientPaypalEmail
+      },
+      ip,
+      userAgent
+    });
+    res.status(202).json({
+      ok: true,
+      message: 'PayPal payout submitted. Check PayPal status before marking the supplier invoice paid.',
+      payout: result.payout,
+      payment: result.payment
+    });
+  } catch (err) {
+    res.status(err.status || 500).json({ error: err.message });
+  }
+};
+
+exports.checkSupplierPayoutStatus = async (req, res) => {
+  // Finance/Admin endpoint used by the Check PayPal Status button.
+  // Successful status confirmation performs local Test Bank settlement.
+  try {
+    const result = await supplierPayout.checkSupplierPayout(req.params.id, req);
+    const status = result.payout && result.payout.status;
+    res.json({
+      ok: true,
+      message: status === 'Completed'
+        ? 'PayPal payout completed. The invoice is paid and Test Bank balances were updated once.'
+        : `PayPal payout is ${status || 'Pending'}. The invoice remains unpaid until PayPal confirms SUCCESS.`,
+      payout: result.payout,
+      invoice: result.invoice,
+      payment: result.payment
+    });
+  } catch (err) {
+    res.status(err.status || 500).json({ error: err.message });
   }
 };
 

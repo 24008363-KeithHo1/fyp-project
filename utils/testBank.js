@@ -13,7 +13,7 @@ function makeAccountNumber(prefix, seed) {
   return `${prefix}-${numeric}`;
 }
 
-async function findOrCreateTestAccount({ ownerType, ownerReference, accountName, openingBalance = 0 }) {
+async function findOrCreateTestAccount({ ownerType, ownerReference, accountName, openingBalance = 0, transaction = null }) {
   const reference = String(ownerReference || '').trim() || ownerType;
   const [account] = await TestBankAccount.findOrCreate({
     where: { ownerType, ownerReference: reference },
@@ -21,17 +21,19 @@ async function findOrCreateTestAccount({ ownerType, ownerReference, accountName,
       accountName: accountName || reference,
       accountNumber: makeAccountNumber(ownerType.toUpperCase().slice(0, 3), reference),
       balance: openingBalance
-    }
+    },
+    transaction
   });
   return account;
 }
 
-async function ensureCompanyAccount() {
+async function ensureCompanyAccount(options = {}) {
   return findOrCreateTestAccount({
     ownerType: 'Company',
     ownerReference: 'company-payroll',
     accountName: 'Company Payroll Clearing Account',
-    openingBalance: 1000000
+    openingBalance: 1000000,
+    transaction: options.transaction || null
   });
 }
 

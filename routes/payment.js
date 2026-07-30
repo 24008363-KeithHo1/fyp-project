@@ -10,6 +10,10 @@ router.post('/checkout/:id', paymentController.createCheckoutSession);
 router.get('/paypal/config', paymentController.paypalConfig);
 router.post('/paypal/orders/:id', paymentController.createPayPalOrder);
 router.post('/paypal/orders/:orderId/capture', paymentController.capturePayPalOrder);
+// Supplier payout routes are protected because they send outgoing money from
+// the Business PayPal sandbox account to a supplier Personal sandbox account.
+router.post('/paypal/payouts/:id', auth, checkRole(['Admin', 'Finance']), paymentController.createSupplierPayout);
+router.post('/paypal/payouts/:id/status', auth, checkRole(['Admin', 'Finance']), paymentController.checkSupplierPayoutStatus);
 router.get('/nets/:id/status/:txnRetrievalRef', paymentController.netsPaymentStatus);
 router.get('/nets/:id/page', paymentController.netsQrPage);
 router.get('/nets/:id', paymentController.netsQr);

@@ -3,7 +3,7 @@ const { sequelize } = require('../config/db');
 
 const TestBankAccount = sequelize.define('TestBankAccount', {
   id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
-  ownerType: { type: DataTypes.ENUM('Company', 'Employee', 'Customer'), allowNull: false },
+  ownerType: { type: DataTypes.ENUM('Company', 'Employee', 'Customer', 'Supplier'), allowNull: false },
   ownerReference: { type: DataTypes.STRING, allowNull: false },
   accountName: { type: DataTypes.STRING, allowNull: false },
   bankName: { type: DataTypes.STRING, defaultValue: 'FYP Test Bank' },

@@ -50,11 +50,20 @@ router.get('/', auth, checkRole(['Admin','Finance','HR']), ctrl.list);
 // business role here, so without this check any authenticated Staff user
 // could view/export any invoice just by guessing/incrementing its id.
 router.get('/:id', auth, checkRole(['Admin','Finance','HR']), ctrl.get);
+router.post('/:id/approve', auth, checkRole(['Admin','Finance']), ctrl.approve);
+router.post('/:id/paypal-email', auth, checkRole(['Admin','Finance']), ctrl.updateSupplierPayPalEmail);
 router.get('/:id/pdf', allowViewTokenOrStaffAuth, ctrl.exportPdf);
 router.get('/:id/excel', allowViewTokenOrStaffAuth, ctrl.exportExcel);
 router.post('/:id/send', auth, checkRole(['Admin','Finance']), ctrl.send);
 router.delete('/:id', auth, checkRole(['Admin','Finance']), ctrl.remove);
 // Public view link (tokenized) -- does not require auth
 router.get('/:id/view', ctrl.viewPage);
+
+router.use((err, req, res, next) => {
+  if (res.headersSent) return next(err);
+  return res.status(err.status || 500).json({
+    error: err.message || 'Invoice request failed'
+  });
+});
 
 module.exports = router;

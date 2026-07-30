@@ -3,9 +3,27 @@
     <div class="card-body">
       <h3>Invoice <%= invoice.number %></h3>
       <p><strong>Customer:</strong> <%= invoice.customer_name %></p>
+      <p><strong>Supplier PayPal email:</strong> <%= invoice.paypalEmail || (invoice.data && invoice.data.paypalEmail) || 'Not set' %></p>
       <p><strong>Amount:</strong> <%= invoice.currency || (invoice.data && invoice.data.currency) || 'SGD' %> <%= parseFloat(invoice.amount).toFixed(2) %></p>
       <p><strong>Status:</strong> <%= invoice.status %></p>
       <p><strong>Due:</strong> <%= invoice.due_date ? new Date(invoice.due_date).toLocaleDateString() : '' %></p>
+      <% const supplierPayout = invoice.data && invoice.data.supplierPayout ? invoice.data.supplierPayout : null; %>
+      <% /* Examiner note: supplierPayout stores PayPal Payouts references and status. Invoice Paid happens only after SUCCESS. */ %>
+      <% const supplierPaypalEmail = invoice.paypalEmail || (invoice.data && invoice.data.paypalEmail) || ''; %>
+      <% const isSupplierPayoutInvoice = invoice.status === 'Approved' || supplierPayout || supplierPaypalEmail; %>
+      <% if (supplierPayout) { %>
+        <div class="alert alert-light border mt-3">
+          <p class="mb-1"><strong>Current payout status:</strong> <%= supplierPayout.status || 'Pending' %></p>
+          <p class="mb-1"><strong>PayPal payout batch:</strong> <%= supplierPayout.payoutBatchId || supplierPayout.senderBatchId || '-' %></p>
+          <p class="mb-1"><strong>PayPal payout item:</strong> <%= supplierPayout.payoutItemId || '-' %></p>
+          <p class="mb-1"><strong>PayPal transaction:</strong> <%= supplierPayout.paypalTransactionId || '-' %></p>
+          <p class="mb-1"><strong>Date submitted:</strong> <%= supplierPayout.submittedAt ? new Date(supplierPayout.submittedAt).toLocaleString() : '-' %></p>
+          <p class="mb-1"><strong>Date completed:</strong> <%= supplierPayout.completedAt ? new Date(supplierPayout.completedAt).toLocaleString() : '-' %></p>
+          <% if (supplierPayout.failureMessage) { %>
+            <p class="mb-0 text-danger"><strong>Error:</strong> <%= supplierPayout.failureMessage %></p>
+          <% } %>
+        </div>
+      <% } %>
       <% if (invoice.data && invoice.data.line_items && invoice.data.line_items.length) { %>
         <div class="table-responsive mt-3">
           <table class="table table-sm table-bordered align-middle">
@@ -42,11 +60,20 @@
       <% } %>
       <% if (invoice.status !== 'Paid') { %>
         <div class="payment-actions mt-3">
-          <button class="btn btn-success" type="button" onclick="payByCard(<%= invoice.id %>)">Pay by Card</button>
-          <button class="btn btn-outline-warning" type="button" onclick="payByPayPal(<%= invoice.id %>)">PayPal</button>
-          <button class="btn btn-outline-dark" type="button" onclick="showNETS(<%= invoice.id %>)">NETS QR</button>
+          <% if (!isSupplierPayoutInvoice) { %>
+            <button class="btn btn-success" type="button" onclick="payByCard(<%= invoice.id %>)">Pay by Card</button>
+            <button class="btn btn-outline-dark" type="button" onclick="showNETS(<%= invoice.id %>)">NETS QR</button>
+          <% } %>
+          <% if (invoice.status === 'Approved' && !supplierPayout && supplierPaypalEmail) { %>
+            <button class="btn btn-primary" type="button" onclick="paySupplierWithPayPal(<%= invoice.id %>, this)">Pay Supplier with PayPal</button>
+          <% } %>
+          <% if (invoice.status === 'Approved' && !supplierPayout && !supplierPaypalEmail) { %>
+            <button class="btn btn-secondary" type="button" disabled>Supplier PayPal email missing</button>
+          <% } %>
+          <% if (supplierPayout && ['Pending','Processing'].includes(supplierPayout.status || 'Pending')) { %>
+            <button class="btn btn-outline-primary" type="button" onclick="checkSupplierPayout(<%= invoice.id %>, this)">Check PayPal Status</button>
+          <% } %>
         </div>
-        <div id="paypalButtons" class="mt-3" style="max-width:320px"></div>
         <div id="netsBox" class="bank-transfer-box mt-3 d-none"></div>
       <% } %>
       <div class="mt-3">
@@ -56,27 +83,6 @@
     </div>
   </div>
   <script>
-  let paypalSdkPromise;
-
-  async function loadPayPalSdk(){
-    if (window.paypal) return window.paypal;
-    if (!paypalSdkPromise) {
-      paypalSdkPromise = fetch('/payment/paypal/config')
-        .then(async res => {
-          const data = await res.json();
-          if (!res.ok) throw new Error(data.error || 'Unable to load PayPal configuration');
-          return new Promise((resolve, reject) => {
-            const script = document.createElement('script');
-            script.src = `https://www.paypal.com/sdk/js?client-id=${encodeURIComponent(data.clientId)}&currency=${encodeURIComponent(data.currency)}`;
-            script.onload = () => resolve(window.paypal);
-            script.onerror = () => reject(new Error('Unable to load PayPal SDK'));
-            document.head.appendChild(script);
-          });
-        });
-    }
-    return paypalSdkPromise;
-  }
-
   async function payByCard(id){
     const res = await fetch(`/payment/checkout/${id}`, { method: 'POST' });
     const data = await res.json();
@@ -84,37 +90,44 @@
     else alert(data.error || 'Unable to start card payment');
   }
 
-  async function payByPayPal(id){
-    const container = document.getElementById('paypalButtons');
-    container.innerHTML = '';
+  async function showNETS(id){
+    window.location.href = `/payment/nets/${id}/page?return=${encodeURIComponent(`/invoices/${id}/view`)}`;
+  }
 
+  function authHeaders(){
+    const token = localStorage.getItem('token');
+    return token ? { authorization: 'Bearer ' + token } : {};
+  }
+
+  async function paySupplierWithPayPal(id, button){
+    // Calls server-side PayPal Payouts; this is not PayPal Checkout.
+    if (!confirm('Submit an outgoing PayPal Payout to this supplier?')) return;
+    button.disabled = true;
     try {
-      const paypal = await loadPayPalSdk();
-      paypal.Buttons({
-        createOrder: async () => {
-          const res = await fetch(`/payment/paypal/orders/${id}`, { method: 'POST' });
-          const data = await res.json();
-          if (!res.ok) throw new Error(data.error || 'Unable to create PayPal order');
-          return data.id;
-        },
-        onApprove: async data => {
-          const res = await fetch(`/payment/paypal/orders/${data.orderID}/capture`, { method: 'POST' });
-          const result = await res.json();
-          if (!res.ok) throw new Error(result.error || 'Unable to capture PayPal payment');
-          alert('PayPal payment successful');
-          location.reload();
-        },
-        onError: err => {
-          alert(err.message || 'PayPal payment failed');
-        }
-      }).render(container);
+      const res = await fetch(`/payment/paypal/payouts/${id}`, { method: 'POST', headers: authHeaders() });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Unable to submit supplier payout');
+      alert('PayPal payout submitted. Check PayPal status before treating the supplier invoice as paid.');
+      location.reload();
     } catch (err) {
-      alert(err.message || 'Unable to start PayPal payment');
+      alert(err.message);
+      button.disabled = false;
     }
   }
 
-  async function showNETS(id){
-    window.location.href = `/payment/nets/${id}/page?return=${encodeURIComponent(`/invoices/${id}/view`)}`;
+  async function checkSupplierPayout(id, button){
+    // Re-checks PayPal and settles invoice/Test Bank only after SUCCESS.
+    button.disabled = true;
+    try {
+      const res = await fetch(`/payment/paypal/payouts/${id}/status`, { method: 'POST', headers: authHeaders() });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Unable to check PayPal status');
+      alert(data.message || 'PayPal status checked. If completed, the examiner can log into the supplier Personal sandbox account to verify receipt.');
+      location.reload();
+    } catch (err) {
+      alert(err.message);
+      button.disabled = false;
+    }
   }
 
   </script>

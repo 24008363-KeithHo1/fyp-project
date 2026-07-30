@@ -60,9 +60,10 @@ CREATE TABLE IF NOT EXISTS Invoices (
   id INT AUTO_INCREMENT PRIMARY KEY,
   number VARCHAR(100) NOT NULL UNIQUE,
   customer_name VARCHAR(255) NOT NULL,
+  paypalEmail VARCHAR(255),
   amount DECIMAL(10,2) NOT NULL,
   currency VARCHAR(10) NOT NULL DEFAULT 'SGD',
-  status ENUM('Draft','Sent','Viewed','Paid','Overdue') DEFAULT 'Draft',
+  status ENUM('Draft','Approved','Sent','Viewed','Paid','Overdue') DEFAULT 'Draft',
   due_date DATE,
   data JSON,
   createdAt DATETIME DEFAULT CURRENT_TIMESTAMP,
@@ -394,7 +395,7 @@ CREATE TABLE IF NOT EXISTS Payments (
 
 CREATE TABLE IF NOT EXISTS TestBankAccounts (
   id INT AUTO_INCREMENT PRIMARY KEY,
-  ownerType ENUM('Company','Employee','Customer') NOT NULL,
+  ownerType ENUM('Company','Employee','Customer','Supplier') NOT NULL,
   ownerReference VARCHAR(255) NOT NULL,
   accountName VARCHAR(255) NOT NULL,
   bankName VARCHAR(255) DEFAULT 'FYP Test Bank',
@@ -410,7 +411,7 @@ CREATE TABLE IF NOT EXISTS TestBankAccounts (
 
 CREATE TABLE IF NOT EXISTS TestBankTransactions (
   id INT AUTO_INCREMENT PRIMARY KEY,
-  type ENUM('SalaryRelease','Refund','Adjustment') NOT NULL,
+  type ENUM('SalaryRelease','Refund','Adjustment','SupplierPayment','InvoicePayment','PaymentReversal') NOT NULL,
   fromAccountId INT,
   toAccountId INT NOT NULL,
   amount DECIMAL(12,2) NOT NULL,

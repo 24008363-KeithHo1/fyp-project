@@ -752,6 +752,10 @@
               <input id="customer" class="form-control" placeholder="Customer name" required>
             </div>
             <div class="invoice-field">
+              <label for="paypalEmail" class="form-label">Supplier PayPal email</label>
+              <input id="paypalEmail" class="form-control" type="email" placeholder="supplier@example.com">
+            </div>
+            <div class="invoice-field">
               <label for="currency" class="form-label">Currency</label>
               <select id="currency" class="form-control">
                 <option value="SGD" selected>SGD — Singapore Dollar</option>
@@ -976,27 +980,6 @@
   document.getElementById('addItem').addEventListener('click', () => addItemRow());
   addItemRow();
 
-  let paypalSdkPromise;
-
-  async function loadPayPalSdk(){
-    if (window.paypal) return window.paypal;
-    if (!paypalSdkPromise) {
-      paypalSdkPromise = fetch('/payment/paypal/config')
-        .then(async res => {
-          const data = await res.json();
-          if (!res.ok) throw new Error(data.error || 'Unable to load PayPal configuration');
-          return new Promise((resolve, reject) => {
-            const script = document.createElement('script');
-            script.src = `https://www.paypal.com/sdk/js?client-id=${encodeURIComponent(data.clientId)}&currency=${encodeURIComponent(data.currency)}`;
-            script.onload = () => resolve(window.paypal);
-            script.onerror = () => reject(new Error('Unable to load PayPal SDK'));
-            document.head.appendChild(script);
-          });
-        });
-    }
-    return paypalSdkPromise;
-  }
-
   async function load(){
     const res = await fetch('/api/invoices',{headers:{authorization:'Bearer '+token}});
     if (!res.ok) return;
@@ -1005,6 +988,16 @@
     const tbody = document.getElementById('list'); tbody.innerHTML='';
     if (!items || !items.length) tbody.innerHTML = '<tr><td colspan="6" class="invoice-empty"><i class="fa-solid fa-receipt"></i>No invoices yet</td></tr>';
     items.forEach(i=>{
+      // Examiner note:
+      // Approved supplier invoices show Pay Supplier actions. If paypalEmail is
+      // missing, the Pay Supplier button stays visible but disabled, and Finance
+      // can use Set PayPal Email before submitting a payout.
+      const supplierPayout = i.data && i.data.supplierPayout;
+      const supplierPaypalEmail = i.paypalEmail || (i.data && i.data.paypalEmail) || '';
+      const isSupplierPayoutInvoice = i.status === 'Approved' || supplierPayout || supplierPaypalEmail;
+      const canSubmitSupplierPayout = i.status === 'Approved' && supplierPaypalEmail && !supplierPayout;
+      const needsSupplierPaypalEmail = i.status === 'Approved' && !supplierPaypalEmail && !supplierPayout;
+      const canCheckSupplierPayout = supplierPayout && ['Pending', 'Processing'].includes(supplierPayout.status || 'Pending');
       const tr = document.createElement('tr');
       tr.innerHTML = `
         <td class="mono">${escapeHtml(i.number || '')}</td>
@@ -1017,13 +1010,16 @@
           <div class="invoice-actions">
             <a class="invoice-action-btn" href="/api/invoices/${i.id}/pdf" target="_blank"><i class="fa-solid fa-file-pdf"></i> PDF</a>
             <a class="invoice-action-btn" href="/api/invoices/${i.id}/excel" target="_blank"><i class="fa-solid fa-file-excel"></i> Excel</a>
-            ${i.status !== 'Paid' ? `<button class="invoice-action-btn invoice-action-btn-success" onclick="payByCard(${i.id})"><i class="fa-solid fa-credit-card"></i> Card</button>` : ''}
-            ${i.status !== 'Paid' ? `<button class="invoice-action-btn invoice-action-btn-warning" onclick="payByPayPal(${i.id})"><i class="fa-brands fa-paypal"></i> PayPal</button>` : ''}
-            ${i.status !== 'Paid' ? `<button class="invoice-action-btn invoice-action-btn-dark" onclick="showNETS(${i.id})"><i class="fa-solid fa-qrcode"></i> NETS</button>` : ''}
+            ${i.status !== 'Paid' && i.status !== 'Approved' ? `<button class="invoice-action-btn invoice-action-btn-primary" onclick="approveInvoice(${i.id})"><i class="fa-solid fa-circle-check"></i> Approve</button>` : ''}
+            ${i.status !== 'Paid' && !isSupplierPayoutInvoice ? `<button class="invoice-action-btn invoice-action-btn-success" onclick="payByCard(${i.id})"><i class="fa-solid fa-credit-card"></i> Card</button>` : ''}
+            ${i.status !== 'Paid' && !isSupplierPayoutInvoice ? `<button class="invoice-action-btn invoice-action-btn-dark" onclick="showNETS(${i.id})"><i class="fa-solid fa-qrcode"></i> NETS</button>` : ''}
+            ${canSubmitSupplierPayout ? `<button class="invoice-action-btn invoice-action-btn-warning" onclick="submitSupplierPayout(${i.id}, this)"><i class="fa-brands fa-paypal"></i> Pay Supplier</button>` : ''}
+            ${needsSupplierPaypalEmail ? `<button class="invoice-action-btn invoice-action-btn-warning" type="button" disabled title="Add supplier PayPal email first"><i class="fa-brands fa-paypal"></i> Pay Supplier</button>` : ''}
+            ${needsSupplierPaypalEmail ? `<button class="invoice-action-btn invoice-action-btn-info" onclick="setSupplierPaypalEmail(${i.id})"><i class="fa-solid fa-envelope"></i> Set PayPal Email</button>` : ''}
+            ${canCheckSupplierPayout ? `<button class="invoice-action-btn invoice-action-btn-info" onclick="checkSupplierPayout(${i.id}, this)"><i class="fa-solid fa-rotate-right"></i> Check PayPal Status</button>` : ''}
             <button class="invoice-action-btn invoice-action-btn-primary" onclick="sendInvoice(${i.id}, '${escapeHtml((i.data && i.data.email) || '').replace(/'/g, "\\'")}')"><i class="fa-solid fa-paper-plane"></i> Send</button>
             ${i.status !== 'Paid' ? `<button class="invoice-action-btn invoice-action-btn-danger" onclick="deleteInvoice(${i.id}, '${escapeHtml(i.number || '').replace(/'/g, "\\'")}')"><i class="fa-solid fa-trash"></i> Delete</button>` : ''}
           </div>
-          <div id="paypal-buttons-${i.id}" class="mt-2"></div>
           <div id="nets-qr-${i.id}" class="mt-2"></div>
         </td>
       `;
@@ -1049,6 +1045,7 @@
     }
     const payload = {
       customer_name: document.getElementById('customer').value,
+      paypalEmail: document.getElementById('paypalEmail').value.trim(),
       amount: totals.total,
       due_date: document.getElementById('due').value,
       currency: document.getElementById('currency').value,
@@ -1099,10 +1096,20 @@
     fd.append('file', file);
     try {
       const res = await fetch('/api/invoices/bulk-upload', { method: 'POST', headers: { authorization: 'Bearer ' + token }, body: fd });
-      const data = await res.json();
+      const text = await res.text();
+      let data;
+      try {
+        data = text ? JSON.parse(text) : {};
+      } catch (parseError) {
+        const preview = text ? text.replace(/\s+/g, ' ').slice(0, 220) : '(empty response)';
+        throw new Error(`Server returned HTTP ${res.status} instead of JSON: ${preview}`);
+      }
 
       if (!res.ok) {
-        alert(`Error: ${data.error}\n${data.details ? data.details.join('\n') : ''}`);
+        const details = Array.isArray(data.details)
+          ? data.details.map(detail => detail.message || detail).join('\n')
+          : (Array.isArray(data.errorDetails) ? data.errorDetails.join('\n') : '');
+        alert(`Error: ${data.error || 'Upload failed'}${details ? `\n${details}` : ''}`);
         return;
       }
 
@@ -1138,42 +1145,74 @@
     }
   }
 
+  async function approveInvoice(id){
+    if (!confirm('Approve this supplier invoice for payout?')) return;
+    const res = await fetch(`/api/invoices/${id}/approve`, { method: 'POST', headers: { authorization:'Bearer '+token } });
+    const data = await res.json();
+    if (res.ok) {
+      alert('Supplier invoice approved.');
+      load();
+    } else {
+      alert(data.error || 'Failed to approve invoice');
+    }
+  }
+
+  async function submitSupplierPayout(id, button){
+    // This calls the server-side PayPal Payouts flow. It does not load the
+    // PayPal Checkout SDK and does not open a PayPal login popup.
+    if (!confirm('Submit an outgoing PayPal Payout to this supplier? This will not open PayPal Checkout.')) return;
+    button.disabled = true;
+    try {
+      const res = await fetch(`/payment/paypal/payouts/${id}`, { method: 'POST', headers: { authorization:'Bearer '+token } });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Unable to submit supplier payout');
+      alert('PayPal payout submitted. Click Check PayPal Status before treating the invoice as paid.');
+      load();
+    } catch (err) {
+      alert(err.message);
+      button.disabled = false;
+    }
+  }
+
+  async function setSupplierPaypalEmail(id){
+    // Saves the supplier Personal sandbox PayPal email on the invoice.
+    const paypalEmail = prompt('Supplier Personal sandbox PayPal email');
+    if (!paypalEmail) return;
+    const res = await fetch(`/api/invoices/${id}/paypal-email`, {
+      method: 'POST',
+      headers: { authorization:'Bearer '+token, 'content-type':'application/json' },
+      body: JSON.stringify({ paypalEmail: paypalEmail.trim() })
+    });
+    const data = await res.json();
+    if (res.ok) {
+      alert('Supplier PayPal email saved.');
+      load();
+    } else {
+      alert(data.error || 'Unable to save supplier PayPal email');
+    }
+  }
+
+  async function checkSupplierPayout(id, button){
+    // Re-checks PayPal and only marks Paid after PayPal confirms SUCCESS.
+    button.disabled = true;
+    try {
+      const res = await fetch(`/payment/paypal/payouts/${id}/status`, { method: 'POST', headers: { authorization:'Bearer '+token } });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Unable to check PayPal payout status');
+      alert(data.message || 'PayPal payout status checked.');
+      load();
+    } catch (err) {
+      alert(err.message);
+      button.disabled = false;
+    }
+  }
+
   // Added: starts Stripe card checkout directly from an invoice row.
   async function payByCard(id){
     const res = await fetch(`/payment/checkout/${id}`, { method: 'POST' });
     const data = await res.json();
     if (res.ok && data.url) location = data.url;
     else alert(data.error || 'Unable to start card payment');
-  }
-
-  // Added: loads PayPal buttons inside the selected invoice row.
-  async function payByPayPal(id){
-    const container = document.getElementById(`paypal-buttons-${id}`);
-    container.innerHTML = '';
-
-    try {
-      const paypal = await loadPayPalSdk();
-      paypal.Buttons({
-        createOrder: async () => {
-          const res = await fetch(`/payment/paypal/orders/${id}`, { method: 'POST' });
-          const data = await res.json();
-          if (!res.ok) throw new Error(data.error || 'Unable to create PayPal order');
-          return data.id;
-        },
-        onApprove: async data => {
-          const res = await fetch(`/payment/paypal/orders/${data.orderID}/capture`, { method: 'POST' });
-          const result = await res.json();
-          if (!res.ok) throw new Error(result.error || 'Unable to capture PayPal payment');
-          alert('PayPal payment successful');
-          load();
-        },
-        onError: err => {
-          alert(err.message || 'PayPal payment failed');
-        }
-      }).render(container);
-    } catch (err) {
-      alert(err.message || 'Unable to start PayPal payment');
-    }
   }
 
   // Added: displays a NETS QR code for the invoice so customers can scan and pay.

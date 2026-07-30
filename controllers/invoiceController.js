@@ -9,11 +9,18 @@ const crypto = require('crypto');
 const ExcelJS = require('exceljs');
 const multer = require('multer');
 const path = require('path');
+const fs = require('fs');
 const { parseInvoiceExcelBlocks } = require('../utils/excel');
 
 // Reuses the same uploads/ folder as payroll bulk upload for consistency.
+const bulkUploadDir = path.join(__dirname, '..', 'uploads');
 const bulkUploadStorage = multer.diskStorage({
-  destination: (req, file, cb) => cb(null, 'uploads/'),
+  destination: (req, file, cb) => {
+    fs.mkdir(bulkUploadDir, { recursive: true }, (error) => {
+      if (error) return cb(error);
+      cb(null, bulkUploadDir);
+    });
+  },
   filename: (req, file, cb) => cb(null, `${Date.now()}${path.extname(file.originalname)}`)
 });
 
@@ -29,7 +36,14 @@ const bulkUpload = multer({
   }
 });
 
-exports.bulkUploadMiddleware = bulkUpload.single('file');
+exports.bulkUploadMiddleware = (req, res, next) => {
+  bulkUpload.single('file')(req, res, (error) => {
+    if (!error) return next();
+    return res.status(400).json({
+      error: error.message || 'Invoice upload failed before processing the file.'
+    });
+  });
+};
 
 /**
  * Constant-time string comparison to avoid leaking timing information
@@ -242,10 +256,19 @@ exports.create = async (req, res) => {
     }
 
     const currency = String((req.body && req.body.currency) || 'SGD').toUpperCase();
+    const paypalEmail = req.body && req.body.paypalEmail ? String(req.body.paypalEmail).trim() : null;
+    if (paypalEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(paypalEmail)) {
+      errors.push({ field: 'paypalEmail', message: 'Supplier PayPal email address is invalid.' });
+    }
+    if (errors.length) {
+      return res.status(400).json({ error: 'Validation failed', details: errors });
+    }
+
     const data = Object.assign({}, req.body && req.body.data ? req.body.data : {}, {
       line_items: normalizedItems || null,
       summary: summary || null,
-      currency
+      currency,
+      paypalEmail: paypalEmail || undefined
     });
 
     const now = new Date();
@@ -273,7 +296,7 @@ exports.create = async (req, res) => {
 
       const tx = await sequelize.transaction();
       try {
-        inv = await Invoice.create({ number, customer_name: customer_name.trim(), amount: round2(parsedAmount), currency, due_date, data }, { transaction: tx });
+        inv = await Invoice.create({ number, customer_name: customer_name.trim(), paypalEmail, amount: round2(parsedAmount), currency, due_date, data }, { transaction: tx });
         if (normalizedItems && normalizedItems.length) {
           await InvoiceItem.bulkCreate(
             normalizedItems.map((item, index) => ({
@@ -399,6 +422,53 @@ exports.get = async (req, res) => {
   if (!inv) return res.status(404).json({ error: 'Not found' });
   await applyOverdueStatus(inv);
   res.json(inv);
+};
+
+exports.approve = async (req, res) => {
+  // Supplier payout invoices must be explicitly Approved before the Pay
+  // Supplier action becomes available to Finance/Admin users.
+  try {
+    const invoice = await Invoice.findByPk(req.params.id);
+    if (!invoice) return res.status(404).json({ error: 'Invoice not found' });
+    if (invoice.status === 'Paid') return res.status(409).json({ error: 'Paid invoices cannot be approved again.' });
+    if (invoice.status === 'Approved') return res.json(invoice);
+
+    await invoice.update({ status: 'Approved' });
+    await logAction(req, 'approve', 'Invoice', invoice.id, {
+      number: invoice.number,
+      customer_name: invoice.customer_name,
+      amount: invoice.amount,
+      currency: invoice.currency
+    });
+    res.json(invoice);
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+};
+
+exports.updateSupplierPayPalEmail = async (req, res) => {
+  // Stores only the supplier's PayPal sandbox email. Passwords, client IDs,
+  // and secrets are never stored on supplier/customer records.
+  try {
+    const invoice = await Invoice.findByPk(req.params.id);
+    if (!invoice) return res.status(404).json({ error: 'Invoice not found' });
+    const paypalEmail = req.body && req.body.paypalEmail ? String(req.body.paypalEmail).trim() : '';
+    if (!paypalEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(paypalEmail)) {
+      return res.status(400).json({ error: 'Enter a valid supplier PayPal sandbox email.' });
+    }
+
+    await invoice.update({
+      paypalEmail,
+      data: Object.assign({}, invoice.data || {}, { paypalEmail })
+    });
+    await logAction(req, 'update_supplier_paypal_email', 'Invoice', invoice.id, {
+      number: invoice.number,
+      paypalEmail
+    });
+    res.json(invoice);
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
 };
 
 exports.exportPdf = async (req, res) => {

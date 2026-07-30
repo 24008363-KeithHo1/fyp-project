@@ -6,6 +6,7 @@
   "scripts": {
     "start": "node app.js",
     "dev": "nodemon app.js",
+    "test": "node --test tests/*.test.js",
     "seed": "node scripts/seedAdmin.js",
     "seed:partners": "node scripts/seedPartnerCustomers.js",
     "db:migrate": "node scripts/migrate.js",
