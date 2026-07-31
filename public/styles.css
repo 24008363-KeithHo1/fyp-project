@@ -338,9 +338,11 @@ header .btn-outline-primary{border-radius:20px;padding:.35rem .6rem}
   color:#fff;
   font-size:.82rem;
   font-weight:800;
-  line-height:1;
+  line-height:1.15;
   text-decoration:none;
-  white-space:nowrap;
+  white-space:normal;
+  text-align:center;
+  overflow-wrap:anywhere;
   box-shadow:0 8px 18px rgba(10,26,16,.12);
   transition:transform .15s ease,box-shadow .15s ease,filter .15s ease;
 }
@@ -925,11 +927,15 @@ form label{color:#2c4636;font-weight:600}
   display:inline-flex;
   align-items:center;
   justify-content:center;
-  max-width:100%;
+  width:auto;
+  max-width:9.5rem;
   border:1px solid #a5f3fc;
   background:#ecfeff;
   color:#155e75;
-  white-space:nowrap;
+  white-space:normal;
+  text-align:center;
+  line-height:1.15;
+  overflow-wrap:anywhere;
 }
 
 .payments-page .method-pill{
@@ -1102,14 +1108,27 @@ main .form-select:hover{
 .payments-page .payment-history-panel .table th:nth-child(5),
 .payments-page .payment-history-panel .table td:nth-child(5){width:11%}
 .payments-page .payment-history-panel .table th:nth-child(6),
-.payments-page .payment-history-panel .table td:nth-child(6){width:10%}
+.payments-page .payment-history-panel .table td:nth-child(6){width:12%}
 .payments-page .payment-history-panel .table th:nth-child(7),
-.payments-page .payment-history-panel .table td:nth-child(7){width:17%;max-width:none}
+.payments-page .payment-history-panel .table td:nth-child(7){width:18%;max-width:none}
 .payments-page .payment-history-panel .table th:nth-child(8),
-.payments-page .payment-history-panel .table td:nth-child(8){width:20%;min-width:0}
+.payments-page .payment-history-panel .table td:nth-child(8){width:18%;min-width:0}
 
 .payments-page .payment-action-cell{width:auto}
-.payments-page .payment-action-group{max-width:none}
+.payments-page .payment-action-group{
+  max-width:none;
+  align-items:stretch;
+}
+.payments-page .payment-action-group .payment-history-btn{
+  flex:1 1 7.5rem;
+  min-width:7rem;
+  max-width:100%;
+}
+.payments-page .payment-history-panel .table td:nth-child(7) small,
+.payments-page .payment-history-panel .table td:nth-child(7) div{
+  overflow-wrap:anywhere;
+  word-break:break-word;
+}
 
 @media(max-width:720px){
   .payments-page .payment-tabs{grid-template-columns:repeat(2,minmax(0,1fr))}

@@ -224,80 +224,10 @@ html { scroll-behavior: smooth; }
   </section>
 </div>
 
-<div class="modal fade" id="paypalPayoutConfirmModal" tabindex="-1" aria-labelledby="paypalPayoutConfirmTitle" aria-hidden="true">
-  <div class="modal-dialog modal-dialog-centered">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h5 class="modal-title" id="paypalPayoutConfirmTitle"><i class="fa-brands fa-paypal me-2" aria-hidden="true"></i>Pay Supplier with PayPal</h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-      </div>
-      <div class="modal-body">
-        <div class="mb-2"><strong>Invoice:</strong> <span id="paypalPayoutInvoiceNumber">-</span></div>
-        <div class="mb-2"><strong>Supplier:</strong> <span id="paypalPayoutSupplierName">-</span></div>
-        <div class="mb-2"><strong>Recipient PayPal email:</strong> <span id="paypalPayoutRecipient">-</span></div>
-        <div class="mb-2"><strong>Amount:</strong> <span id="paypalPayoutAmount">-</span></div>
-        <div class="alert alert-info mb-0">This sends a PayPal Payout from the Business sandbox account. No PayPal login popup or redirect is used.</div>
-      </div>
-      <div class="modal-footer">
-        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
-        <button type="button" class="btn btn-primary" id="confirmPaypalPayoutBtn">
-          <i class="fa-brands fa-paypal me-1" aria-hidden="true"></i>
-          Send Payout
-        </button>
-      </div>
-    </div>
-  </div>
-</div>
-
-<div class="modal fade" id="paymentReturnRequestModal" tabindex="-1" aria-labelledby="paymentReturnRequestTitle" aria-hidden="true">
-  <div class="modal-dialog modal-dialog-centered">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h5 class="modal-title" id="paymentReturnRequestTitle"><i class="fa-solid fa-rotate-left me-2" aria-hidden="true"></i>Request Payment Return</h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-      </div>
-      <div class="modal-body">
-        <div class="row g-3">
-          <div class="col-md-6">
-            <label class="form-label" for="returnInvoiceNumber">Original invoice number</label>
-            <input class="form-control" id="returnInvoiceNumber" readonly>
-          </div>
-          <div class="col-md-6">
-            <label class="form-label" for="returnPaymentAmount">Original payment amount</label>
-            <input class="form-control" id="returnPaymentAmount" readonly>
-          </div>
-          <div class="col-12">
-            <label class="form-label" for="returnSupplierEmail">Supplier email address</label>
-            <input class="form-control" id="returnSupplierEmail" type="email" autocomplete="email" required>
-          </div>
-          <div class="col-12">
-            <label class="form-label" for="returnReason">Return reason</label>
-            <input class="form-control" id="returnReason" required maxlength="500">
-          </div>
-          <div class="col-12">
-            <label class="form-label" for="returnRemarks">Remarks</label>
-            <textarea class="form-control" id="returnRemarks" rows="3"></textarea>
-          </div>
-        </div>
-        <div class="alert alert-info mt-3 mb-0">This creates a supplier return request and sends an email. It does not modify the Paid invoice, original payment, or Test Bank balances.</div>
-      </div>
-      <div class="modal-footer">
-        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
-        <button type="button" class="btn btn-primary" id="submitPaymentReturnRequestBtn">
-          <i class="fa-solid fa-paper-plane me-1" aria-hidden="true"></i>
-          Send Request
-        </button>
-      </div>
-    </div>
-  </div>
-</div>
-
 <script>
 let allInvoices = [];
 let allPayments = [];
 let netsStatusPoller;
-let pendingPaypalPayout = null;
-let pendingPaymentReturn = null;
 
 const paymentTabs = Array.from(document.querySelectorAll('#paymentMethodTabs .nav-link'));
 const paymentPanels = Array.from(document.querySelectorAll('.payment-workspace-panel .payment-tab-panel'));
@@ -361,7 +291,7 @@ function statusBadge(status, method){
   if (cleanStatus === 'Pending') return '<span class="badge bg-warning text-dark">Pending</span>';
   if (cleanStatus === 'Failed') return '<span class="badge bg-danger">Failed</span>';
   if (cleanStatus === 'Refunded') {
-    return '<span class="badge payment-status-reversed" title="Request payment return / Supplier refund">Request payment return</span>';
+    return '<span class="badge payment-status-reversed" title="Payment return requested">Return requested</span>';
   }
   return `<span class="badge bg-secondary">${cleanStatus}</span>`;
 }
@@ -519,7 +449,7 @@ function renderPayments(){
           ${isCompletedSupplierPayout(payment) && !payment.paymentReturn ? `<button class="payment-history-btn refund-btn return-request-btn" type="button" data-invoice-id="${payment.invoiceId}" data-payment-id="${payment.id}">Request Payment Return</button>` : ''}
           ${isCompletedSupplierPayout(payment) && payment.paymentReturn && payment.paymentReturn.status === 'ReturnRequested' ? `<button class="payment-history-btn refund-btn confirm-return-btn" type="button" data-return-id="${payment.paymentReturn.id}">Confirm Funds Returned</button>` : ''}
           ${payment.paymentReturn && payment.paymentReturn.status === 'ReturnRequested' && payment.paymentReturn.notificationStatus === 'Failed' ? `<button class="payment-history-btn invoice-btn resend-return-email-btn" type="button" data-return-id="${payment.paymentReturn.id}">Resend Email</button>` : ''}
-          ${!isCompletedSupplierPayout(payment) && payment.paymentReturn && payment.paymentReturn.status === 'ReturnRequested' ? `<span class="payment-history-btn receipt-btn">Return Requested</span>` : ''}
+          ${!isCompletedSupplierPayout(payment) && payment.paymentReturn && payment.paymentReturn.status === 'ReturnRequested' ? `<span class="payment-history-btn receipt-btn">Return requested</span>` : ''}
           ${payment.paymentReturn && payment.paymentReturn.status === 'Returned' ? `<span class="payment-history-btn receipt-btn">Funds Returned</span>` : ''}
           ${normalizeStatus(payment.status) === 'Paid' && !isCompletedSupplierPayout(payment) && !payment.paymentReturn ? `<button class="payment-history-btn refund-btn refund-payment-btn" type="button" data-payment-id="${payment.id}">Request payment return</button>` : ''}
         </div>
@@ -664,22 +594,6 @@ async function submitPaymentReturnPayload({ payment, button, supplierEmail, reas
   }
 }
 
-async function submitPaymentReturnRequest(){
-  if (!pendingPaymentReturn || !pendingPaymentReturn.payment) return;
-  const { payment, button } = pendingPaymentReturn;
-  const supplierEmail = document.getElementById('returnSupplierEmail').value.trim();
-  const reason = document.getElementById('returnReason').value.trim();
-  const remarks = document.getElementById('returnRemarks').value.trim();
-  if (!validEmail(supplierEmail)) return showAlert('Enter a valid supplier email address.');
-  if (reason.length < 3) return showAlert('Enter a payment return reason of at least 3 characters.');
-  const modalElement = document.getElementById('paymentReturnRequestModal');
-  if (window.bootstrap && bootstrap.Modal) bootstrap.Modal.getOrCreateInstance(modalElement).hide();
-  pendingPaymentReturn = null;
-  await submitPaymentReturnPayload({ payment, button, supplierEmail, reason, remarks });
-}
-
-document.getElementById('submitPaymentReturnRequestBtn').addEventListener('click', submitPaymentReturnRequest);
-
 async function resendPaymentReturnEmail(returnId, button){
   try {
     if (button) {
@@ -770,8 +684,6 @@ async function startStripePayment(){
 }
 
 async function submitSupplierPayout(button){
-  // Opens the in-app confirmation modal. The actual payout is sent only after
-  // Finance confirms in confirmSupplierPayout().
   const invoiceId = document.getElementById('paypalInvoiceId').value;
   const container = document.getElementById('paypalPayoutBox');
   container.innerHTML = '';
@@ -783,49 +695,26 @@ async function submitSupplierPayout(button){
   if (invoice.data && invoice.data.supplierPayout && ['Pending','Processing','Completed'].includes(invoice.data.supplierPayout.status || 'Pending')) {
     return showAlert('A PayPal payout has already been submitted for this invoice. Use Check PayPal Status.');
   }
-
-  pendingPaypalPayout = { invoice, button };
-  document.getElementById('paypalPayoutInvoiceNumber').textContent = invoice.number || invoice.id;
-  document.getElementById('paypalPayoutSupplierName').textContent = invoice.customer_name || '-';
-  document.getElementById('paypalPayoutRecipient').textContent = invoice.paypalEmail || invoice.data.paypalEmail;
-  document.getElementById('paypalPayoutAmount').textContent = money(invoice.amount, invoice.currency);
-  const modalElement = document.getElementById('paypalPayoutConfirmModal');
-  if (window.bootstrap && bootstrap.Modal) {
-    bootstrap.Modal.getOrCreateInstance(modalElement).show();
-  } else {
-    modalElement.classList.add('show');
-    modalElement.style.display = 'block';
-    modalElement.removeAttribute('aria-hidden');
-  }
-}
-
-async function confirmSupplierPayout(){
-  // Sends POST /payment/paypal/payouts/:id, which calls PayPal
-  // /v1/payments/payouts on the server. No PayPal popup is opened.
-  if (!pendingPaypalPayout || !pendingPaypalPayout.invoice) return;
-  const { invoice, button } = pendingPaypalPayout;
-  const container = document.getElementById('paypalPayoutBox');
-  const confirmButton = document.getElementById('confirmPaypalPayoutBtn');
+  const details = [
+    `Invoice: ${invoice.number || invoice.id}`,
+    `Supplier: ${invoice.customer_name || '-'}`,
+    `Recipient PayPal email: ${invoice.paypalEmail || invoice.data.paypalEmail}`,
+    `Amount: ${money(invoice.amount, invoice.currency)}`
+  ].join('\n');
+  if (!confirm(`Send this PayPal supplier payout?\n\n${details}\n\nNo PayPal login popup or redirect is used.`)) return;
 
   try {
     if (button) button.disabled = true;
-    if (confirmButton) confirmButton.disabled = true;
     const data = await fetchJson(`/payment/paypal/payouts/${invoice.id}`, { method: 'POST' });
     container.innerHTML = `<div class="alert alert-warning mb-0">Payout submitted. Batch reference: ${data.payout && (data.payout.payoutBatchId || data.payout.senderBatchId) || '-'}. Check PayPal status before treating this invoice as paid.</div>`;
     showAlert('PayPal payout submitted. The invoice remains unpaid until PayPal confirms SUCCESS.', 'success');
-    const modalElement = document.getElementById('paypalPayoutConfirmModal');
-    if (window.bootstrap && bootstrap.Modal) bootstrap.Modal.getOrCreateInstance(modalElement).hide();
-    pendingPaypalPayout = null;
     await refreshPayments();
   } catch (err) {
     showAlert(err.message || 'Unable to submit PayPal payout');
   } finally {
     if (button) button.disabled = false;
-    if (confirmButton) confirmButton.disabled = false;
   }
 }
-
-document.getElementById('confirmPaypalPayoutBtn').addEventListener('click', confirmSupplierPayout);
 
 async function checkSupplierPayoutStatus(invoiceId, button){
   // Checks PayPal status and settles locally only when PayPal returns SUCCESS.

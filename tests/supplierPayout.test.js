@@ -283,13 +283,12 @@ test('failed payment return email keeps the request and enables resend', () => {
   assert.match(financePaymentsViewSource, /\/payment\/returns\/\$\{returnId\}\/resend-email/);
 });
 
-test('payment return UI opens a form modal with supplier email, invoice, amount, reason, and remarks', () => {
-  assert.match(financePaymentsViewSource, /id="paymentReturnRequestModal"/);
-  assert.match(financePaymentsViewSource, /id="returnSupplierEmail"/);
-  assert.match(financePaymentsViewSource, /id="returnInvoiceNumber"/);
-  assert.match(financePaymentsViewSource, /id="returnPaymentAmount"/);
-  assert.match(financePaymentsViewSource, /id="returnReason"/);
-  assert.match(financePaymentsViewSource, /id="returnRemarks"/);
+test('finance payment return UI uses prompts instead of inline modal markup', () => {
+  assert.doesNotMatch(financePaymentsViewSource, /id="paymentReturnRequestModal"/);
+  assert.doesNotMatch(financePaymentsViewSource, /id="paypalPayoutConfirmModal"/);
+  assert.match(financePaymentsViewSource, /prompt\('Supplier email address'/);
+  assert.match(financePaymentsViewSource, /prompt\('Reason for requesting payment return'/);
+  assert.match(financePaymentsViewSource, /prompt\('Optional remarks'/);
   assert.match(invoiceViewSource, /id="paymentReturnRequestModal"/);
   assert.match(invoiceViewSource, /openPaymentReturnModal/);
 });
