@@ -58,9 +58,21 @@ async function paypalRequest(path, options = {}) {
   return data;
 }
 
+async function cancelUnclaimedPayoutItem(payoutItemId) {
+  if (!payoutItemId) {
+    const error = new Error('PayPal payout item ID is required to cancel an unclaimed payout.');
+    error.status = 400;
+    throw error;
+  }
+  return paypalRequest(`/v1/payments/payouts-item/${encodeURIComponent(payoutItemId)}/cancel`, {
+    method: 'POST'
+  });
+}
+
 module.exports = {
   paypalApiBase,
   requirePayPalConfig,
   getAccessToken,
-  paypalRequest
+  paypalRequest,
+  cancelUnclaimedPayoutItem
 };

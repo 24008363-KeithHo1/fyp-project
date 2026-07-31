@@ -3,7 +3,7 @@ const { sequelize } = require('../config/db');
 
 const TestBankTransaction = sequelize.define('TestBankTransaction', {
   id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
-  type: { type: DataTypes.ENUM('SalaryRelease', 'Refund', 'Adjustment', 'SupplierPayment', 'InvoicePayment', 'PaymentReversal'), allowNull: false },
+  type: { type: DataTypes.ENUM('SalaryRelease', 'Refund', 'Adjustment', 'SupplierPayment', 'InvoicePayment', 'PaymentReversal', 'PaymentReturn'), allowNull: false },
   fromAccountId: { type: DataTypes.INTEGER },
   toAccountId: { type: DataTypes.INTEGER, allowNull: false },
   amount: { type: DataTypes.DECIMAL(12, 2), allowNull: false },

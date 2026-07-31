@@ -5,6 +5,7 @@ const path = require('path');
 
 const Invoice = require('../models/Invoice');
 const Payment = require('../models/Payment');
+const PaymentReturn = require('../models/PaymentReturn');
 const {
   mapPayPalPayoutStatus,
   assertPayableInvoice,
@@ -17,6 +18,9 @@ const supplierPayoutSource = fs.readFileSync(path.join(root, 'services', 'suppli
 const paymentRoutesSource = fs.readFileSync(path.join(root, 'routes', 'payment.js'), 'utf8');
 const paypalServiceSource = fs.readFileSync(path.join(root, 'services', 'paypalService.js'), 'utf8');
 const paymentControllerSource = fs.readFileSync(path.join(root, 'controllers', 'paymentController.js'), 'utf8');
+const paymentReturnEmailSource = fs.readFileSync(path.join(root, 'services', 'paymentReturnEmail.js'), 'utf8');
+const invoiceViewSource = fs.readFileSync(path.join(root, 'views', 'invoice.ejs'), 'utf8');
+const financePaymentsViewSource = fs.readFileSync(path.join(root, 'views', 'finance', 'payments.ejs'), 'utf8');
 
 function invoice(overrides = {}) {
   return {
@@ -27,7 +31,7 @@ function invoice(overrides = {}) {
     currency: 'USD',
     status: 'Approved',
     paypalEmail: 'supplier-personal@example.com',
-    data: {},
+    data: { isSupplierInvoice: true },
     update: async function update(changes) {
       Object.assign(this, changes);
       return this;
@@ -148,7 +152,7 @@ test('PayPal API failure is surfaced safely without secrets', async () => {
 });
 
 test('supplier payout validation rejects missing email, unapproved invoice, already-paid invoice, invalid amount and duplicate submission', () => {
-  assert.throws(() => assertPayableInvoice(invoice({ paypalEmail: '', data: {} })), /PayPal sandbox email/);
+  assert.throws(() => assertPayableInvoice(invoice({ paypalEmail: '', data: { isSupplierInvoice: true } })), /PayPal sandbox email/);
   assert.throws(() => assertPayableInvoice(invoice({ status: 'Draft' })), /approved/);
   assert.throws(() => assertPayableInvoice(invoice({ status: 'Paid' })), /already paid/);
   assert.throws(() => assertPayableInvoice(invoice({ amount: 0 })), /greater than zero/);
@@ -196,6 +200,10 @@ test('database rollback is available when one local settlement update fails', ()
 test('route layer protects supplier payout endpoints with Finance or Admin role', () => {
   assert.match(paymentRoutesSource, /paypal\/payouts\/:id['"], auth, checkRole\(\['Admin', 'Finance'\]\)/);
   assert.match(paymentRoutesSource, /paypal\/payouts\/:id\/status['"], auth, checkRole\(\['Admin', 'Finance'\]\)/);
+  assert.match(paymentRoutesSource, /paypal\/payouts\/:id\/return-request['"], auth, checkRole\(\['Admin', 'Finance'\]\)/);
+  assert.match(paymentRoutesSource, /returns\/payment\/:id\/request['"], auth, checkRole\(\['Admin', 'Finance'\]\)/);
+  assert.match(paymentRoutesSource, /returns\/:id\/resend-email['"], auth, checkRole\(\['Admin', 'Finance'\]\)/);
+  assert.match(paymentRoutesSource, /returns\/:id\/confirm['"], auth, checkRole\(\['Admin', 'Finance'\]\)/);
 });
 
 test('PayPal service uses sandbox base, environment credentials, and avoids token logging', () => {
@@ -206,8 +214,123 @@ test('PayPal service uses sandbox base, environment credentials, and avoids toke
   assert.equal(paypalEmailFor(invoice({ paypalEmail: '', data: { paypalEmail: 'supplier-data@example.com' } })), 'supplier-data@example.com');
 });
 
+test('payment return workflow separates request, original payment, and confirmed Test Bank return', () => {
+  assert.match(supplierPayoutSource, /PaymentReturn\.create\(\{/);
+  assert.match(supplierPayoutSource, /originalPaymentId:\s*payment\.id/);
+  assert.match(supplierPayoutSource, /status:\s*'ReturnRequested'/);
+  assert.match(supplierPayoutSource, /type:\s*'PaymentReturn'/);
+  assert.match(supplierPayoutSource, /fromAccountId:\s*supplierAccount\.id/);
+  assert.match(supplierPayoutSource, /toAccountId:\s*companyAccount\.id/);
+  assert.match(supplierPayoutSource, /status:\s*'Returned'/);
+  assert.doesNotMatch(supplierPayoutSource, /lockedPayment\.update\([\s\S]*status:\s*'Refunded'/);
+});
+
+test('completed supplier payout return is requested before any Test Bank balance movement', () => {
+  const requestIndex = supplierPayoutSource.indexOf('async function requestPaymentReturn');
+  const confirmIndex = supplierPayoutSource.indexOf('async function confirmFundsReturned');
+  assert.ok(requestIndex > -1);
+  assert.ok(confirmIndex > -1);
+  const requestBlock = supplierPayoutSource.slice(requestIndex, confirmIndex);
+  assert.match(requestBlock, /PaymentReturn\.create/);
+  assert.doesNotMatch(requestBlock, /companyAccount\.update|supplierAccount\.update|TestBankTransaction\.create/);
+});
+
+test('duplicate payment return requests are blocked by model and service', () => {
+  assert.ok(PaymentReturn.rawAttributes.originalPaymentId);
+  assert.match(supplierPayoutSource, /PaymentReturn\.findOne\(\{\s*where:\s*\{\s*originalPaymentId:\s*payment\.id\s*\}/);
+  assert.match(supplierPayoutSource, /already exists for this supplier payout/);
+  assert.match(fs.readFileSync(path.join(root, 'models', 'PaymentReturn.js'), 'utf8'), /unique:\s*true/);
+});
+
+test('payment return request validates email and required reason server-side', () => {
+  assert.match(supplierPayoutSource, /Enter a valid supplier email address/);
+  assert.match(supplierPayoutSource, /validateSupplierEmail/);
+  assert.match(supplierPayoutSource, /EMAIL_RE\.test\(supplierEmail\)/);
+  assert.match(supplierPayoutSource, /Enter a payment return reason of at least 3 characters/);
+});
+
+test('payment return request saves notification fields and sends Nodemailer email', () => {
+  assert.ok(PaymentReturn.rawAttributes.supplierEmail);
+  assert.ok(PaymentReturn.rawAttributes.notificationEmail);
+  assert.ok(PaymentReturn.rawAttributes.notificationStatus);
+  assert.ok(PaymentReturn.rawAttributes.notificationSentAt);
+  assert.ok(PaymentReturn.rawAttributes.notificationError);
+  assert.match(supplierPayoutSource, /sendPaymentReturnRequestEmail\(\{/);
+  assert.match(supplierPayoutSource, /notificationStatus:\s*'Sent'/);
+  assert.match(supplierPayoutSource, /notificationStatus:\s*'Failed'/);
+  assert.match(paymentReturnEmailSource, /sendEmail\(to, email\.subject, email\.html, \{\s*text:\s*email\.text\s*\}\)/);
+  assert.match(paymentReturnEmailSource, /text:\s*email\.text/);
+  assert.match(paymentReturnEmailSource, /Payment Return Request \\u2013 Invoice/);
+  assert.match(supplierPayoutSource, /notificationDelivery/);
+  assert.match(supplierPayoutSource, /messageId:\s*emailResult && emailResult\.messageId/);
+});
+
+test('payment return email uses requested finance copy without hard-coded SMTP password', () => {
+  assert.match(paymentReturnEmailSource, /Dear Supplier/);
+  assert.match(paymentReturnEmailSource, /Invoice Number:/);
+  assert.match(paymentReturnEmailSource, /Please return the funds using the agreed payment method/);
+  assert.match(paymentReturnEmailSource, /Finance Department/);
+  assert.doesNotMatch(paymentReturnEmailSource, /password\s*[:=]\s*['"][^'"]+['"]/i);
+});
+
+test('failed payment return email keeps the request and enables resend', () => {
+  assert.match(supplierPayoutSource, /catch \(emailError\)/);
+  assert.match(supplierPayoutSource, /Payment return request was created, but email delivery failed/);
+  assert.doesNotMatch(supplierPayoutSource, /throw emailError/);
+  assert.match(supplierPayoutSource, /async function resendPaymentReturnEmail/);
+  assert.match(supplierPayoutSource, /notificationStatus !== 'Failed'/);
+  assert.match(financePaymentsViewSource, /Resend Email/);
+  assert.match(financePaymentsViewSource, /\/payment\/returns\/\$\{returnId\}\/resend-email/);
+});
+
+test('payment return UI opens a form modal with supplier email, invoice, amount, reason, and remarks', () => {
+  assert.match(financePaymentsViewSource, /id="paymentReturnRequestModal"/);
+  assert.match(financePaymentsViewSource, /id="returnSupplierEmail"/);
+  assert.match(financePaymentsViewSource, /id="returnInvoiceNumber"/);
+  assert.match(financePaymentsViewSource, /id="returnPaymentAmount"/);
+  assert.match(financePaymentsViewSource, /id="returnReason"/);
+  assert.match(financePaymentsViewSource, /id="returnRemarks"/);
+  assert.match(invoiceViewSource, /id="paymentReturnRequestModal"/);
+  assert.match(invoiceViewSource, /openPaymentReturnModal/);
+});
+
+test('unclaimed PayPal payouts use payout item cancel endpoint before local status update', () => {
+  assert.match(paypalServiceSource, /payouts-item\/\$\{encodeURIComponent\(payoutItemId\)\}\/cancel/);
+  assert.match(supplierPayoutSource, /statusResult\.status === 'Unclaimed'/);
+  assert.match(supplierPayoutSource, /cancelUnclaimedPayoutItem\(updatedPayout\.payoutItemId\)/);
+});
+
+test('supplier return UI uses request and confirmation wording, not immediate reversal wording', () => {
+  assert.match(invoiceViewSource, /Request Payment Return/);
+  assert.match(financePaymentsViewSource, /Confirm Funds Returned/);
+  assert.match(financePaymentsViewSource, /not a PayPal action/);
+  assert.match(paymentControllerSource, /Use Request Payment Return for completed supplier PayPal payouts/);
+});
+
 test('supplier invoices are blocked from the legacy PayPal Checkout endpoint', () => {
   assert.match(paymentControllerSource, /function isSupplierPayoutInvoice/);
   assert.match(paymentControllerSource, /This is a supplier payout invoice/);
   assert.match(paymentControllerSource, /paypalRequest\('\/v2\/checkout\/orders'/);
+});
+
+test('customer invoices keep Stripe and NETS unless explicitly marked as supplier invoices', () => {
+  assert.match(invoiceViewSource, /id="isSupplierInvoice"/);
+  assert.match(invoiceViewSource, /isSupplierInvoice:\s*document\.getElementById\('isSupplierInvoice'\)\.checked/);
+  assert.match(invoiceViewSource, /const isSupplierPayoutInvoice = Boolean\(\(i\.data && i\.data\.isSupplierInvoice\) \|\| supplierPayout\)/);
+  assert.doesNotMatch(invoiceViewSource, /const isSupplierPayoutInvoice = i\.status === 'Approved'/);
+  assert.match(financePaymentsViewSource, /selectId === 'paypalInvoiceId'\) return Boolean\(inv\.data && inv\.data\.isSupplierInvoice\)/);
+  assert.match(supplierPayoutSource, /Mark this invoice as a supplier invoice before sending a supplier payout/);
+});
+
+test('payment history hides delete and prompts before request payment return', () => {
+  assert.doesNotMatch(financePaymentsViewSource, /delete-payment-btn/);
+  assert.doesNotMatch(financePaymentsViewSource, /Delete supplier payment history/);
+  assert.match(financePaymentsViewSource, /prompt\('Supplier email address'/);
+  assert.match(financePaymentsViewSource, /prompt\('Reason for requesting payment return'/);
+  assert.match(financePaymentsViewSource, /body:\s*JSON\.stringify\(\{\s*supplierEmail:\s*supplierEmail\.trim\(\),\s*reason:\s*reason\.trim\(\)\s*\}\)/);
+  assert.match(financePaymentsViewSource, /\/payment\/returns\/payment\/\$\{paymentId\}\/request/);
+  assert.doesNotMatch(financePaymentsViewSource, /\/payment\/\$\{paymentId\}\/refund/);
+  assert.match(supplierPayoutSource, /async function requestPaymentReturnForPayment/);
+  assert.match(supplierPayoutSource, /sendPaymentReturnRequestEmail\(\{/);
+  assert.match(supplierPayoutSource, /no original payment, invoice, or Test Bank balances modified/);
 });

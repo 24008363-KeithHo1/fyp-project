@@ -173,7 +173,7 @@ html { scroll-behavior: smooth; }
           <option value="Paid">Paid</option>
           <option value="Pending">Pending</option>
           <option value="Failed">Failed</option>
-          <option value="Refunded">Reversed</option>
+          <option value="Refunded">Request payment return</option>
         </select>
       </div>
       <div class="col-md-2">
@@ -249,11 +249,55 @@ html { scroll-behavior: smooth; }
   </div>
 </div>
 
+<div class="modal fade" id="paymentReturnRequestModal" tabindex="-1" aria-labelledby="paymentReturnRequestTitle" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="paymentReturnRequestTitle"><i class="fa-solid fa-rotate-left me-2" aria-hidden="true"></i>Request Payment Return</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <div class="row g-3">
+          <div class="col-md-6">
+            <label class="form-label" for="returnInvoiceNumber">Original invoice number</label>
+            <input class="form-control" id="returnInvoiceNumber" readonly>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label" for="returnPaymentAmount">Original payment amount</label>
+            <input class="form-control" id="returnPaymentAmount" readonly>
+          </div>
+          <div class="col-12">
+            <label class="form-label" for="returnSupplierEmail">Supplier email address</label>
+            <input class="form-control" id="returnSupplierEmail" type="email" autocomplete="email" required>
+          </div>
+          <div class="col-12">
+            <label class="form-label" for="returnReason">Return reason</label>
+            <input class="form-control" id="returnReason" required maxlength="500">
+          </div>
+          <div class="col-12">
+            <label class="form-label" for="returnRemarks">Remarks</label>
+            <textarea class="form-control" id="returnRemarks" rows="3"></textarea>
+          </div>
+        </div>
+        <div class="alert alert-info mt-3 mb-0">This creates a supplier return request and sends an email. It does not modify the Paid invoice, original payment, or Test Bank balances.</div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+        <button type="button" class="btn btn-primary" id="submitPaymentReturnRequestBtn">
+          <i class="fa-solid fa-paper-plane me-1" aria-hidden="true"></i>
+          Send Request
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <script>
 let allInvoices = [];
 let allPayments = [];
 let netsStatusPoller;
 let pendingPaypalPayout = null;
+let pendingPaymentReturn = null;
 
 const paymentTabs = Array.from(document.querySelectorAll('#paymentMethodTabs .nav-link'));
 const paymentPanels = Array.from(document.querySelectorAll('.payment-workspace-panel .payment-tab-panel'));
@@ -301,6 +345,10 @@ function money(value, currency){
   return `${currency || 'SGD'} ${Number(value || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
 
+function validEmail(value){
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(value || '').trim());
+}
+
 function normalizeStatus(status){
   if (status === 'refunded') return 'Refunded';
   if (status === 'COMPLETED' || status === 'paid') return 'Paid';
@@ -313,9 +361,14 @@ function statusBadge(status, method){
   if (cleanStatus === 'Pending') return '<span class="badge bg-warning text-dark">Pending</span>';
   if (cleanStatus === 'Failed') return '<span class="badge bg-danger">Failed</span>';
   if (cleanStatus === 'Refunded') {
-    return '<span class="badge payment-status-reversed" title="Payment reversal / Supplier refund">Reversed</span>';
+    return '<span class="badge payment-status-reversed" title="Request payment return / Supplier refund">Request payment return</span>';
   }
   return `<span class="badge bg-secondary">${cleanStatus}</span>`;
+}
+
+function isCompletedSupplierPayout(payment){
+  const payout = payment && payment.data && payment.data.supplierPayout;
+  return Boolean(payment && payment.method === 'PayPal' && normalizeStatus(payment.status) === 'Paid' && payout && payout.status === 'Completed');
 }
 
 function showAlert(message, type){
@@ -348,11 +401,17 @@ async function fetchJson(url, options){
 function populateInvoiceSelect(selectId, invoices){
   const select = document.getElementById(selectId);
   if (!select) return;
-  const unpaid = invoices.filter(inv => inv.status !== 'Paid');
+  const unpaid = invoices.filter(inv => {
+    if (inv.status === 'Paid') return false;
+    if (selectId === 'paypalInvoiceId') return Boolean(inv.data && inv.data.isSupplierInvoice);
+    return !Boolean(inv.data && inv.data.isSupplierInvoice);
+  });
   select.innerHTML = '';
 
   if (!unpaid.length) {
-    select.innerHTML = '<option value="">No unpaid invoices</option>';
+    select.innerHTML = selectId === 'paypalInvoiceId'
+      ? '<option value="">No unpaid supplier invoices</option>'
+      : '<option value="">No unpaid customer invoices</option>';
     select.disabled = true;
     return;
   }
@@ -457,8 +516,12 @@ function renderPayments(){
         <div class="payment-action-group" aria-label="Payment actions for ${payment.invoiceNumber || 'invoice'}">
           <a class="payment-history-btn invoice-btn" href="/api/invoices/${payment.invoiceId}/pdf" target="_blank" rel="noopener">Supplier invoice</a>
           <a class="payment-history-btn receipt-btn" href="/api/invoices/${payment.invoiceId}/pdf" target="_blank" rel="noopener" download>Receipt</a>
-          ${normalizeStatus(payment.status) === 'Paid' ? `<button class="payment-history-btn refund-btn refund-payment-btn" type="button" data-payment-id="${payment.id}">Payment reversal</button>` : ''}
-          ${normalizeStatus(payment.status) !== 'Paid' ? `<button class="payment-history-btn delete-payment-btn" type="button" data-payment-id="${payment.id}">Delete</button>` : ''}
+          ${isCompletedSupplierPayout(payment) && !payment.paymentReturn ? `<button class="payment-history-btn refund-btn return-request-btn" type="button" data-invoice-id="${payment.invoiceId}" data-payment-id="${payment.id}">Request Payment Return</button>` : ''}
+          ${isCompletedSupplierPayout(payment) && payment.paymentReturn && payment.paymentReturn.status === 'ReturnRequested' ? `<button class="payment-history-btn refund-btn confirm-return-btn" type="button" data-return-id="${payment.paymentReturn.id}">Confirm Funds Returned</button>` : ''}
+          ${payment.paymentReturn && payment.paymentReturn.status === 'ReturnRequested' && payment.paymentReturn.notificationStatus === 'Failed' ? `<button class="payment-history-btn invoice-btn resend-return-email-btn" type="button" data-return-id="${payment.paymentReturn.id}">Resend Email</button>` : ''}
+          ${!isCompletedSupplierPayout(payment) && payment.paymentReturn && payment.paymentReturn.status === 'ReturnRequested' ? `<span class="payment-history-btn receipt-btn">Return Requested</span>` : ''}
+          ${payment.paymentReturn && payment.paymentReturn.status === 'Returned' ? `<span class="payment-history-btn receipt-btn">Funds Returned</span>` : ''}
+          ${normalizeStatus(payment.status) === 'Paid' && !isCompletedSupplierPayout(payment) && !payment.paymentReturn ? `<button class="payment-history-btn refund-btn refund-payment-btn" type="button" data-payment-id="${payment.id}">Request payment return</button>` : ''}
         </div>
       </td>
     `;
@@ -477,7 +540,7 @@ function renderRecentActivity(){
   container.innerHTML = allPayments.slice(0, 5).map(payment => {
     const status = normalizeStatus(payment.status);
   const action = status === 'Refunded'
-      ? `${payment.invoiceNumber} reversed via ${payment.method}`
+      ? `${payment.invoiceNumber} request payment return via ${payment.method}`
       : status === 'Failed'
       ? `${payment.method} payment failed for ${payment.invoiceNumber}`
       : payment.method === 'NETS'
@@ -491,6 +554,7 @@ function paymentReferenceDetails(payment){
   const refund = payment.data && payment.data.refund;
   const payout = payment.data && payment.data.supplierPayout;
   if (payout) {
+    const paymentReturn = payment.paymentReturn;
     return `
       <div>${payout.payoutBatchId || payout.senderBatchId || payment.providerReference || ''}</div>
       <small class="text-muted d-block">Payout status: ${payout.status || 'Pending'}</small>
@@ -500,6 +564,12 @@ function paymentReferenceDetails(payment){
       ${payout.submittedAt ? `<small class="text-muted d-block">Submitted: ${new Date(payout.submittedAt).toLocaleString()}</small>` : ''}
       ${payout.completedAt ? `<small class="text-muted d-block">Completed: ${new Date(payout.completedAt).toLocaleString()}</small>` : ''}
       ${payout.failureMessage ? `<small class="text-danger d-block">${payout.failureMessage}</small>` : ''}
+      ${paymentReturn ? `<small class="text-muted d-block">Return request: ${paymentReturn.status}</small>` : ''}
+      ${paymentReturn && paymentReturn.notificationEmail ? `<small class="text-muted d-block">Return email: ${paymentReturn.notificationEmail}</small>` : ''}
+      ${paymentReturn && paymentReturn.notificationStatus ? `<small class="${paymentReturn.notificationStatus === 'Failed' ? 'text-danger' : 'text-muted'} d-block">Notification: ${paymentReturn.notificationStatus}</small>` : ''}
+      ${paymentReturn && paymentReturn.notificationSentAt ? `<small class="text-muted d-block">Email sent: ${new Date(paymentReturn.notificationSentAt).toLocaleString()}</small>` : ''}
+      ${paymentReturn && paymentReturn.notificationError ? `<small class="text-danger d-block">Email error: ${paymentReturn.notificationError}</small>` : ''}
+      ${paymentReturn && paymentReturn.returnTransactionId ? `<small class="text-muted d-block">Return transaction: ${paymentReturn.returnTransactionId}</small>` : ''}
       ${['Pending','Processing'].includes(payout.status || 'Pending') ? `<button class="payment-history-btn invoice-btn check-payout-btn mt-1" type="button" data-invoice-id="${payment.invoiceId}">Check PayPal Status</button>` : ''}
     `;
   }
@@ -520,55 +590,131 @@ function paymentReferenceDetails(payment){
   return payment.providerReference || '';
 }
 
-// Added: deletes a payment history record and refreshes the finance payments page.
-async function deletePayment(paymentId, button){
-  const payment = allPayments.find(item => Number(item.id) === Number(paymentId));
-  if (!payment) return showAlert('Payment not found');
-  if (normalizeStatus(payment.status) === 'Paid') return showAlert('Paid supplier payment records cannot be deleted. Record a payment reversal first.');
-  if (!confirm(`Delete supplier payment history for ${payment.invoiceNumber || 'this supplier invoice'}? This cannot be undone.`)) return;
-
-  try {
-    if (button) {
-      button.disabled = true;
-      button.textContent = 'Deleting...';
-    }
-    await fetchJson(`/payment/history/${paymentId}`, { method: 'DELETE' });
-    showAlert('Payment history record deleted.', 'success');
-    await refreshPayments();
-  } catch (err) {
-    showAlert(err.message);
-  } finally {
-    if (button) {
-      button.disabled = false;
-      button.textContent = 'Delete';
-    }
-  }
-}
-
-// Added: lets finance record a payment reversal and reopens the supplier invoice for repayment.
+// Added: lets finance request a payment return email without changing the original payment record.
 async function refundPayment(paymentId, button){
   const payment = allPayments.find(item => Number(item.id) === Number(paymentId));
   if (!payment) return showAlert('Payment not found');
+  const payout = payment.data && payment.data.supplierPayout;
+  const defaultEmail = payment.supplierEmail || (payout && payout.recipientPaypalEmail) || '';
+  const supplierEmail = prompt('Supplier email address', defaultEmail);
+  if (supplierEmail === null) return;
+  if (!validEmail(supplierEmail)) return showAlert('Enter a valid supplier email address.');
+  const reason = prompt('Reason for requesting payment return');
+  if (reason === null) return;
+  if (reason.trim().length < 3) return showAlert('Enter a payment return reason of at least 3 characters.');
 
   try {
-    showAlert(`Recording payment reversal for ${payment.invoiceNumber || 'supplier payment'}...`);
+    showAlert(`Recording payment return request for ${payment.invoiceNumber || 'supplier payment'}...`);
     if (button) {
       button.disabled = true;
       button.textContent = 'Reversing...';
     }
-    await fetchJson(`/payment/${paymentId}/refund`, {
+    const data = await fetchJson(`/payment/returns/payment/${paymentId}/request`, {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ reason: 'Payment reversal recorded by finance' })
+      body: JSON.stringify({ supplierEmail: supplierEmail.trim(), reason: reason.trim() })
     });
-    showAlert('Payment reversal recorded and supplier invoice reopened.', 'success');
+    showAlert(data.warning || data.message || 'Payment return request created.', data.warning ? undefined : 'success');
     await refreshPayments();
   } catch (err) {
     showAlert(err.message);
   } finally {
     if (button) {
       button.disabled = false;
-      button.textContent = 'Payment reversal';
+      button.textContent = 'Request payment return';
+    }
+  }
+}
+
+async function openPaymentReturnModal(invoiceId, button){
+  const payment = allPayments.find(item => Number(item.invoiceId) === Number(invoiceId) && isCompletedSupplierPayout(item));
+  if (!payment) return showAlert('Completed supplier PayPal payout not found.');
+  const payout = payment.data && payment.data.supplierPayout;
+  const defaultEmail = payment.supplierEmail || (payout && payout.recipientPaypalEmail) || '';
+  const supplierEmail = prompt('Supplier email address', defaultEmail);
+  if (supplierEmail === null) return;
+  if (!validEmail(supplierEmail)) return showAlert('Enter a valid supplier email address.');
+  const reason = prompt('Reason for requesting payment return');
+  if (reason === null) return;
+  if (reason.trim().length < 3) return showAlert('Enter a payment return reason of at least 3 characters.');
+  const remarks = prompt('Optional remarks', '') || '';
+  await submitPaymentReturnPayload({ payment, button, supplierEmail: supplierEmail.trim(), reason: reason.trim(), remarks: remarks.trim() });
+}
+
+async function submitPaymentReturnPayload({ payment, button, supplierEmail, reason, remarks }){
+  try {
+    if (button) {
+      button.disabled = true;
+      button.textContent = 'Requesting...';
+    }
+    const data = await fetchJson(`/payment/paypal/payouts/${payment.invoiceId}/return-request`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ supplierEmail, reason, remarks })
+    });
+    showAlert(data.warning || data.message || 'Payment return requested. Confirm funds returned only after supplier funds are actually back.', data.warning ? undefined : 'success');
+    await refreshPayments();
+  } catch (err) {
+    showAlert(err.message);
+  } finally {
+    if (button) {
+      button.disabled = false;
+      button.textContent = 'Request Payment Return';
+    }
+  }
+}
+
+async function submitPaymentReturnRequest(){
+  if (!pendingPaymentReturn || !pendingPaymentReturn.payment) return;
+  const { payment, button } = pendingPaymentReturn;
+  const supplierEmail = document.getElementById('returnSupplierEmail').value.trim();
+  const reason = document.getElementById('returnReason').value.trim();
+  const remarks = document.getElementById('returnRemarks').value.trim();
+  if (!validEmail(supplierEmail)) return showAlert('Enter a valid supplier email address.');
+  if (reason.length < 3) return showAlert('Enter a payment return reason of at least 3 characters.');
+  const modalElement = document.getElementById('paymentReturnRequestModal');
+  if (window.bootstrap && bootstrap.Modal) bootstrap.Modal.getOrCreateInstance(modalElement).hide();
+  pendingPaymentReturn = null;
+  await submitPaymentReturnPayload({ payment, button, supplierEmail, reason, remarks });
+}
+
+document.getElementById('submitPaymentReturnRequestBtn').addEventListener('click', submitPaymentReturnRequest);
+
+async function resendPaymentReturnEmail(returnId, button){
+  try {
+    if (button) {
+      button.disabled = true;
+      button.textContent = 'Sending...';
+    }
+    const data = await fetchJson(`/payment/returns/${returnId}/resend-email`, { method: 'POST' });
+    showAlert(data.warning || data.message || 'Payment return request email resent.', data.warning ? undefined : 'success');
+    await refreshPayments();
+  } catch (err) {
+    showAlert(err.message);
+  } finally {
+    if (button) {
+      button.disabled = false;
+      button.textContent = 'Resend Email';
+    }
+  }
+}
+
+async function confirmFundsReturned(returnId, button){
+  if (!confirm('Confirm funds returned in the internal Test Bank? This is an internal confirmation, not a PayPal action.')) return;
+  try {
+    if (button) {
+      button.disabled = true;
+      button.textContent = 'Confirming...';
+    }
+    await fetchJson(`/payment/returns/${returnId}/confirm`, { method: 'POST' });
+    showAlert('Funds returned confirmed in Test Bank. Original payment record remains preserved.', 'success');
+    await refreshPayments();
+  } catch (err) {
+    showAlert(err.message);
+  } finally {
+    if (button) {
+      button.disabled = false;
+      button.textContent = 'Confirm Funds Returned';
     }
   }
 }
@@ -767,18 +913,29 @@ async function confirmNETSPayment(invoiceId, reference){
 }
 
 document.getElementById('historyBody').addEventListener('click', event => {
-  const deleteButton = event.target.closest('.delete-payment-btn');
-  if (deleteButton) {
-    if (deleteButton.disabled) return;
-    deletePayment(deleteButton.dataset.paymentId, deleteButton);
-    return;
-  }
-
   const button = event.target.closest('.refund-payment-btn');
+  const returnRequestButton = event.target.closest('.return-request-btn');
+  const confirmReturnButton = event.target.closest('.confirm-return-btn');
+  const resendReturnEmailButton = event.target.closest('.resend-return-email-btn');
   const checkPayoutButton = event.target.closest('.check-payout-btn');
   if (checkPayoutButton) {
     if (checkPayoutButton.disabled) return;
     checkSupplierPayoutStatus(checkPayoutButton.dataset.invoiceId, checkPayoutButton);
+    return;
+  }
+  if (returnRequestButton) {
+    if (returnRequestButton.disabled) return;
+    openPaymentReturnModal(returnRequestButton.dataset.invoiceId, returnRequestButton);
+    return;
+  }
+  if (resendReturnEmailButton) {
+    if (resendReturnEmailButton.disabled) return;
+    resendPaymentReturnEmail(resendReturnEmailButton.dataset.returnId, resendReturnEmailButton);
+    return;
+  }
+  if (confirmReturnButton) {
+    if (confirmReturnButton.disabled) return;
+    confirmFundsReturned(confirmReturnButton.dataset.returnId, confirmReturnButton);
     return;
   }
   if (!button) return;

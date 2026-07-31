@@ -530,7 +530,7 @@ function renderAlerts(totals) {
   const items = [];
   if ((totals.overdueInvoiceCount||0)>0) items.push(`${totals.overdueInvoiceCount} overdue invoice${totals.overdueInvoiceCount===1?'':'s'}`);
   if ((totals.failedPayPalCount||0)>0) items.push(`${totals.failedPayPalCount} failed PayPal transaction${totals.failedPayPalCount===1?'':'s'}`);
-  if ((totals.refundedPaymentCount||0)>0) items.push(`${totals.refundedPaymentCount} payment reversal${totals.refundedPaymentCount===1?'':'s'} / supplier refund${totals.refundedPaymentCount===1?'':'s'} totalling ${financeMoney(totals.refundedPaymentAmount)}`);
+  if ((totals.refundedPaymentCount||0)>0) items.push(`${totals.refundedPaymentCount} payment return request${totals.refundedPaymentCount===1?'':'s'} / supplier refund${totals.refundedPaymentCount===1?'':'s'} totalling ${financeMoney(totals.refundedPaymentAmount)}`);
   if ((totals.payrollDueSoonCount||0)>0) items.push(`${totals.payrollDueSoonCount} payroll run${totals.payrollDueSoonCount===1?'':'s'} due in 2 days`);
   const container = document.getElementById('financeAlerts');
   if (!items.length) { container.innerHTML='<div class="fd-alerts-empty"><i class="fa-solid fa-circle-check"></i> No active finance alerts.</div>'; return; }

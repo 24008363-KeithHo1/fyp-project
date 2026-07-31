@@ -756,6 +756,13 @@
               <input id="paypalEmail" class="form-control" type="email" placeholder="supplier@example.com">
             </div>
             <div class="invoice-field">
+              <label class="form-label" for="isSupplierInvoice">Invoice type</label>
+              <div class="form-check mt-2">
+                <input class="form-check-input" type="checkbox" id="isSupplierInvoice">
+                <label class="form-check-label" for="isSupplierInvoice">Supplier invoice / vendor bill</label>
+              </div>
+            </div>
+            <div class="invoice-field">
               <label for="currency" class="form-label">Currency</label>
               <select id="currency" class="form-control">
                 <option value="SGD" selected>SGD — Singapore Dollar</option>
@@ -853,7 +860,52 @@
     </div>
   </div>
 
+  <div class="modal fade" id="paymentReturnRequestModal" tabindex="-1" aria-labelledby="paymentReturnRequestTitle" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="paymentReturnRequestTitle"><i class="fa-solid fa-rotate-left me-2" aria-hidden="true"></i>Request Payment Return</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <div class="row g-3">
+            <div class="col-md-6">
+              <label class="form-label" for="returnInvoiceNumber">Original invoice number</label>
+              <input class="form-control" id="returnInvoiceNumber" readonly>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label" for="returnPaymentAmount">Original payment amount</label>
+              <input class="form-control" id="returnPaymentAmount" readonly>
+            </div>
+            <div class="col-12">
+              <label class="form-label" for="returnSupplierEmail">Supplier email address</label>
+              <input class="form-control" id="returnSupplierEmail" type="email" autocomplete="email" required>
+            </div>
+            <div class="col-12">
+              <label class="form-label" for="returnReason">Return reason</label>
+              <input class="form-control" id="returnReason" required maxlength="500">
+            </div>
+            <div class="col-12">
+              <label class="form-label" for="returnRemarks">Remarks</label>
+              <textarea class="form-control" id="returnRemarks" rows="3"></textarea>
+            </div>
+          </div>
+          <div class="alert alert-info mt-3 mb-0">This creates a supplier return request and sends an email. It does not modify the Paid invoice, original payment, or Test Bank balances.</div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+          <button type="button" class="btn btn-primary" id="submitPaymentReturnRequestBtn">
+            <i class="fa-solid fa-paper-plane me-1" aria-hidden="true"></i>
+            Send Request
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <script>
+  let pendingPaymentReturn = null;
+
   function toNum(value){
     const num = Number(value);
     return Number.isFinite(num) ? num : 0;
@@ -875,6 +927,14 @@
       .replace(/>/g, '&gt;')
       .replace(/"/g, '&quot;')
       .replace(/'/g, '&#39;');
+  }
+
+  function jsString(value){
+    return escapeHtml(value).replace(/'/g, "\\'");
+  }
+
+  function validEmail(value){
+    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(value || '').trim());
   }
 
   function statusClass(status, dueDate){
@@ -989,20 +1049,24 @@
     if (!items || !items.length) tbody.innerHTML = '<tr><td colspan="6" class="invoice-empty"><i class="fa-solid fa-receipt"></i>No invoices yet</td></tr>';
     items.forEach(i=>{
       // Examiner note:
-      // Approved supplier invoices show Pay Supplier actions. If paypalEmail is
-      // missing, the Pay Supplier button stays visible but disabled, and Finance
-      // can use Set PayPal Email before submitting a payout.
+      // Supplier invoices are explicit vendor bills. Customer invoices keep
+      // Stripe and NETS actions even after approval or when no supplier payout
+      // has been started.
       const supplierPayout = i.data && i.data.supplierPayout;
       const supplierPaypalEmail = i.paypalEmail || (i.data && i.data.paypalEmail) || '';
-      const isSupplierPayoutInvoice = i.status === 'Approved' || supplierPayout || supplierPaypalEmail;
-      const canSubmitSupplierPayout = i.status === 'Approved' && supplierPaypalEmail && !supplierPayout;
-      const needsSupplierPaypalEmail = i.status === 'Approved' && !supplierPaypalEmail && !supplierPayout;
+      const isSupplierPayoutInvoice = Boolean((i.data && i.data.isSupplierInvoice) || supplierPayout);
+      const canSubmitSupplierPayout = isSupplierPayoutInvoice && i.status === 'Approved' && supplierPaypalEmail && !supplierPayout;
+      const needsSupplierPaypalEmail = isSupplierPayoutInvoice && i.status === 'Approved' && !supplierPaypalEmail && !supplierPayout;
       const canCheckSupplierPayout = supplierPayout && ['Pending', 'Processing'].includes(supplierPayout.status || 'Pending');
+      const supplierPaymentReturn = i.data && i.data.supplierPaymentReturn;
+      const canRequestPaymentReturn = i.status === 'Paid' && supplierPayout && supplierPayout.status === 'Completed' && !(supplierPaymentReturn && ['ReturnRequested','Returned'].includes(supplierPaymentReturn.status));
+      const invoiceCurrency = i.currency || (i.data && i.data.currency) || 'SGD';
+      const returnModalArgs = `${i.id}, this, '${jsString(i.number || i.id)}', '${jsString(invoiceCurrency)}', '${jsString(parseFloat(i.amount || 0).toFixed(2))}', '${jsString(supplierPaypalEmail || (supplierPayout && supplierPayout.recipientPaypalEmail) || '')}'`;
       const tr = document.createElement('tr');
       tr.innerHTML = `
         <td class="mono">${escapeHtml(i.number || '')}</td>
         <td>${escapeHtml(i.customer_name || '')}</td>
-        <td class="text-end">${i.currency || (i.data && i.data.currency) || 'SGD'} ${parseFloat(i.amount||0).toFixed(2)}</td>
+        <td class="text-end">${invoiceCurrency} ${parseFloat(i.amount||0).toFixed(2)}</td>
         <td>${i.due_date ? new Date(i.due_date).toLocaleDateString() : ''}</td>
         <td><span class="invoice-badge ${statusClass(i.status, i.due_date)}">${statusLabel(i.status, i.due_date)}</span></td>
         <td class="text-end">
@@ -1017,6 +1081,9 @@
             ${needsSupplierPaypalEmail ? `<button class="invoice-action-btn invoice-action-btn-warning" type="button" disabled title="Add supplier PayPal email first"><i class="fa-brands fa-paypal"></i> Pay Supplier</button>` : ''}
             ${needsSupplierPaypalEmail ? `<button class="invoice-action-btn invoice-action-btn-info" onclick="setSupplierPaypalEmail(${i.id})"><i class="fa-solid fa-envelope"></i> Set PayPal Email</button>` : ''}
             ${canCheckSupplierPayout ? `<button class="invoice-action-btn invoice-action-btn-info" onclick="checkSupplierPayout(${i.id}, this)"><i class="fa-solid fa-rotate-right"></i> Check PayPal Status</button>` : ''}
+            ${canRequestPaymentReturn ? `<button class="invoice-action-btn invoice-action-btn-warning" onclick="openPaymentReturnModal(${returnModalArgs})"><i class="fa-solid fa-rotate-left"></i> Request Payment Return</button>` : ''}
+            ${supplierPaymentReturn && supplierPaymentReturn.status === 'ReturnRequested' ? `<button class="invoice-action-btn invoice-action-btn-info" type="button" disabled><i class="fa-solid fa-clock"></i> Return Requested</button>` : ''}
+            ${supplierPaymentReturn && supplierPaymentReturn.status === 'Returned' ? `<button class="invoice-action-btn invoice-action-btn-info" type="button" disabled><i class="fa-solid fa-circle-check"></i> Funds Returned</button>` : ''}
             <button class="invoice-action-btn invoice-action-btn-primary" onclick="sendInvoice(${i.id}, '${escapeHtml((i.data && i.data.email) || '').replace(/'/g, "\\'")}')"><i class="fa-solid fa-paper-plane"></i> Send</button>
             ${i.status !== 'Paid' ? `<button class="invoice-action-btn invoice-action-btn-danger" onclick="deleteInvoice(${i.id}, '${escapeHtml(i.number || '').replace(/'/g, "\\'")}')"><i class="fa-solid fa-trash"></i> Delete</button>` : ''}
           </div>
@@ -1057,6 +1124,7 @@
         tax_rate: item.tax_rate
       })),
       data: {
+        isSupplierInvoice: document.getElementById('isSupplierInvoice').checked,
         summary: {
           subtotal: Number(totals.subtotal.toFixed(2)),
           discount_total: Number(totals.discount.toFixed(2)),
@@ -1206,6 +1274,69 @@
       button.disabled = false;
     }
   }
+
+  async function openPaymentReturnModal(id, button, invoiceNumber, currency, amount, supplierEmail){
+    const confirmedEmail = prompt('Supplier email address', supplierEmail || '');
+    if (confirmedEmail === null) return;
+    if (!validEmail(confirmedEmail)) {
+      alert('Enter a valid supplier email address.');
+      return;
+    }
+    const reason = prompt('Reason for requesting payment return');
+    if (reason === null) return;
+    if (reason.trim().length < 3) {
+      alert('Enter a payment return reason of at least 3 characters.');
+      return;
+    }
+    const remarks = prompt('Optional remarks', '') || '';
+    await submitPaymentReturnPayload({
+      id,
+      button,
+      supplierEmail: confirmedEmail.trim(),
+      reason: reason.trim(),
+      remarks: remarks.trim()
+    });
+  }
+
+  async function submitPaymentReturnPayload({ id, button, supplierEmail, reason, remarks }){
+    button.disabled = true;
+    try {
+      const res = await fetch(`/payment/paypal/payouts/${id}/return-request`, {
+        method: 'POST',
+        headers: { authorization:'Bearer '+token, 'content-type':'application/json' },
+        body: JSON.stringify({ supplierEmail, reason, remarks })
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Unable to request payment return');
+      alert(data.warning || data.message || 'Payment return requested.');
+      load();
+    } catch (err) {
+      alert(err.message);
+      button.disabled = false;
+    }
+  }
+
+  async function submitPaymentReturnRequest(){
+    if (!pendingPaymentReturn) return;
+    const { id, button } = pendingPaymentReturn;
+    const supplierEmail = document.getElementById('returnSupplierEmail').value.trim();
+    const reason = document.getElementById('returnReason').value.trim();
+    const remarks = document.getElementById('returnRemarks').value.trim();
+    if (!validEmail(supplierEmail)) {
+      alert('Enter a valid supplier email address.');
+      return;
+    }
+    if (reason.length < 3) {
+      alert('Enter a payment return reason of at least 3 characters.');
+      return;
+    }
+    const modalElement = document.getElementById('paymentReturnRequestModal');
+    if (window.bootstrap && bootstrap.Modal) bootstrap.Modal.getOrCreateInstance(modalElement).hide();
+    pendingPaymentReturn = null;
+    await submitPaymentReturnPayload({ id, button, supplierEmail, reason, remarks });
+  }
+
+  document.getElementById('submitPaymentReturnRequestBtn').addEventListener('click', submitPaymentReturnRequest);
 
   // Added: starts Stripe card checkout directly from an invoice row.
   async function payByCard(id){

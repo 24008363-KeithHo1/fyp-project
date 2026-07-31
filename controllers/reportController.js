@@ -113,13 +113,13 @@ exports.summary = async (req, res) => {
     const now = new Date();
     const twoDaysFromNow = new Date(now.getTime() + (2 * 24 * 60 * 60 * 1000));
     let payrollDueSoonCount = 0;
-
     payrolls.forEach((payroll) => {
       const gross = money(payroll.gross);
       const net = money(payroll.net);
       payrollGross += gross;
       payrollNet += net;
-      if (payroll.payment_status === 'Paid') {
+      const status = payroll.payment_status || 'Pending';
+      if (status === 'Paid') {
         totalPayrollPaid += net;
         employeesPaid += 1;
       } else {

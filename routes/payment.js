@@ -14,12 +14,16 @@ router.post('/paypal/orders/:orderId/capture', paymentController.capturePayPalOr
 // the Business PayPal sandbox account to a supplier Personal sandbox account.
 router.post('/paypal/payouts/:id', auth, checkRole(['Admin', 'Finance']), paymentController.createSupplierPayout);
 router.post('/paypal/payouts/:id/status', auth, checkRole(['Admin', 'Finance']), paymentController.checkSupplierPayoutStatus);
+router.post('/paypal/payouts/:id/return-request', auth, checkRole(['Admin', 'Finance']), paymentController.requestSupplierPaymentReturn);
 router.get('/nets/:id/status/:txnRetrievalRef', paymentController.netsPaymentStatus);
 router.get('/nets/:id/page', paymentController.netsQrPage);
 router.get('/nets/:id', paymentController.netsQr);
 router.post('/nets/:id/complete', paymentController.completeNETSPayment);
 router.post('/nets/:id/confirm', auth, checkRole(['Admin', 'Finance']), paymentController.confirmNETSPayment);
 router.get('/history', auth, checkRole(['Admin', 'Finance']), paymentController.history);
+router.post('/returns/payment/:id/request', auth, checkRole(['Admin', 'Finance']), paymentController.requestPaymentReturnByPayment);
+router.post('/returns/:id/resend-email', auth, checkRole(['Admin', 'Finance']), paymentController.resendSupplierPaymentReturnEmail);
+router.post('/returns/:id/confirm', auth, checkRole(['Admin', 'Finance']), paymentController.confirmSupplierPaymentReturn);
 router.delete('/history/:id', auth, checkRole(['Admin', 'Finance']), paymentController.removeHistoryItem);
 router.post('/:id/refund', auth, checkRole(['Admin', 'Finance']), paymentController.refundPayment);
 

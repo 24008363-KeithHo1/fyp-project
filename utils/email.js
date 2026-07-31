@@ -24,6 +24,7 @@ async function sendEmail(to, subject, html, options = {}) {
       from: defaultFromEmail || smtpUser,
       to,
       subject,
+      text: options.text,
       html,
       attachments: Array.isArray(options.attachments) ? options.attachments : undefined
     });

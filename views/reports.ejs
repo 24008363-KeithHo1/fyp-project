@@ -1,121 +1,377 @@
 <%- include('partials/header', { title: 'Reports' }) %>
 <%- include('partials/navbar') %>
 
+<style>
+  :root{
+    --rp-ink:#102033;
+    --rp-muted:#64748b;
+    --rp-line:rgba(148,163,184,.2);
+    --rp-green:#0b8f3e;
+    --rp-teal:#0f766e;
+    --rp-blue:#2563eb;
+    --rp-cyan:#0891b2;
+    --rp-amber:#b45309;
+    --rp-red:#b91c1c;
+    --rp-surface:#fff;
+    --rp-soft:#f8fafc;
+    --rp-shadow:0 16px 34px rgba(15,23,42,.08);
+  }
+  .reports-page{max-width:1220px;margin:0 auto;color:var(--rp-ink)}
+  .reports-hero{display:flex;align-items:flex-end;justify-content:space-between;gap:1rem;flex-wrap:wrap;margin-bottom:1rem;padding:1.25rem;border:1px solid rgba(11,94,58,.16);border-radius:8px;background:linear-gradient(135deg,#0f2942,#0f766e 54%,#15803d);box-shadow:0 18px 38px rgba(15,23,42,.14);color:#fff}
+  .reports-eyebrow{display:inline-flex;align-items:center;gap:.45rem;margin:0 0 .45rem;padding:.28rem .6rem;border:1px solid rgba(255,255,255,.28);border-radius:999px;background:rgba(255,255,255,.12);font-size:.72rem;font-weight:800;text-transform:uppercase}
+  .reports-hero h1{margin:0;font-size:1.75rem;font-weight:800}
+  .reports-hero p{margin:.32rem 0 0;max-width:680px;color:rgba(255,255,255,.82)}
+  .reports-actions{display:flex;align-items:center;gap:.55rem;flex-wrap:wrap}
+  .reports-last-updated{display:inline-flex;align-items:center;gap:.4rem;min-height:36px;padding:.43rem .65rem;border-radius:999px;background:rgba(255,255,255,.13);font-size:.78rem;font-weight:700;color:rgba(255,255,255,.9)}
+  .reports-refresh{display:inline-flex;align-items:center;gap:.45rem;min-height:36px;border:0;border-radius:8px;background:#fff;color:#0b5e3a;font-size:.82rem;font-weight:800;box-shadow:0 8px 18px rgba(15,23,42,.16)}
+  .reports-refresh:hover,.reports-refresh:focus{background:#ecfdf5;color:#064e3b}
+  .reports-kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:.85rem;margin-bottom:1rem}
+  .reports-kpi{position:relative;overflow:hidden;min-height:118px;padding:1rem;border:1px solid var(--rp-line);border-radius:8px;background:var(--rp-surface);box-shadow:var(--rp-shadow)}
+  .reports-kpi::before{position:absolute;inset:0 0 auto;height:4px;background:var(--accent);content:''}
+  .reports-kpi-head{display:flex;align-items:center;justify-content:space-between;gap:.75rem}
+  .reports-kpi-icon{display:grid;place-items:center;width:36px;height:36px;border-radius:8px;background:var(--tint);color:var(--accent)}
+  .reports-kpi span{display:block;color:var(--rp-muted);font-size:.74rem;font-weight:800;text-transform:uppercase}
+  .reports-kpi strong{display:block;margin-top:.55rem;color:var(--rp-ink);font-size:1.35rem;line-height:1.15}
+  .reports-kpi small{display:block;margin-top:.42rem;color:var(--rp-muted);font-size:.75rem}
+  .reports-chart-panel{margin-bottom:1rem}
+  .reports-chart-toolbar{display:flex;align-items:flex-end;justify-content:space-between;gap:1rem;flex-wrap:wrap;padding:1rem;border-bottom:1px solid rgba(148,163,184,.14);background:#f8fafc}
+  .reports-chart-control{display:grid;gap:.35rem;min-width:min(100%,300px)}
+  .reports-chart-control label{color:#475569;font-size:.72rem;font-weight:800;text-transform:uppercase}
+  .reports-chart-control select{min-height:40px;border:1px solid rgba(148,163,184,.32);border-radius:8px;color:var(--rp-ink);font-size:.86rem;font-weight:700}
+  .reports-chart-summary{display:flex;align-items:center;gap:.55rem;flex-wrap:wrap}
+  .reports-chart-summary span{display:inline-flex;align-items:center;gap:.35rem;padding:.34rem .56rem;border-radius:999px;background:#fff;color:#475569;font-size:.76rem;font-weight:800;box-shadow:0 6px 14px rgba(15,23,42,.06)}
+  .reports-chart-panel .reports-panel-head{border-bottom:0}
+  .reports-chart-wrap.large{height:360px;padding:1rem}
+  .reports-panel{overflow:hidden;border:1px solid var(--rp-line);border-radius:8px;background:var(--rp-surface);box-shadow:var(--rp-shadow)}
+  .reports-panel-head{display:flex;align-items:center;justify-content:space-between;gap:.75rem;padding:1rem 1rem .8rem;border-bottom:1px solid rgba(148,163,184,.14)}
+  .reports-panel-title{display:flex;align-items:center;gap:.55rem;min-width:0}
+  .reports-panel-title i{display:grid;place-items:center;width:30px;height:30px;border-radius:8px;background:#ecfdf5;color:var(--rp-green);font-size:.82rem}
+  .reports-panel h2{margin:0;color:var(--rp-ink);font-size:.95rem;font-weight:800}
+  .reports-panel p{margin:.18rem 0 0;color:var(--rp-muted);font-size:.78rem}
+  .reports-panel-total{color:var(--rp-green);font-size:.83rem;font-weight:800;white-space:nowrap}
+  .reports-chart-wrap{height:270px;padding:.85rem}
+  .reports-chart-wrap canvas{width:100%;height:100%;display:block}
+  .reports-legend{display:flex;gap:.45rem;flex-wrap:wrap;padding:0 .85rem .85rem}
+  .reports-legend span{display:inline-flex;align-items:center;gap:.32rem;padding:.22rem .48rem;border-radius:999px;background:#f1f5f9;color:#475569;font-size:.72rem;font-weight:700}
+  .reports-legend i{width:.5rem;height:.5rem;border-radius:999px;background:var(--dot)}
+  .reports-validation{margin-top:1rem}
+  .reports-validation .reports-panel-head{align-items:flex-start}
+  .reports-badge{display:inline-flex;align-items:center;gap:.35rem;padding:.34rem .58rem;border-radius:999px;background:#f1f5f9;color:#475569;font-size:.75rem;font-weight:800}
+  .reports-badge.clean{background:#dcfce7;color:#166534}
+  .reports-badge.warn{background:#fff7ed;color:#c2410c}
+  .reports-table-wrap{overflow-x:auto}
+  .reports-table{width:100%;min-width:840px;margin:0;border-collapse:collapse}
+  .reports-table th,.reports-table td{padding:.78rem .9rem;border-bottom:1px solid rgba(148,163,184,.15);vertical-align:top}
+  .reports-table th{background:#f8fafc;color:#475569;font-size:.7rem;font-weight:800;text-transform:uppercase}
+  .reports-table td{color:#334155;font-size:.84rem}
+  .reports-table tbody tr:hover td{background:#f8fafc}
+  .reports-table tbody tr:last-child td{border-bottom:0}
+  .reports-type{display:inline-flex;align-items:center;gap:.35rem;padding:.28rem .5rem;border-radius:999px;background:#eff6ff;color:#1d4ed8;font-size:.74rem;font-weight:800}
+  .reports-type.payroll{background:#ecfdf5;color:#047857}
+  .reports-ref{font-family:Consolas,'Courier New',monospace;color:#0f172a;font-weight:700}
+  .reports-field{color:#7c2d12;font-weight:700}
+  .reports-empty,.reports-error{padding:2rem;text-align:center;color:var(--rp-muted)}
+  .reports-empty i,.reports-error i{display:block;margin-bottom:.55rem;font-size:1.55rem}
+  .reports-empty i{color:var(--rp-green)}
+  .reports-error{color:var(--rp-red)}
+  @media(max-width:1050px){.reports-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}}
+  @media(max-width:640px){.reports-hero{align-items:flex-start;padding:1rem}.reports-hero h1{font-size:1.45rem}.reports-actions{width:100%}.reports-refresh{flex:1;justify-content:center}.reports-kpis{grid-template-columns:1fr}.reports-chart-wrap{height:230px}.reports-chart-wrap.large{height:300px}.reports-panel-head{align-items:flex-start;flex-direction:column}.reports-panel-total{white-space:normal}.reports-chart-toolbar{align-items:stretch}.reports-chart-control{width:100%}}
+</style>
+
 <script>
 const token = localStorage.getItem('token');
 if (!token) location = '/login';
 </script>
 
-<div class="d-flex justify-content-between align-items-start flex-wrap gap-2 mb-4">
-  <div>
-    <h2>Reports</h2>
-    <p class="text-muted mb-0">Invoicing, payroll, revenue, and validation summaries.</p>
-  </div>
-  <button class="btn btn-outline-primary" type="button" onclick="loadReports()">Refresh</button>
-</div>
-
-<div class="report-kpis mb-4">
-  <div class="report-kpi">
-    <span>Total invoiced</span>
-    <strong id="totalInvoiced">SGD 0.00</strong>
-  </div>
-  <div class="report-kpi">
-    <span>Paid revenue</span>
-    <strong id="paidRevenue">SGD 0.00</strong>
-  </div>
-  <div class="report-kpi">
-    <span>Outstanding</span>
-    <strong id="outstandingRevenue">SGD 0.00</strong>
-  </div>
-  <div class="report-kpi">
-    <span>Payroll net</span>
-    <strong id="payrollNet">SGD 0.00</strong>
-  </div>
-</div>
-
-<div class="row g-3 mb-4">
-  <div class="col-lg-4">
-    <div class="report-panel">
-      <h5>Invoice Status</h5>
-      <canvas id="invoiceStatusChart" width="320" height="220"></canvas>
+<section class="reports-page">
+  <header class="reports-hero">
+    <div>
+      <p class="reports-eyebrow"><i class="fa-solid fa-chart-column"></i> Finance intelligence</p>
+      <h1>Reports</h1>
+      <p>Monitor invoice performance, revenue collection, payroll exposure, and validation issues from one reporting workspace.</p>
     </div>
-  </div>
-  <div class="col-lg-4">
-    <div class="report-panel">
-      <h5>Paid Revenue</h5>
-      <canvas id="revenueChart" width="320" height="220"></canvas>
+    <div class="reports-actions">
+      <span class="reports-last-updated" id="lastUpdated"><i class="fa-regular fa-clock"></i> Not loaded</span>
+      <button class="btn reports-refresh" type="button" id="refreshReports"><i class="fa-solid fa-rotate-right"></i> Refresh</button>
     </div>
-  </div>
-  <div class="col-lg-4">
-    <div class="report-panel">
-      <h5>Payroll by Period</h5>
-      <canvas id="payrollChart" width="320" height="220"></canvas>
-    </div>
-  </div>
-</div>
+  </header>
 
-<div class="report-panel">
-  <div class="d-flex justify-content-between align-items-center mb-2">
-    <h5 class="mb-0">Validation and Error Reporting</h5>
-    <span class="badge text-bg-secondary" id="issueCount">0 issues</span>
+  <div class="reports-kpis">
+    <article class="reports-kpi" style="--accent:#0f766e;--tint:#ecfdf5">
+      <div class="reports-kpi-head"><span>Total invoiced</span><div class="reports-kpi-icon"><i class="fa-solid fa-file-invoice-dollar"></i></div></div>
+      <strong id="totalInvoiced">SGD 0.00</strong>
+      <small id="invoiceCount">0 invoices tracked</small>
+    </article>
+    <article class="reports-kpi" style="--accent:#2563eb;--tint:#eff6ff">
+      <div class="reports-kpi-head"><span>Paid revenue</span><div class="reports-kpi-icon"><i class="fa-solid fa-circle-check"></i></div></div>
+      <strong id="paidRevenue">SGD 0.00</strong>
+      <small id="paidInvoiceCount">0 paid invoices</small>
+    </article>
+    <article class="reports-kpi" style="--accent:#c2410c;--tint:#fff7ed">
+      <div class="reports-kpi-head"><span>Outstanding</span><div class="reports-kpi-icon"><i class="fa-solid fa-hourglass-half"></i></div></div>
+      <strong id="outstandingRevenue">SGD 0.00</strong>
+      <small id="pendingPaymentCount">0 pending invoices</small>
+    </article>
+    <article class="reports-kpi" style="--accent:#0891b2;--tint:#ecfeff">
+      <div class="reports-kpi-head"><span>Payroll net</span><div class="reports-kpi-icon"><i class="fa-solid fa-money-check-dollar"></i></div></div>
+      <strong id="payrollNet">SGD 0.00</strong>
+      <small id="payrollCount">0 payroll records</small>
+    </article>
   </div>
-  <div class="table-responsive">
-    <table class="table table-sm align-middle">
-      <thead class="table-light">
-        <tr>
-          <th>Area</th>
-          <th>Reference</th>
-          <th>Field</th>
-          <th>Issue</th>
-        </tr>
-      </thead>
-      <tbody id="issuesBody">
-        <tr><td colspan="4" class="text-muted text-center">Loading...</td></tr>
-      </tbody>
-    </table>
-  </div>
-</div>
+
+  <section class="reports-panel reports-chart-panel">
+    <div class="reports-chart-toolbar">
+      <div class="reports-chart-control">
+        <label for="reportChartSelect">Chart view</label>
+        <select class="form-select" id="reportChartSelect">
+          <option value="revenueOverview">Revenue overview</option>
+          <option value="paymentMethodRevenue">Revenue by payment method</option>
+          <option value="invoiceStatus">Invoice status</option>
+          <option value="monthlyRevenue">Paid revenue by month</option>
+          <option value="payrollByPeriod">Payroll net by period</option>
+        </select>
+      </div>
+      <div class="reports-chart-summary" id="selectedChartSummary">
+        <span><i class="fa-solid fa-spinner fa-spin"></i> Loading chart</span>
+      </div>
+    </div>
+    <div class="reports-panel-head">
+      <div class="reports-panel-title"><i class="fa-solid fa-chart-simple" id="selectedChartIcon"></i><div><h2 id="selectedChartTitle">Revenue overview</h2><p id="selectedChartDescription">Paid, outstanding, overdue, and refunded value at a glance.</p></div></div>
+      <span class="reports-panel-total" id="selectedChartTotal">SGD 0.00</span>
+    </div>
+    <div class="reports-chart-wrap large"><canvas id="selectedReportChart" width="880" height="360"></canvas></div>
+    <div class="reports-legend" id="selectedChartLegend"></div>
+  </section>
+
+  <section class="reports-panel reports-validation">
+    <div class="reports-panel-head">
+      <div class="reports-panel-title"><i class="fa-solid fa-triangle-exclamation"></i><div><h2>Validation and Error Reporting</h2><p>Records that need attention before reporting can be trusted.</p></div></div>
+      <span class="reports-badge" id="issueCount"><i class="fa-solid fa-spinner fa-spin"></i> Loading</span>
+    </div>
+    <div class="reports-table-wrap">
+      <table class="reports-table">
+        <thead>
+          <tr>
+            <th>Area</th>
+            <th>Reference</th>
+            <th>Field</th>
+            <th>Issue</th>
+          </tr>
+        </thead>
+        <tbody id="issuesBody">
+          <tr><td colspan="4"><div class="reports-empty"><i class="fa-solid fa-spinner fa-spin"></i>Loading report data...</div></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+</section>
 
 <script>
 function formatMoney(value){
   return 'SGD ' + Number(value || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
-function drawBarChart(canvasId, labels, values, color){
+function formatCount(value, singular, plural){
+  const count = Number(value || 0);
+  return `${count.toLocaleString()} ${count === 1 ? singular : (plural || `${singular}s`)}`;
+}
+
+function escapeReportHtml(value){
+  return String(value ?? '').replace(/[&<>"']/g, char => ({
+    '&':'&amp;',
+    '<':'&lt;',
+    '>':'&gt;',
+    '"':'&quot;',
+    "'":'&#39;'
+  }[char]));
+}
+
+function chartColor(index){
+  return ['#0f766e','#2563eb','#0891b2','#b45309','#7c3aed','#dc2626','#4f46e5','#15803d'][index % 8];
+}
+
+function setLegend(elementId, labels){
+  const legend = document.getElementById(elementId);
+  legend.innerHTML = labels.length
+    ? labels.slice(0, 8).map((label, index) => `<span><i style="--dot:${chartColor(index)}"></i>${escapeReportHtml(label)}</span>`).join('')
+    : '<span><i style="--dot:#94a3b8"></i>No data</span>';
+}
+
+let reportsSummary = null;
+
+function drawBarChart(canvasId, labels, values, options = {}){
   const canvas = document.getElementById(canvasId);
   const ctx = canvas.getContext('2d');
-  const width = canvas.width;
-  const height = canvas.height;
+  const ratio = window.devicePixelRatio || 1;
+  const displayWidth = canvas.clientWidth || canvas.width;
+  const displayHeight = canvas.clientHeight || canvas.height;
+  canvas.width = Math.floor(displayWidth * ratio);
+  canvas.height = Math.floor(displayHeight * ratio);
+  ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
+
+  const width = displayWidth;
+  const height = displayHeight;
   ctx.clearRect(0, 0, width, height);
   ctx.font = '12px Segoe UI, Arial';
-  ctx.fillStyle = '#667085';
 
   if (!labels.length) {
-    ctx.fillText('No data available', 18, 32);
+    ctx.fillStyle = '#64748b';
+    ctx.fillText('No data available', 18, 34);
     return;
   }
 
-  const max = Math.max(...values, 1);
-  const chartTop = 18;
-  const chartHeight = 145;
-  const gap = 10;
-  const barWidth = Math.max(20, (width - 36 - gap * (labels.length - 1)) / labels.length);
+  const max = Math.max(...values.map(Number), 1);
+  const left = 36;
+  const right = 18;
+  const top = 20;
+  const bottom = 46;
+  const chartHeight = height - top - bottom;
+  const chartWidth = width - left - right;
+  const gap = Math.min(14, Math.max(7, chartWidth / labels.length * .15));
+  const barWidth = Math.max(18, (chartWidth - gap * (labels.length - 1)) / labels.length);
+
+  ctx.strokeStyle = '#e2e8f0';
+  ctx.lineWidth = 1;
+  for (let i = 0; i <= 3; i += 1) {
+    const y = top + (chartHeight / 3) * i;
+    ctx.beginPath();
+    ctx.moveTo(left, y);
+    ctx.lineTo(width - right, y);
+    ctx.stroke();
+  }
 
   labels.forEach((label, index) => {
-    const x = 18 + index * (barWidth + gap);
-    const barHeight = Math.round((values[index] / max) * chartHeight);
-    const y = chartTop + chartHeight - barHeight;
-    ctx.fillStyle = color;
-    ctx.fillRect(x, y, barWidth, barHeight);
-    ctx.fillStyle = '#344054';
-    ctx.fillText(String(values[index].toFixed ? values[index].toFixed(0) : values[index]), x, y - 5);
-    ctx.fillStyle = '#667085';
+    const rawValue = Number(values[index] || 0);
+    const x = left + index * (barWidth + gap);
+    const barHeight = Math.round((rawValue / max) * chartHeight);
+    const y = top + chartHeight - barHeight;
+    ctx.fillStyle = chartColor(index);
+    ctx.beginPath();
+    ctx.roundRect(x, y, barWidth, Math.max(barHeight, 2), 5);
+    ctx.fill();
+
+    ctx.fillStyle = '#334155';
+    ctx.font = '700 11px Segoe UI, Arial';
+    const valueLabel = options.money ? formatMoney(rawValue).replace('SGD ', '') : rawValue.toFixed(0);
+    ctx.fillText(valueLabel, x, Math.max(12, y - 6));
+
     ctx.save();
     ctx.translate(x, height - 18);
     ctx.rotate(-0.35);
-    ctx.fillText(label.slice(0, 12), 0, 0);
+    ctx.fillStyle = '#64748b';
+    ctx.font = '11px Segoe UI, Arial';
+    ctx.fillText(String(label).slice(0, 13), 0, 0);
     ctx.restore();
   });
+}
+
+function sumValues(values){
+  return values.reduce((sum, value) => sum + Number(value || 0), 0);
+}
+
+function selectedChartConfig(summary){
+  const charts = summary.charts || {};
+  const choice = document.getElementById('reportChartSelect').value;
+  const configs = {
+    revenueOverview: () => {
+      const data = {
+        Paid: summary.totals.paidRevenue,
+        Outstanding: summary.totals.outstandingRevenue
+      };
+      const labels = Object.keys(data);
+      const values = Object.values(data).map(Number);
+      return {
+        title:'Revenue overview',
+        description:'Paid, outstanding, overdue, and refunded value at a glance.',
+        icon:'fa-chart-pie',
+        labels,
+        values,
+        money:true,
+        total:formatMoney(sumValues(values)),
+        summary:[
+          `<i class="fa-solid fa-circle-check"></i> ${formatMoney(summary.totals.paidRevenue)} paid`,
+          `<i class="fa-solid fa-hourglass-half"></i> ${formatMoney(summary.totals.outstandingRevenue)} outstanding`,
+          `<i class="fa-solid fa-triangle-exclamation"></i> ${formatMoney(summary.totals.overdueRevenue)} overdue`
+        ]
+      };
+    },
+    paymentMethodRevenue: () => {
+      const data = { ...(charts.paymentMethodRevenue || {}) };
+      delete data.BankTransfer;
+      const labels = Object.keys(data);
+      const values = Object.values(data).map(Number);
+      return {
+        title:'Revenue by payment method',
+        description:'Paid revenue split by Stripe, PayPal, NETS, and bank transfer.',
+        icon:'fa-credit-card',
+        labels,
+        values,
+        money:true,
+        total:formatMoney(sumValues(values)),
+        summary:[
+          `<i class="fa-solid fa-circle-check"></i> ${formatMoney(sumValues(values))} collected`,
+          `<i class="fa-solid fa-receipt"></i> ${formatCount(summary.totals.refundedPaymentCount, 'refund', 'refunds')}`
+        ]
+      };
+    },
+    invoiceStatus: () => {
+      const data = charts.invoiceStatus || {};
+      const labels = Object.keys(data);
+      const values = Object.values(data).map(Number);
+      return {
+        title:'Invoice status',
+        description:'Current invoice distribution across workflow statuses.',
+        icon:'fa-layer-group',
+        labels,
+        values,
+        total:formatCount(sumValues(values), 'record'),
+        summary:[`<i class="fa-solid fa-file-invoice"></i> ${formatCount(summary.totals.invoiceCount, 'invoice', 'invoices')}`]
+      };
+    },
+    monthlyRevenue: () => {
+      const data = charts.monthlyRevenue || {};
+      const labels = Object.keys(data);
+      const values = Object.values(data).map(Number);
+      return {
+        title:'Paid revenue by month',
+        description:'Collected invoice revenue grouped by payment month.',
+        icon:'fa-chart-line',
+        labels,
+        values,
+        money:true,
+        total:formatMoney(sumValues(values)),
+        summary:[`<i class="fa-solid fa-circle-check"></i> ${formatMoney(summary.totals.paidRevenue)} paid revenue`]
+      };
+    },
+    payrollByPeriod: () => {
+      const data = charts.payrollByPeriod || {};
+      const labels = Object.keys(data);
+      const values = Object.values(data).map(Number);
+      return {
+        title:'Payroll net by period',
+        description:'Net payroll commitment grouped by payroll period.',
+        icon:'fa-calendar-days',
+        labels,
+        values,
+        money:true,
+        total:formatMoney(sumValues(values)),
+        summary:[`<i class="fa-solid fa-users"></i> ${formatCount(summary.totals.payrollCount, 'payroll record', 'payroll records')}`]
+      };
+    }
+  };
+  return (configs[choice] || configs.revenueOverview)();
+}
+
+function renderSelectedChart(){
+  if (!reportsSummary) return;
+  const config = selectedChartConfig(reportsSummary);
+  document.getElementById('selectedChartIcon').className = `fa-solid ${config.icon}`;
+  document.getElementById('selectedChartTitle').textContent = config.title;
+  document.getElementById('selectedChartDescription').textContent = config.description;
+  document.getElementById('selectedChartTotal').textContent = config.total;
+  document.getElementById('selectedChartSummary').innerHTML = config.summary.map(item => `<span>${item}</span>`).join('');
+  drawBarChart('selectedReportChart', config.labels, config.values, { money:config.money });
+  setLegend('selectedChartLegend', config.labels);
 }
 
 async function fetchJson(url){
@@ -124,48 +380,67 @@ async function fetchJson(url){
   return res.json();
 }
 
-async function loadReports(){
-  const [summary, validation] = await Promise.all([
-    fetchJson('/api/reports/summary'),
-    fetchJson('/api/reports/validation')
-  ]);
-
-  document.getElementById('totalInvoiced').textContent = formatMoney(summary.totals.totalInvoiced);
-  document.getElementById('paidRevenue').textContent = formatMoney(summary.totals.paidRevenue);
-  document.getElementById('outstandingRevenue').textContent = formatMoney(summary.totals.outstandingRevenue);
-  document.getElementById('payrollNet').textContent = formatMoney(summary.totals.payrollNet);
-
-  const invoiceStatus = summary.charts.invoiceStatus || {};
-  drawBarChart('invoiceStatusChart', Object.keys(invoiceStatus), Object.values(invoiceStatus).map(Number), '#0b5e3a');
-
-  const monthlyRevenue = summary.charts.monthlyRevenue || {};
-  drawBarChart('revenueChart', Object.keys(monthlyRevenue), Object.values(monthlyRevenue).map(Number), '#0b8f3e');
-
-  const payrollByPeriod = summary.charts.payrollByPeriod || {};
-  drawBarChart('payrollChart', Object.keys(payrollByPeriod), Object.values(payrollByPeriod).map(Number), '#8a5a12');
-
-  document.getElementById('issueCount').textContent = `${validation.issueCount} issue${validation.issueCount === 1 ? '' : 's'}`;
-  const tbody = document.getElementById('issuesBody');
-  tbody.innerHTML = '';
-  if (!validation.issues.length) {
-    tbody.innerHTML = '<tr><td colspan="4" class="text-muted text-center">No validation issues found</td></tr>';
-    return;
-  }
-  validation.issues.forEach(issue => {
-    const tr = document.createElement('tr');
-    tr.innerHTML = `
-      <td>${issue.type}</td>
-      <td>${issue.reference}</td>
-      <td>${issue.field}</td>
-      <td>${issue.message}</td>
-    `;
-    tbody.appendChild(tr);
-  });
+function setLoading(isLoading){
+  const button = document.getElementById('refreshReports');
+  button.disabled = isLoading;
+  button.innerHTML = isLoading
+    ? '<i class="fa-solid fa-spinner fa-spin"></i> Loading'
+    : '<i class="fa-solid fa-rotate-right"></i> Refresh';
 }
 
-loadReports().catch(err => {
-  document.getElementById('issuesBody').innerHTML = `<tr><td colspan="4" class="text-danger">${err.message}</td></tr>`;
+async function loadReports(){
+  setLoading(true);
+  try {
+    const [summary, validation] = await Promise.all([
+      fetchJson('/api/reports/summary'),
+      fetchJson('/api/reports/validation')
+    ]);
+
+    document.getElementById('totalInvoiced').textContent = formatMoney(summary.totals.totalInvoiced);
+    document.getElementById('paidRevenue').textContent = formatMoney(summary.totals.paidRevenue);
+    document.getElementById('outstandingRevenue').textContent = formatMoney(summary.totals.outstandingRevenue);
+    document.getElementById('payrollNet').textContent = formatMoney(summary.totals.payrollNet);
+    document.getElementById('invoiceCount').textContent = formatCount(summary.totals.invoiceCount, 'invoice tracked', 'invoices tracked');
+    document.getElementById('paidInvoiceCount').textContent = formatCount(summary.totals.paidInvoiceCount, 'paid invoice', 'paid invoices');
+    document.getElementById('pendingPaymentCount').textContent = formatCount(summary.totals.pendingPaymentCount, 'pending invoice', 'pending invoices');
+    document.getElementById('payrollCount').textContent = formatCount(summary.totals.payrollCount, 'payroll record', 'payroll records');
+
+    reportsSummary = summary;
+    renderSelectedChart();
+
+    const issueBadge = document.getElementById('issueCount');
+    issueBadge.className = `reports-badge ${validation.issueCount ? 'warn' : 'clean'}`;
+    issueBadge.innerHTML = `<i class="fa-solid ${validation.issueCount ? 'fa-triangle-exclamation' : 'fa-circle-check'}"></i> ${validation.issueCount} issue${validation.issueCount === 1 ? '' : 's'}`;
+
+    const tbody = document.getElementById('issuesBody');
+    if (!validation.issues.length) {
+      tbody.innerHTML = '<tr><td colspan="4"><div class="reports-empty"><i class="fa-solid fa-circle-check"></i>No validation issues found</div></td></tr>';
+    } else {
+      tbody.innerHTML = validation.issues.map(issue => `
+        <tr>
+          <td><span class="reports-type ${String(issue.type).toLowerCase() === 'payroll' ? 'payroll' : ''}"><i class="fa-solid ${String(issue.type).toLowerCase() === 'payroll' ? 'fa-money-check-dollar' : 'fa-file-invoice'}"></i>${escapeReportHtml(issue.type)}</span></td>
+          <td class="reports-ref">${escapeReportHtml(issue.reference)}</td>
+          <td class="reports-field">${escapeReportHtml(issue.field)}</td>
+          <td>${escapeReportHtml(issue.message)}</td>
+        </tr>
+      `).join('');
+    }
+
+    document.getElementById('lastUpdated').innerHTML = `<i class="fa-regular fa-clock"></i> Updated ${new Date().toLocaleTimeString([], { hour:'2-digit', minute:'2-digit' })}`;
+  } catch (err) {
+    document.getElementById('issuesBody').innerHTML = `<tr><td colspan="4"><div class="reports-error"><i class="fa-solid fa-circle-exclamation"></i>${escapeReportHtml(err.message)}</div></td></tr>`;
+  } finally {
+    setLoading(false);
+  }
+}
+
+document.getElementById('refreshReports').addEventListener('click', loadReports);
+document.getElementById('reportChartSelect').addEventListener('change', renderSelectedChart);
+window.addEventListener('resize', () => {
+  clearTimeout(window.reportsResizeTimer);
+  window.reportsResizeTimer = setTimeout(renderSelectedChart, 160);
 });
+loadReports();
 </script>
 
 <%- include('partials/footer') %>

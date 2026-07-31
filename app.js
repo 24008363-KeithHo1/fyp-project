@@ -14,6 +14,7 @@ require('./models/SubscriptionAutomationRun');
 require('./models/SubscriptionEmailDelivery');
 require('./models/SubscriptionDemoSchedule');
 require('./models/SubscriptionPayment');
+require('./models/PaymentReturn');
 const { startSubscriptionInvoiceScheduler } = require('./services/subscriptionInvoiceAutomation');
 const { startSubscriptionDemoScheduler } = require('./services/subscriptionInvoiceDemoScheduler');
 const { startSubscriptionOverdueScheduler } = require('./services/subscriptionInvoiceOverdue');

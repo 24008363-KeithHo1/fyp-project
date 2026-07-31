@@ -393,6 +393,37 @@ CREATE TABLE IF NOT EXISTS Payments (
   CONSTRAINT fk_payment_recorded_by FOREIGN KEY (recordedBy) REFERENCES Users(id) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
+CREATE TABLE IF NOT EXISTS PaymentReturns (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  originalPaymentId INT NOT NULL,
+  invoiceId INT NOT NULL,
+  reason TEXT NOT NULL,
+  remarks TEXT,
+  amount DECIMAL(10,2) NOT NULL,
+  currency VARCHAR(10) DEFAULT 'SGD',
+  supplierEmail VARCHAR(255) NOT NULL,
+  requestedBy INT,
+  requestedAt DATETIME NOT NULL,
+  status ENUM('ReturnRequested','Returned') NOT NULL DEFAULT 'ReturnRequested',
+  confirmedBy INT,
+  confirmedAt DATETIME,
+  returnTransactionId INT,
+  notificationEmail VARCHAR(255),
+  notificationStatus ENUM('Pending','Sent','Failed') NOT NULL DEFAULT 'Pending',
+  notificationSentAt DATETIME,
+  notificationError TEXT,
+  data JSON,
+  createdAt DATETIME DEFAULT CURRENT_TIMESTAMP,
+  updatedAt DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  UNIQUE KEY uniq_payment_return_original_payment (originalPaymentId),
+  INDEX idx_payment_returns_invoice_status (invoiceId, status),
+  CONSTRAINT fk_payment_return_original_payment FOREIGN KEY (originalPaymentId) REFERENCES Payments(id),
+  CONSTRAINT fk_payment_return_invoice FOREIGN KEY (invoiceId) REFERENCES Invoices(id),
+  CONSTRAINT fk_payment_return_requested_by FOREIGN KEY (requestedBy) REFERENCES Users(id) ON DELETE SET NULL,
+  CONSTRAINT fk_payment_return_confirmed_by FOREIGN KEY (confirmedBy) REFERENCES Users(id) ON DELETE SET NULL,
+  CONSTRAINT fk_payment_return_transaction FOREIGN KEY (returnTransactionId) REFERENCES TestBankTransactions(id) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
 CREATE TABLE IF NOT EXISTS TestBankAccounts (
   id INT AUTO_INCREMENT PRIMARY KEY,
   ownerType ENUM('Company','Employee','Customer','Supplier') NOT NULL,
@@ -411,7 +442,7 @@ CREATE TABLE IF NOT EXISTS TestBankAccounts (
 
 CREATE TABLE IF NOT EXISTS TestBankTransactions (
   id INT AUTO_INCREMENT PRIMARY KEY,
-  type ENUM('SalaryRelease','Refund','Adjustment','SupplierPayment','InvoicePayment','PaymentReversal') NOT NULL,
+  type ENUM('SalaryRelease','Refund','Adjustment','SupplierPayment','InvoicePayment','PaymentReversal','PaymentReturn') NOT NULL,
   fromAccountId INT,
   toAccountId INT NOT NULL,
   amount DECIMAL(12,2) NOT NULL,

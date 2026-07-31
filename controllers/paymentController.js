@@ -5,6 +5,7 @@ const stripe = stripeSecretKey ? Stripe(stripeSecretKey) : null;
 
 const Invoice = require('../models/Invoice');
 const Payment = require('../models/Payment');
+const PaymentReturn = require('../models/PaymentReturn');
 const { logAudit, getRequestMetadata } = require('../utils/audit');
 const { simulateRefundDestination } = require('../utils/testBank');
 const supplierPayout = require('../services/supplierPayout');
@@ -510,10 +511,81 @@ exports.checkSupplierPayoutStatus = async (req, res) => {
       ok: true,
       message: status === 'Completed'
         ? 'PayPal payout completed. The invoice is paid and Test Bank balances were updated once.'
+        : status === 'Returned' || status === 'Cancelled'
+        ? 'Unclaimed PayPal payout cancellation/return was confirmed by PayPal. No completed supplier payment was recorded locally.'
         : `PayPal payout is ${status || 'Pending'}. The invoice remains unpaid until PayPal confirms SUCCESS.`,
       payout: result.payout,
       invoice: result.invoice,
       payment: result.payment
+    });
+  } catch (err) {
+    res.status(err.status || 500).json({ error: err.message });
+  }
+};
+
+exports.requestSupplierPaymentReturn = async (req, res) => {
+  try {
+    const result = await supplierPayout.requestPaymentReturn(req.params.id, req);
+    res.status(result.emailSent ? 201 : 202).json({
+      ok: true,
+      message: result.emailSent
+        ? `Payment return request created and email sent to ${result.paymentReturn.supplierEmail}.`
+        : 'Payment return request created, but the email could not be sent.',
+      warning: result.emailWarning || undefined,
+      paymentReturn: result.paymentReturn,
+      payment: result.payment,
+      invoice: result.invoice
+    });
+  } catch (err) {
+    res.status(err.status || 500).json({ error: err.message });
+  }
+};
+
+exports.resendSupplierPaymentReturnEmail = async (req, res) => {
+  try {
+    const result = await supplierPayout.resendPaymentReturnEmail(req.params.id, req);
+    res.status(result.emailSent ? 200 : 202).json({
+      ok: true,
+      message: result.emailSent
+        ? `Payment return request email resent to ${result.paymentReturn.supplierEmail}.`
+        : 'Payment return request email could not be sent.',
+      warning: result.emailWarning || undefined,
+      paymentReturn: result.paymentReturn,
+      invoice: result.invoice
+    });
+  } catch (err) {
+    res.status(err.status || 500).json({ error: err.message });
+  }
+};
+
+exports.requestPaymentReturnByPayment = async (req, res) => {
+  try {
+    const result = await supplierPayout.requestPaymentReturnForPayment(req.params.id, req);
+    res.status(result.emailSent ? 201 : 202).json({
+      ok: true,
+      message: result.emailSent
+        ? `Payment return request created and email sent to ${result.paymentReturn.supplierEmail}.`
+        : 'Payment return request created, but the email could not be sent.',
+      warning: result.emailWarning || undefined,
+      paymentReturn: result.paymentReturn,
+      payment: result.payment,
+      invoice: result.invoice
+    });
+  } catch (err) {
+    res.status(err.status || 500).json({ error: err.message });
+  }
+};
+
+exports.confirmSupplierPaymentReturn = async (req, res) => {
+  try {
+    const result = await supplierPayout.confirmFundsReturned(req.params.id, req);
+    res.json({
+      ok: true,
+      message: 'Funds returned confirmed in Test Bank. Original payment record was preserved.',
+      paymentReturn: result.paymentReturn,
+      originalPayment: result.payment,
+      invoice: result.invoice,
+      returnTransaction: result.transaction
     });
   } catch (err) {
     res.status(err.status || 500).json({ error: err.message });
@@ -818,13 +890,19 @@ exports.history = async (req, res) => {
     const invoiceIds = [...new Set(payments.map(payment => payment.invoiceId).filter(Boolean))];
     const invoices = invoiceIds.length ? await Invoice.findAll({ where: { id: invoiceIds } }) : [];
     const invoiceMap = new Map(invoices.map(invoice => [invoice.id, invoice]));
+    const paymentIds = payments.map(payment => payment.id);
+    const returns = paymentIds.length ? await PaymentReturn.findAll({ where: { originalPaymentId: paymentIds } }) : [];
+    const returnMap = new Map(returns.map(paymentReturn => [paymentReturn.originalPaymentId, paymentReturn]));
 
     res.json(payments.map(payment => {
       const payload = payment.toJSON();
       const invoice = invoiceMap.get(payment.invoiceId);
+      const paymentReturn = returnMap.get(payment.id);
       return Object.assign(payload, {
         customerName: invoice ? invoice.customer_name : '',
-        invoiceStatus: invoice ? invoice.status : ''
+        invoiceStatus: invoice ? invoice.status : '',
+        supplierEmail: invoice ? (invoice.paypalEmail || (invoice.data && (invoice.data.paypalEmail || invoice.data.supplierPaypalEmail)) || '') : '',
+        paymentReturn: paymentReturn ? paymentReturn.toJSON() : null
       });
     }));
   } catch (err) {
@@ -837,6 +915,9 @@ exports.removeHistoryItem = async (req, res) => {
   try {
     const payment = await Payment.findByPk(req.params.id);
     if (!payment) return res.status(404).json({ error: 'Payment not found' });
+    if (supplierPayout.isCompletedSupplierPayout(payment)) {
+      return res.status(409).json({ error: 'Use Request Payment Return for completed supplier PayPal payouts. Do not record an immediate payment reversal.' });
+    }
     if (normalizePaymentStatus(payment.status) === 'Paid') {
       return res.status(400).json({ error: 'Paid supplier payment records cannot be deleted. Record a payment reversal first.' });
     }

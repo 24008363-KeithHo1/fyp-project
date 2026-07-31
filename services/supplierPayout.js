@@ -2,8 +2,10 @@ const { Op } = require('sequelize');
 const { sequelize } = require('../config/db');
 const Invoice = require('../models/Invoice');
 const Payment = require('../models/Payment');
+const PaymentReturn = require('../models/PaymentReturn');
 const TestBankTransaction = require('../models/TestBankTransaction');
-const { paypalRequest } = require('./paypalService');
+const { paypalRequest, cancelUnclaimedPayoutItem } = require('./paypalService');
+const { sendPaymentReturnRequestEmail } = require('./paymentReturnEmail');
 const { findOrCreateTestAccount, ensureCompanyAccount } = require('../utils/testBank');
 const { logAudit, getRequestMetadata } = require('../utils/audit');
 
@@ -45,6 +47,20 @@ function paypalEmailFor(invoice) {
   return clean(invoice.paypalEmail || (invoice.data && invoice.data.paypalEmail) || (invoice.data && invoice.data.supplierPaypalEmail));
 }
 
+function isSupplierInvoice(invoice) {
+  return Boolean(invoice && invoice.data && invoice.data.isSupplierInvoice);
+}
+
+function validateSupplierEmail(email) {
+  const supplierEmail = clean(email);
+  if (!supplierEmail || !EMAIL_RE.test(supplierEmail)) {
+    const error = new Error('Enter a valid supplier email address.');
+    error.status = 400;
+    throw error;
+  }
+  return supplierEmail;
+}
+
 function assertPayableInvoice(invoice) {
   // These checks explain why a Pay Supplier button may be disabled:
   // the invoice must be approved, unpaid, positive-value, and have a
@@ -61,6 +77,11 @@ function assertPayableInvoice(invoice) {
   }
   if (invoice.status !== 'Approved') {
     const error = new Error('Invoice must be approved before supplier payout.');
+    error.status = 409;
+    throw error;
+  }
+  if (!isSupplierInvoice(invoice)) {
+    const error = new Error('Mark this invoice as a supplier invoice before sending a supplier payout.');
     error.status = 409;
     throw error;
   }
@@ -196,6 +217,15 @@ async function fetchPayoutStatus(batchId) {
   return paypalRequest(`/v1/payments/payouts/${encodeURIComponent(batchId)}`);
 }
 
+function statusFromCancelResponse(response) {
+  const status = response && (response.transaction_status || response.status);
+  return {
+    status: mapPayPalPayoutStatus(status || 'RETURNED'),
+    paypalStatus: status || 'RETURNED',
+    response
+  };
+}
+
 function statusFromBatch(response) {
   const item = extractFirstItem(response);
   const paypalStatus = item && (item.transaction_status || item.payout_item_fee && item.payout_item_fee.status);
@@ -324,6 +354,516 @@ async function applySuccessfulPayout({ invoice, payment, payout, response, req }
   });
 }
 
+function isCompletedSupplierPayout(payment) {
+  const payout = payment && payment.data && payment.data.supplierPayout;
+  return Boolean(payment && payment.method === 'PayPal' && payment.status === 'Paid' && payout && payout.status === 'Completed');
+}
+
+async function findCompletedSupplierPayoutPayment(invoiceId, transaction = null) {
+  const payments = await Payment.findAll({
+    where: { invoiceId, method: 'PayPal', status: 'Paid' },
+    order: [['id', 'DESC']],
+    transaction,
+    lock: transaction ? true : undefined
+  });
+  return payments.find(isCompletedSupplierPayout) || null;
+}
+
+async function requestPaymentReturn(invoiceId, req) {
+  const reason = String((req.body && req.body.reason) || '').trim();
+  if (reason.length < 3) {
+    const error = new Error('Enter a payment return reason of at least 3 characters.');
+    error.status = 400;
+    throw error;
+  }
+  const remarks = String((req.body && req.body.remarks) || '').trim();
+
+  const invoice = await Invoice.findByPk(invoiceId);
+  if (!invoice) {
+    const error = new Error('Invoice not found');
+    error.status = 404;
+    throw error;
+  }
+
+  const payment = await findCompletedSupplierPayoutPayment(invoice.id);
+  if (!payment) {
+    const error = new Error('Only completed supplier PayPal payouts can have a payment return requested.');
+    error.status = 409;
+    throw error;
+  }
+
+  const existing = await PaymentReturn.findOne({ where: { originalPaymentId: payment.id } });
+  if (existing) {
+    const error = new Error('A payment return request already exists for this supplier payout.');
+    error.status = 409;
+    error.paymentReturn = existing;
+    throw error;
+  }
+
+  const payout = payment.data.supplierPayout;
+  const supplierEmail = validateSupplierEmail(
+    (req.body && req.body.supplierEmail)
+      || payout.recipientPaypalEmail
+      || paypalEmailFor(invoice)
+  );
+  const now = new Date();
+  const paymentReturn = await PaymentReturn.create({
+    originalPaymentId: payment.id,
+    invoiceId: invoice.id,
+    reason,
+    remarks,
+    amount: Number(payment.amount),
+    currency: payment.currency || invoice.currency || 'SGD',
+    supplierEmail,
+    requestedBy: req.user && req.user.id,
+    requestedAt: now,
+    status: 'ReturnRequested',
+    notificationEmail: supplierEmail,
+    notificationStatus: 'Pending',
+    data: {
+      paypalPayoutBatchId: payout.payoutBatchId,
+      paypalPayoutItemId: payout.payoutItemId,
+      paypalTransactionId: payout.paypalTransactionId,
+      recipientPaypalEmail: payout.recipientPaypalEmail,
+      note: 'Payment return request only; no Test Bank balances moved until Finance/Admin confirms funds returned.'
+    }
+  });
+
+  let emailResult = null;
+  let emailWarning = null;
+  try {
+    emailResult = await sendPaymentReturnRequestEmail({
+      to: supplierEmail,
+      invoiceNumber: invoice.number || invoice.id,
+      amount: paymentReturn.amount,
+      currency: paymentReturn.currency,
+      reason
+    });
+    await paymentReturn.update({
+      notificationStatus: 'Sent',
+      notificationSentAt: new Date(),
+      notificationError: null,
+      data: Object.assign({}, paymentReturn.data || {}, {
+        notificationDelivery: {
+          messageId: emailResult && emailResult.messageId,
+          accepted: emailResult && emailResult.accepted,
+          response: emailResult && emailResult.response
+        }
+      })
+    });
+  } catch (emailError) {
+    emailWarning = `Payment return request was created, but email delivery failed: ${emailError.message}`;
+    await paymentReturn.update({
+      notificationStatus: 'Failed',
+      notificationError: emailError.message
+    });
+  }
+
+  await invoice.update({
+    data: Object.assign({}, invoice.data || {}, {
+      supplierPaymentReturn: {
+        id: paymentReturn.id,
+        originalPaymentId: payment.id,
+        status: paymentReturn.status,
+        requestedAt: now.toISOString(),
+        requestedBy: req.user && req.user.id,
+        reason,
+        remarks,
+        supplierEmail,
+        notificationEmail: supplierEmail,
+        notificationStatus: paymentReturn.notificationStatus,
+        notificationSentAt: paymentReturn.notificationSentAt,
+        notificationError: paymentReturn.notificationError
+      }
+    })
+  });
+
+  const { ip, userAgent } = getRequestMetadata(req || {});
+  await logAudit({
+    userId: req.user ? req.user.id : null,
+    action: 'supplier_payment_return_requested',
+    entity: 'PaymentReturn',
+    entityId: paymentReturn.id,
+    meta: {
+      originalPaymentId: payment.id,
+      invoiceId: invoice.id,
+      invoiceNumber: invoice.number,
+      amount: paymentReturn.amount,
+      currency: paymentReturn.currency,
+      reason,
+      supplierEmail,
+      notificationStatus: paymentReturn.notificationStatus
+    },
+    ip,
+    userAgent
+  });
+
+  return {
+    invoice: await Invoice.findByPk(invoice.id),
+    payment,
+    paymentReturn,
+    emailSent: paymentReturn.notificationStatus === 'Sent',
+    emailWarning,
+    emailResult
+  };
+}
+
+async function requestPaymentReturnForPayment(paymentId, req) {
+  const reason = String((req.body && req.body.reason) || '').trim();
+  if (reason.length < 3) {
+    const error = new Error('Enter a payment return reason of at least 3 characters.');
+    error.status = 400;
+    throw error;
+  }
+  const remarks = String((req.body && req.body.remarks) || '').trim();
+  const supplierEmail = validateSupplierEmail(req.body && req.body.supplierEmail);
+
+  const payment = await Payment.findByPk(paymentId);
+  if (!payment) {
+    const error = new Error('Payment not found.');
+    error.status = 404;
+    throw error;
+  }
+  if (payment.status !== 'Paid') {
+    const error = new Error('Only paid payments can have a payment return requested.');
+    error.status = 409;
+    throw error;
+  }
+
+  const invoice = await Invoice.findByPk(payment.invoiceId);
+  if (!invoice) {
+    const error = new Error('Invoice not found for this payment.');
+    error.status = 404;
+    throw error;
+  }
+
+  const existing = await PaymentReturn.findOne({ where: { originalPaymentId: payment.id } });
+  if (existing) {
+    const error = new Error('A payment return request already exists for this payment.');
+    error.status = 409;
+    error.paymentReturn = existing;
+    throw error;
+  }
+
+  const now = new Date();
+  const paymentReturn = await PaymentReturn.create({
+    originalPaymentId: payment.id,
+    invoiceId: invoice.id,
+    reason,
+    remarks,
+    amount: Number(payment.amount),
+    currency: payment.currency || invoice.currency || 'SGD',
+    supplierEmail,
+    requestedBy: req.user && req.user.id,
+    requestedAt: now,
+    status: 'ReturnRequested',
+    notificationEmail: supplierEmail,
+    notificationStatus: 'Pending',
+    data: {
+      originalPaymentMethod: payment.method,
+      originalPaymentStatus: payment.status,
+      providerReference: payment.providerReference,
+      note: 'Payment return request only; no original payment, invoice, or Test Bank balances modified.'
+    }
+  });
+
+  let emailResult = null;
+  let emailWarning = null;
+  try {
+    emailResult = await sendPaymentReturnRequestEmail({
+      to: supplierEmail,
+      invoiceNumber: invoice.number || payment.invoiceNumber || invoice.id,
+      amount: paymentReturn.amount,
+      currency: paymentReturn.currency,
+      reason
+    });
+    await paymentReturn.update({
+      notificationStatus: 'Sent',
+      notificationSentAt: new Date(),
+      notificationError: null,
+      data: Object.assign({}, paymentReturn.data || {}, {
+        notificationDelivery: {
+          messageId: emailResult && emailResult.messageId,
+          accepted: emailResult && emailResult.accepted,
+          response: emailResult && emailResult.response
+        }
+      })
+    });
+  } catch (emailError) {
+    emailWarning = `Payment return request was created, but email delivery failed: ${emailError.message}`;
+    await paymentReturn.update({
+      notificationStatus: 'Failed',
+      notificationError: emailError.message
+    });
+  }
+
+  await invoice.update({
+    data: Object.assign({}, invoice.data || {}, {
+      supplierPaymentReturn: {
+        id: paymentReturn.id,
+        originalPaymentId: payment.id,
+        status: paymentReturn.status,
+        requestedAt: now.toISOString(),
+        requestedBy: req.user && req.user.id,
+        reason,
+        remarks,
+        supplierEmail,
+        notificationEmail: supplierEmail,
+        notificationStatus: paymentReturn.notificationStatus,
+        notificationSentAt: paymentReturn.notificationSentAt,
+        notificationError: paymentReturn.notificationError
+      }
+    })
+  });
+
+  const { ip, userAgent } = getRequestMetadata(req || {});
+  await logAudit({
+    userId: req.user ? req.user.id : null,
+    action: 'payment_return_requested',
+    entity: 'PaymentReturn',
+    entityId: paymentReturn.id,
+    meta: {
+      originalPaymentId: payment.id,
+      invoiceId: invoice.id,
+      invoiceNumber: invoice.number,
+      amount: paymentReturn.amount,
+      currency: paymentReturn.currency,
+      reason,
+      supplierEmail,
+      notificationStatus: paymentReturn.notificationStatus
+    },
+    ip,
+    userAgent
+  });
+
+  return {
+    invoice: await Invoice.findByPk(invoice.id),
+    payment,
+    paymentReturn,
+    emailSent: paymentReturn.notificationStatus === 'Sent',
+    emailWarning,
+    emailResult
+  };
+}
+
+async function resendPaymentReturnEmail(returnId, req) {
+  const paymentReturn = await PaymentReturn.findByPk(returnId);
+  if (!paymentReturn) {
+    const error = new Error('Payment return request not found.');
+    error.status = 404;
+    throw error;
+  }
+  if (paymentReturn.status !== 'ReturnRequested') {
+    const error = new Error('Only open payment return requests can have notification email resent.');
+    error.status = 409;
+    throw error;
+  }
+  if (paymentReturn.notificationStatus !== 'Failed') {
+    const error = new Error('Only failed payment return emails can be resent.');
+    error.status = 409;
+    throw error;
+  }
+
+  const invoice = await Invoice.findByPk(paymentReturn.invoiceId);
+  const supplierEmail = validateSupplierEmail(paymentReturn.supplierEmail || paymentReturn.notificationEmail);
+  try {
+    const emailResult = await sendPaymentReturnRequestEmail({
+      to: supplierEmail,
+      invoiceNumber: (invoice && invoice.number) || paymentReturn.invoiceId,
+      amount: paymentReturn.amount,
+      currency: paymentReturn.currency,
+      reason: paymentReturn.reason
+    });
+    await paymentReturn.update({
+      notificationEmail: supplierEmail,
+      notificationStatus: 'Sent',
+      notificationSentAt: new Date(),
+      notificationError: null,
+      data: Object.assign({}, paymentReturn.data || {}, {
+        notificationDelivery: {
+          messageId: emailResult && emailResult.messageId,
+          accepted: emailResult && emailResult.accepted,
+          response: emailResult && emailResult.response,
+          resentAt: new Date().toISOString()
+        }
+      })
+    });
+
+    if (invoice) {
+      await invoice.update({
+        data: Object.assign({}, invoice.data || {}, {
+          supplierPaymentReturn: Object.assign({}, (invoice.data && invoice.data.supplierPaymentReturn) || {}, {
+            id: paymentReturn.id,
+            originalPaymentId: paymentReturn.originalPaymentId,
+            status: paymentReturn.status,
+            notificationEmail: supplierEmail,
+            notificationStatus: 'Sent',
+            notificationSentAt: paymentReturn.notificationSentAt,
+            notificationError: null
+          })
+        })
+      });
+    }
+
+    const { ip, userAgent } = getRequestMetadata(req || {});
+    await logAudit({
+      userId: req.user ? req.user.id : null,
+      action: 'supplier_payment_return_email_resent',
+      entity: 'PaymentReturn',
+      entityId: paymentReturn.id,
+      meta: { invoiceId: paymentReturn.invoiceId, originalPaymentId: paymentReturn.originalPaymentId, supplierEmail },
+      ip,
+      userAgent
+    });
+
+    return { paymentReturn, invoice, emailSent: true, emailResult };
+  } catch (emailError) {
+    await paymentReturn.update({
+      notificationEmail: supplierEmail,
+      notificationStatus: 'Failed',
+      notificationError: emailError.message
+    });
+    return {
+      paymentReturn,
+      invoice,
+      emailSent: false,
+      emailWarning: `Payment return request email still failed: ${emailError.message}`
+    };
+  }
+}
+
+async function confirmFundsReturned(returnId, req) {
+  return sequelize.transaction(async (transaction) => {
+    const paymentReturn = await PaymentReturn.findByPk(returnId, { transaction, lock: true });
+    if (!paymentReturn) {
+      const error = new Error('Payment return request not found.');
+      error.status = 404;
+      throw error;
+    }
+    if (paymentReturn.status === 'Returned') {
+      const error = new Error('Funds have already been confirmed returned for this request.');
+      error.status = 409;
+      throw error;
+    }
+
+    const payment = await Payment.findByPk(paymentReturn.originalPaymentId, { transaction, lock: true });
+    const invoice = await Invoice.findByPk(paymentReturn.invoiceId, { transaction, lock: true });
+    if (!isCompletedSupplierPayout(payment)) {
+      const error = new Error('The original payment is not a completed supplier PayPal payout.');
+      error.status = 409;
+      throw error;
+    }
+    if (!invoice) {
+      const error = new Error('Invoice not found for payment return request.');
+      error.status = 404;
+      throw error;
+    }
+
+    const payout = payment.data.supplierPayout;
+    const amount = Number(paymentReturn.amount);
+    const companyAccount = await ensureCompanyAccount({ transaction });
+    const supplierAccount = await findOrCreateTestAccount({
+      ownerType: 'Supplier',
+      ownerReference: payout.recipientPaypalEmail || invoice.paypalEmail || `invoice-${invoice.id}`,
+      accountName: invoice.customer_name,
+      openingBalance: 0,
+      transaction
+    });
+    if (Number(supplierAccount.balance) < amount) {
+      const error = new Error('Supplier Test Bank account has insufficient balance to confirm funds returned.');
+      error.status = 409;
+      throw error;
+    }
+
+    const reference = `PAYMENT-RETURN-${paymentReturn.id}`;
+    const existingTransaction = await TestBankTransaction.findOne({ where: { reference }, transaction, lock: true });
+    if (existingTransaction) {
+      await paymentReturn.update({
+        status: 'Returned',
+        confirmedBy: req.user && req.user.id,
+        confirmedAt: existingTransaction.processedAt,
+        returnTransactionId: existingTransaction.id
+      }, { transaction });
+      return { paymentReturn, payment, invoice, transaction: existingTransaction, alreadyApplied: true };
+    }
+
+    await supplierAccount.update({ balance: Number(supplierAccount.balance) - amount }, { transaction });
+    await companyAccount.update({ balance: Number(companyAccount.balance) + amount }, { transaction });
+
+    const confirmedAt = new Date();
+    const returnTransaction = await TestBankTransaction.create({
+      type: 'PaymentReturn',
+      fromAccountId: supplierAccount.id,
+      toAccountId: companyAccount.id,
+      amount,
+      currency: paymentReturn.currency || payment.currency || invoice.currency || 'SGD',
+      status: 'Completed',
+      reference,
+      description: `Confirmed supplier payment return for invoice ${invoice.number}`,
+      processedAt: confirmedAt,
+      data: {
+        originalPaymentId: payment.id,
+        paymentReturnId: paymentReturn.id,
+        invoiceId: invoice.id,
+        invoiceNumber: invoice.number,
+        reason: paymentReturn.reason,
+        paypalPayoutBatchId: payout.payoutBatchId,
+        paypalPayoutItemId: payout.payoutItemId,
+        paypalTransactionId: payout.paypalTransactionId,
+        note: 'Internal Test Bank return confirmation; this is not described as a real PayPal reversal.'
+      }
+    }, { transaction });
+
+    await paymentReturn.update({
+      status: 'Returned',
+      confirmedBy: req.user && req.user.id,
+      confirmedAt,
+      returnTransactionId: returnTransaction.id,
+      data: Object.assign({}, paymentReturn.data || {}, {
+        returnTransactionReference: returnTransaction.reference,
+        companyTestBankAccountId: companyAccount.id,
+        supplierTestBankAccountId: supplierAccount.id
+      })
+    }, { transaction });
+
+    await invoice.update({
+      data: Object.assign({}, invoice.data || {}, {
+        supplierPaymentReturn: {
+          id: paymentReturn.id,
+          originalPaymentId: payment.id,
+          status: 'Returned',
+          requestedAt: paymentReturn.requestedAt,
+          requestedBy: paymentReturn.requestedBy,
+          confirmedAt: confirmedAt.toISOString(),
+          confirmedBy: req.user && req.user.id,
+          returnTransactionId: returnTransaction.id,
+          reason: paymentReturn.reason
+        }
+      })
+    }, { transaction });
+
+    const { ip, userAgent } = getRequestMetadata(req || {});
+    await logAudit({
+      userId: req.user ? req.user.id : null,
+      action: 'supplier_payment_funds_returned_confirmed',
+      entity: 'PaymentReturn',
+      entityId: paymentReturn.id,
+      meta: {
+        originalPaymentId: payment.id,
+        invoiceId: invoice.id,
+        invoiceNumber: invoice.number,
+        amount,
+        currency: paymentReturn.currency,
+        returnTransactionId: returnTransaction.id
+      },
+      ip,
+      userAgent
+    });
+
+    return { paymentReturn, payment, invoice, transaction: returnTransaction, alreadyApplied: false };
+  });
+}
+
 async function checkSupplierPayout(invoiceId, req) {
   // Status checking is separate from payout submission. Only a completed
   // PayPal item status triggers invoice Paid + Test Bank movement.
@@ -357,7 +897,7 @@ async function checkSupplierPayout(invoiceId, req) {
   const statusResult = statusFromBatch(response);
   const item = statusResult.item;
   const now = new Date();
-  const updatedPayout = payoutDataPayload(payout, {
+  let updatedPayout = payoutDataPayload(payout, {
     status: statusResult.status,
     paypalStatus: statusResult.paypalStatus,
     payoutItemId: itemReference(item) || payout.payoutItemId,
@@ -368,6 +908,24 @@ async function checkSupplierPayout(invoiceId, req) {
     completedAt: statusResult.status === 'Completed' ? (payout.completedAt || now.toISOString()) : payout.completedAt,
     lastCheckedAt: now.toISOString()
   });
+
+  let cancelResponse = null;
+  if (statusResult.status === 'Unclaimed') {
+    if (!updatedPayout.payoutItemId) {
+      const error = new Error('PayPal payout is UNCLAIMED but has no payout item ID to cancel.');
+      error.status = 409;
+      throw error;
+    }
+    cancelResponse = await cancelUnclaimedPayoutItem(updatedPayout.payoutItemId);
+    const cancelled = statusFromCancelResponse(cancelResponse);
+    updatedPayout = payoutDataPayload(updatedPayout, {
+      status: cancelled.status,
+      paypalStatus: cancelled.paypalStatus,
+      cancelledAt: now.toISOString(),
+      cancelResponse,
+      failureMessage: 'Unclaimed PayPal payout item cancellation confirmed by PayPal.'
+    });
+  }
 
   await payment.update({
     status: statusResult.status === 'Completed' ? 'Paid' : FINAL_FAILURE_STATUSES.has(statusResult.status) ? 'Failed' : 'Pending',
@@ -381,13 +939,19 @@ async function checkSupplierPayout(invoiceId, req) {
     await applySuccessfulPayout({ invoice, payment, payout: updatedPayout, response, req });
   }
 
-  return { invoice: await Invoice.findByPk(invoice.id), payment: await Payment.findByPk(payment.id), payout: updatedPayout, paypal: response };
+  return { invoice: await Invoice.findByPk(invoice.id), payment: await Payment.findByPk(payment.id), payout: updatedPayout, paypal: cancelResponse || response };
 }
 
 module.exports = {
   mapPayPalPayoutStatus,
   submitSupplierPayout,
   checkSupplierPayout,
+  requestPaymentReturn,
+  requestPaymentReturnForPayment,
+  resendPaymentReturnEmail,
+  confirmFundsReturned,
+  isCompletedSupplierPayout,
   assertPayableInvoice,
+  isSupplierInvoice,
   paypalEmailFor
 };
