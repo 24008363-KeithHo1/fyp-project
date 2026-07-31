@@ -1,0 +1,4 @@
+id,name,email,bank_number,period,gross,deductions,net
+1,josh,josh@josh.com,1122334455,March,2000,1000,1900
+2,Sam,Sam@Sam.com,6677889910,April,3000,400,2600
+3,Clara,Clara@Clara.com,12345678,November,2000,300,1700
